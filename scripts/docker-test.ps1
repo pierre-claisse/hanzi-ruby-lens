@@ -8,10 +8,16 @@ Write-Host "`n=== Running frontend tests (Vitest) ===" -ForegroundColor Cyan
 npx vitest run
 $vitestExit = $LASTEXITCODE
 
+Write-Host "`n=== Building frontend (vite build) ===" -ForegroundColor Cyan
+npx vite build
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
 Write-Host "`n=== Running Rust tests (cargo test) ===" -ForegroundColor Cyan
 Push-Location src-tauri
-cargo test 2>&1
+$ErrorActionPreference = 'Continue'
+cargo test
 $cargoExit = $LASTEXITCODE
+$ErrorActionPreference = 'Stop'
 Pop-Location
 
 Write-Host "`n========================================" -ForegroundColor White

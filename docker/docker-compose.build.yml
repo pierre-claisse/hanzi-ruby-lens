@@ -1,8 +1,7 @@
 services:
   build:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: hanzi-ruby-lens-toolchain
+    isolation: process
     volumes:
       - type: bind
         source: ../
@@ -12,7 +11,7 @@ services:
     working_dir: C:/app
     command:
       [
-        "powershell",
+        "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
         "-NoProfile",
         "-ExecutionPolicy",
         "Bypass",

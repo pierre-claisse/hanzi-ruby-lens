@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "pretest": "node scripts/check-docker.js",
-    "test": "docker compose -f docker/docker-compose.test.yml up --build --exit-code-from test",
+    "test": "docker compose -f docker/docker-compose.test.yml up --exit-code-from test",
     "prebuild": "node scripts/check-docker.js",
-    "build": "docker compose -f docker/docker-compose.build.yml up --build --exit-code-from build",
+    "build": "docker compose -f docker/docker-compose.build.yml up --exit-code-from build",
     "build:frontend": "vite build"
   },
   "dependencies": {
