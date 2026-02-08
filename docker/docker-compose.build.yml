@@ -1,0 +1,25 @@
+services:
+  build:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - type: bind
+        source: ../
+        target: C:/app
+      - cargo-target:C:/app/src-tauri/target
+      - node-modules:C:/app/node_modules
+    working_dir: C:/app
+    command:
+      [
+        "powershell",
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "C:/app/scripts/docker-build.ps1",
+      ]
+
+volumes:
+  cargo-target:
+  node-modules:

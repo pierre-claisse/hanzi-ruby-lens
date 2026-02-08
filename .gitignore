@@ -1,2 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+**/target/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Build output directory (bind-mounted from Docker)
+output/
+
+# Installers and executables (built artifacts)
+*.exe
+*.msi
+
 # Local Claude Code settings (personal, not shared)
 .claude/settings.local.json

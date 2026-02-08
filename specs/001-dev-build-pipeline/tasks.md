@@ -23,12 +23,12 @@ implementation and testing.
 **Purpose**: Initialize Tauri 2 + React + TypeScript project structure with
 all configuration files. No Docker, no tests — just the skeleton.
 
-- [ ] T001 Create package.json with project dependencies (React 18+, TypeScript 5.x, Vite 5+, Tailwind CSS 3+, @tauri-apps/cli, @tauri-apps/api, Vitest, @testing-library/react, happy-dom) in package.json
-- [ ] T002 [P] Configure TypeScript compiler options in tsconfig.json
-- [ ] T003 [P] Configure Vite with React plugin in vite.config.ts
-- [ ] T004 [P] Configure Tailwind CSS in tailwind.config.ts and postcss.config.js
-- [ ] T005 [P] Configure shadcn/ui in components.json
-- [ ] T006 [P] Create Tauri 2 project scaffolding: src-tauri/Cargo.toml, src-tauri/src/main.rs, src-tauri/tauri.conf.json, src-tauri/build.rs
+- [x] T001 Create package.json with project dependencies (React 18+, TypeScript 5.x, Vite 5+, Tailwind CSS 3+, @tauri-apps/cli, @tauri-apps/api, Vitest, @testing-library/react, happy-dom) in package.json
+- [x] T002 [P] Configure TypeScript compiler options in tsconfig.json
+- [x] T003 [P] Configure Vite with React plugin in vite.config.ts
+- [x] T004 [P] Configure Tailwind CSS in tailwind.config.ts and postcss.config.js
+- [x] T005 [P] Configure shadcn/ui in components.json
+- [x] T006 [P] Create Tauri 2 project scaffolding: src-tauri/Cargo.toml, src-tauri/src/main.rs, src-tauri/tauri.conf.json, src-tauri/build.rs
 
 ---
 
@@ -39,7 +39,7 @@ depends on. This is the single blocking prerequisite for both user stories.
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T007 Create Windows Docker image definition in docker/Dockerfile (base: mcr.microsoft.com/windows/servercore:ltsc2022, layers: VS Build Tools 2022 with MSVC + Windows SDK + ATL, Rust stable x86_64-pc-windows-msvc, Node.js LTS + NPM, NSIS; optimize layer order for caching: toolchains first, source last)
+- [x] T007 Create Windows Docker image definition in docker/Dockerfile (base: mcr.microsoft.com/windows/servercore:ltsc2022, layers: VS Build Tools 2022 with MSVC + Windows SDK + ATL, Rust stable x86_64-pc-windows-msvc, Node.js LTS + NPM, NSIS; optimize layer order for caching: toolchains first, source last)
 
 **Checkpoint**: Docker image builds successfully. All tooling available inside
 the container.
@@ -61,13 +61,13 @@ tooling exists on the host.
 > **NOTE: Write test files FIRST (T009, T011), then the implementation they
 > test (T010, T012). Tests should fail until implementation is created.**
 
-- [ ] T008 [P] [US1] Configure Vitest with happy-dom environment in vitest.config.ts and create global test setup in src/test/setup.ts
-- [ ] T009 [P] [US1] Write placeholder frontend test in src/App.test.tsx asserting the heading "Hanzi Ruby Lens" renders
-- [ ] T010 [US1] Create React frontend: src/index.css (Tailwind directives), src/main.tsx (React entry point), src/App.tsx (centered "Hanzi Ruby Lens" heading with Tailwind styling)
-- [ ] T011 [US1] Write placeholder Rust test in src-tauri/src/lib.rs (trivial assertion proving cargo test compiles and runs inside the container)
-- [ ] T012 [US1] Ensure src-tauri/src/main.rs has the Tauri entry point that references lib.rs
-- [ ] T013 [US1] Create test orchestration in docker/docker-compose.test.yml (bind-mount source into container, run Vitest then cargo test, produce unified pass/fail output, exit cleanly)
-- [ ] T014 [US1] Add `npm run test` script to package.json that invokes `docker compose -f docker/docker-compose.test.yml up --build` and surfaces the exit code
+- [x] T008 [P] [US1] Configure Vitest with happy-dom environment in vitest.config.ts and create global test setup in src/test/setup.ts
+- [x] T009 [P] [US1] Write placeholder frontend test in src/App.test.tsx asserting the heading "Hanzi Ruby Lens" renders
+- [x] T010 [US1] Create React frontend: src/index.css (Tailwind directives), src/main.tsx (React entry point), src/App.tsx (centered "Hanzi Ruby Lens" heading with Tailwind styling)
+- [x] T011 [US1] Write placeholder Rust test in src-tauri/src/lib.rs (trivial assertion proving cargo test compiles and runs inside the container)
+- [x] T012 [US1] Ensure src-tauri/src/main.rs has the Tauri entry point that references lib.rs
+- [x] T013 [US1] Create test orchestration in docker/docker-compose.test.yml (bind-mount source into container, run Vitest then cargo test, produce unified pass/fail output, exit cleanly)
+- [x] T014 [US1] Add `npm run test` script to package.json that invokes `docker compose -f docker/docker-compose.test.yml up --build` and surfaces the exit code
 
 **Checkpoint**: `npm run test` passes all placeholder tests inside Docker
 containers. No Rust, cargo, or Vitest installed on the host.
@@ -86,10 +86,10 @@ Lens" as a centered heading.
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Configure Tauri window title ("Hanzi Ruby Lens"), bundle identifier, and NSIS installer settings in src-tauri/tauri.conf.json
-- [ ] T016 [P] [US2] Add placeholder application icons in src-tauri/icons/ (32x32, 128x128, 256x256 PNGs and .ico required by Tauri bundler)
-- [ ] T017 [US2] Create build orchestration in docker/docker-compose.build.yml (bind-mount source, run npm install + npm run build:frontend + cargo tauri build, bind-mount output directory so .exe appears on host)
-- [ ] T018 [US2] Add `npm run build` and `npm run build:frontend` scripts to package.json (`build` invokes docker compose, `build:frontend` runs vite build inside the container)
+- [x] T015 [US2] Configure Tauri window title ("Hanzi Ruby Lens"), bundle identifier, and NSIS installer settings in src-tauri/tauri.conf.json
+- [x] T016 [P] [US2] Add placeholder application icons in src-tauri/icons/ (32x32, 128x128, 256x256 PNGs and .ico required by Tauri bundler)
+- [x] T017 [US2] Create build orchestration in docker/docker-compose.build.yml (bind-mount source, run npm install + npm run build:frontend + cargo tauri build, bind-mount output directory so .exe appears on host)
+- [x] T018 [US2] Add `npm run build` and `npm run build:frontend` scripts to package.json (`build` invokes docker compose, `build:frontend` runs vite build inside the container)
 
 **Checkpoint**: `npm run build` produces a `.exe` on the host. Launching it
 displays "Hanzi Ruby Lens" as a centered heading.
@@ -100,9 +100,9 @@ displays "Hanzi Ruby Lens" as a centered heading.
 
 **Purpose**: Developer experience improvements that apply to both user stories.
 
-- [ ] T019 [P] Add Docker Desktop prerequisite check to npm scripts with clear error message ("Docker Desktop is not running. Please start Docker Desktop and try again.")
-- [ ] T020 [P] Add Windows containers mode check with actionable error message ("Docker Desktop is not in Windows containers mode. Right-click the Docker Desktop tray icon → Switch to Windows containers.")
-- [ ] T021 Document development workflow in README.md (prerequisites, npm run test, npm run build, first-time setup expectations, image size warning)
+- [x] T019 [P] Add Docker Desktop prerequisite check to npm scripts with clear error message ("Docker Desktop is not running. Please start Docker Desktop and try again.")
+- [x] T020 [P] Add Windows containers mode check with actionable error message ("Docker Desktop is not in Windows containers mode. Right-click the Docker Desktop tray icon → Switch to Windows containers.")
+- [x] T021 Document development workflow in README.md (prerequisites, npm run test, npm run build, first-time setup expectations, image size warning)
 - [ ] T022 Run all four quickstart.md validation scenarios end-to-end and verify all acceptance criteria pass
 
 ---

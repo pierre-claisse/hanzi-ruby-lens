@@ -1,0 +1,17 @@
+[package]
+name = "hanzi-ruby-lens"
+version = "0.1.0"
+description = "Chinese reading app with pinyin ruby annotations"
+edition = "2021"
+
+[lib]
+name = "hanzi_ruby_lens_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
