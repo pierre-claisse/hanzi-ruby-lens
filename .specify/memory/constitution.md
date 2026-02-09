@@ -1,35 +1,22 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: (template) → 1.0.0
-  Bump rationale: MAJOR — first ratification, all principles new.
-
-  Added principles:
-    I.   Content-First Design
-    II.  Offline-First Data
-    III. Domain-Driven Design with CQRS
-    IV.  Principled Simplicity
-    V.   Test-First Imperative
-    VI.  Docker-Only Execution
+  Version change: 1.0.0 → 1.1.0
+  Bump rationale: MINOR — added Domain Language section (no principles changed).
 
   Added sections:
-    - Preamble (product identity)
-    - Technical Constraints (tech stack, visual identity)
-    - Development Workflow (git-flow, SDD, documentation policy)
-    - Governance
+    - Domain Language (ubiquitous vocabulary: Text, Word)
 
-  Removed sections: None (first version)
+  Changed sections: None.
+  Removed sections: None.
 
   Template sync status:
-    ✅ .specify/templates/plan-template.md — no changes needed;
-       Constitution Check section is dynamically filled by /speckit.plan.
-    ✅ .specify/templates/spec-template.md — no changes needed;
-       generic structure compatible with all principles.
-    ✅ .specify/templates/tasks-template.md — no changes needed;
-       task phases and ordering unaffected.
+    ✅ .specify/templates/plan-template.md — no changes needed.
+    ✅ .specify/templates/spec-template.md — no changes needed.
+    ✅ .specify/templates/tasks-template.md — no changes needed.
     ✅ .claude/commands/speckit.plan.md — reads constitution dynamically.
     ✅ .claude/commands/speckit.analyze.md — extracts MUST/SHOULD
-       normative statements; principles written accordingly.
+       normative statements; Domain Language uses MUST/SHOULD accordingly.
     ✅ README.md — minimal; no constitution references to update.
 
   Deferred TODOs: None.
@@ -125,6 +112,44 @@ exclusively inside Docker containers.
 - Reproducibility across environments MUST be guaranteed by
   containerization.
 
+## Domain Language
+
+All specifications, code, and documentation MUST use the following terms
+consistently. These definitions are constitutional; any deviation MUST be
+treated as a violation.
+
+### Text
+
+The complete body of Chinese content entered by the user. In the current
+release cycle, the application holds exactly one Text.
+
+- A Text MUST be editable by the user (modification or full replacement).
+- A Text MUST autosave after a brief delay following user input.
+- Saving an empty Text MUST be permitted; the UI MUST show a placeholder.
+- When a Text is saved, its Words MUST be regenerated via LLM. Any
+  previously corrected Word pinyin MUST be overwritten without warning.
+- A Text is the aggregate root of the domain model.
+
+### Word
+
+An ordered segment of a Text, consisting of one or more Chinese
+characters and their pinyin as a single unit. Words are produced by
+LLM analysis of the full Text.
+
+- A Word MUST contain one or more Chinese characters and exactly one
+  pinyin string representing the whole Word.
+- Pinyin MUST be determined at the Word level, not the character level,
+  because character pronunciation depends on word context
+  (e.g., 覺 is "jué" in 覺得 but "jiào" in 睡覺).
+- Pinyin MUST be displayed as a single unit per Word
+  (e.g., "xiànzài" for 現在, not "xiàn zài").
+- A Word's pinyin MUST be individually correctable by the user.
+- A Word's corrected pinyin MUST autosave.
+- Words are ephemeral: they MUST be fully regenerated when their parent
+  Text is saved. Corrections do not survive Text regeneration.
+- A Chinese character MUST NOT exist as an independent domain entity.
+  Characters are the string content of a Word, nothing more.
+
 ## Technical Constraints
 
 ### Technology Stack
@@ -189,4 +214,4 @@ comply.
   strong recommendations.
 - When a SHOULD rule is violated, justification MUST be documented.
 
-**Version**: 1.0.0 | **Ratified**: 2026-02-08 | **Last Amended**: 2026-02-08
+**Version**: 1.1.0 | **Ratified**: 2026-02-08 | **Last Amended**: 2026-02-09
