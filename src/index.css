@@ -1,3 +1,30 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --color-paper: 254 252 243;
+  --color-ink: 45 45 45;
+  --color-vermillion: 200 75 49;
+}
+
+.dark {
+  --color-paper: 26 26 46;
+  --color-ink: 245 240 232;
+}
+
+@layer base {
+  body {
+    @apply font-sans antialiased bg-paper text-ink transition-colors;
+  }
+
+  rt {
+    color: rgb(var(--color-vermillion));
+    ruby-align: center;
+  }
+
+  ruby {
+    ruby-position: over;
+    white-space: nowrap;
+  }
+}

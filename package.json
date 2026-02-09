@@ -11,6 +11,8 @@
     "build:frontend": "vite build"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource-variable/noto-sans-tc": "^5.2.10",
     "@tauri-apps/api": "^2.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

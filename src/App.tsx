@@ -1,7 +1,12 @@
+import { TextDisplay } from "./components/TextDisplay";
+import { sampleText } from "./data/sample-text";
+
 function App() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <h1 className="text-4xl font-bold">Hanzi Ruby Lens</h1>
+    <div className="bg-paper text-ink min-h-screen px-6 py-12">
+      <div className="max-w-2xl mx-auto">
+        <TextDisplay text={sampleText} />
+      </div>
     </div>
   );
 }
