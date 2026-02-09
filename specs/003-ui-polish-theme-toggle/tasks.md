@@ -26,8 +26,8 @@ This is a single-project desktop application (Tauri + React):
 
 **Purpose**: Prepare project for theme toggle and spacing refinements
 
-- [ ] T001 Verify Tailwind CSS has opacity-12 utility in tailwind.config.ts (add if missing: `opacity: { "12": "0.12" }`)
-- [ ] T002 Verify dark mode CSS variables are present in src/index.css (already exists from feature 002, no changes needed)
+- [X] T001 Verify Tailwind CSS has opacity-12 utility in tailwind.config.ts (add if missing: `opacity: { "12": "0.12" }`)
+- [X] T002 Verify dark mode CSS variables are present in src/index.css (already exists from feature 002, no changes needed)
 
 **Checkpoint**: Configuration ready for theme toggle implementation
 
@@ -39,7 +39,7 @@ This is a single-project desktop application (Tauri + React):
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T003 Add FOUC prevention script to index.html in `<head>` before React script (synchronous theme initialization from localStorage)
+- [X] T003 Add FOUC prevention script to index.html in `<head>` before React script (synchronous theme initialization from localStorage)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -55,18 +55,18 @@ This is a single-project desktop application (Tauri + React):
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T004 [P] [US1] Create ThemeToggle.test.tsx with test: "renders with moon icon in light mode by default"
-- [ ] T005 [P] [US1] Add test to ThemeToggle.test.tsx: "toggles to dark mode on click and persists to localStorage"
-- [ ] T006 [P] [US1] Add test to ThemeToggle.test.tsx: "is keyboard accessible with Tab, Enter, and Space keys"
-- [ ] T007 [P] [US1] Add test to ThemeToggle.test.tsx: "handles localStorage unavailable gracefully (silent fallback)"
-- [ ] T008 [P] [US1] Add test to ThemeToggle.test.tsx: "initializes from localStorage if dark theme is stored"
+- [X] T004 [P] [US1] Create ThemeToggle.test.tsx with test: "renders with moon icon in light mode by default"
+- [X] T005 [P] [US1] Add test to ThemeToggle.test.tsx: "toggles to dark mode on click and persists to localStorage"
+- [X] T006 [P] [US1] Add test to ThemeToggle.test.tsx: "is keyboard accessible with Tab, Enter, and Space keys"
+- [X] T007 [P] [US1] Add test to ThemeToggle.test.tsx: "handles localStorage unavailable gracefully (silent fallback)"
+- [X] T008 [P] [US1] Add test to ThemeToggle.test.tsx: "initializes from localStorage if dark theme is stored"
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Create useTheme hook in src/hooks/useTheme.ts with lazy initialization, localStorage persistence, and document.documentElement class toggling
-- [ ] T010 [US1] Create ThemeToggle component in src/components/ThemeToggle.tsx with inline SVG icons (sun/moon), keyboard accessibility (aria-label, aria-pressed, focus-visible ring)
-- [ ] T011 [US1] Integrate ThemeToggle in src/App.tsx with fixed top-right positioning (fixed top-6 right-6 z-10)
-- [ ] T012 [US1] Update src/App.test.tsx to verify ThemeToggle button is rendered
+- [X] T009 [US1] Create useTheme hook in src/hooks/useTheme.ts with lazy initialization, localStorage persistence, and document.documentElement class toggling
+- [X] T010 [US1] Create ThemeToggle component in src/components/ThemeToggle.tsx with inline SVG icons (sun/moon), keyboard accessibility (aria-label, aria-pressed, focus-visible ring)
+- [X] T011 [US1] Integrate ThemeToggle in src/App.tsx with fixed top-right positioning (fixed top-6 right-6 z-10)
+- [X] T012 [US1] Update src/App.test.tsx to verify ThemeToggle button is rendered
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently. Theme toggle works, persists across restarts, keyboard accessible.
 
@@ -82,15 +82,15 @@ This is a single-project desktop application (Tauri + React):
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T013 [P] [US2] Update src/components/RubyWord.test.tsx: Add test "applies padding class for breathing room" (expect px-0.5)
-- [ ] T014 [P] [US2] Update src/components/TextDisplay.test.tsx: Add test "applies line height for comfortable reading" (verify leading-[2.5])
-- [ ] T014b [US2] Add edge case test to src/components/TextDisplay.test.tsx: Test long-pinyin words (乘風破浪/chéngfēngpòlàng) for overflow or misalignment with new spacing
+- [X] T013 [P] [US2] Update src/components/RubyWord.test.tsx: Add test "applies padding class for breathing room" (expect px-0.5)
+- [X] T014 [P] [US2] Update src/components/TextDisplay.test.tsx: Add test "applies line height for comfortable reading" (verify leading-[2.5])
+- [X] T014b [US2] Add edge case test to src/components/TextDisplay.test.tsx: Test long-pinyin words (乘風破浪/chéngfēngpòlàng) for overflow or misalignment with new spacing
 
 ### Implementation for User Story 2
 
-- [ ] T015 [P] [US2] Add horizontal padding to RubyWord component in src/components/RubyWord.tsx (add px-0.5 class)
-- [ ] T016 [P] [US2] Update line height in src/components/TextDisplay.tsx from leading-[2.8] to leading-[2.5] (addresses user feedback while staying in optimal 2.5-3.0 range)
-- [ ] T017 [US2] Verify ruby vertical spacing in src/index.css (no changes needed - browser defaults with line-height 2.8 are adequate per research)
+- [X] T015 [P] [US2] Add horizontal padding to RubyWord component in src/components/RubyWord.tsx (add px-0.5 class)
+- [X] T016 [P] [US2] Update line height in src/components/TextDisplay.tsx from leading-[2.8] to leading-[2.5] (addresses user feedback while staying in optimal 2.5-3.0 range)
+- [X] T017 [US2] Verify ruby vertical spacing in src/index.css (no changes needed - browser defaults with line-height 2.8 are adequate per research)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently. Theme toggle + improved spacing both functional.
 
@@ -106,13 +106,13 @@ This is a single-project desktop application (Tauri + React):
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T018 [US3] Update src/components/RubyWord.test.tsx: Add test "applies hover styles with increased opacity" (expect hover:bg-vermillion/12)
-- [ ] T019 [US3] Update src/components/RubyWord.test.tsx: Add test "applies focus-visible ring for keyboard accessibility"
+- [X] T018 [US3] Update src/components/RubyWord.test.tsx: Add test "applies hover styles with increased opacity" (expect hover:bg-vermillion/12)
+- [X] T019 [US3] Update src/components/RubyWord.test.tsx: Add test "applies focus-visible ring for keyboard accessibility"
 
 ### Implementation for User Story 3
 
-- [ ] T020 [US3] Update hover opacity in src/components/RubyWord.tsx: Change hover:bg-vermillion/8 to hover:bg-vermillion/12
-- [ ] T021 [US3] Add keyboard focus ring in src/components/RubyWord.tsx: Add focus-visible:ring-2 focus-visible:ring-vermillion classes
+- [X] T020 [US3] Update hover opacity in src/components/RubyWord.tsx: Change hover:bg-vermillion/8 to hover:bg-vermillion/12
+- [X] T021 [US3] Add keyboard focus ring in src/components/RubyWord.tsx: Add focus-visible:ring-2 focus-visible:ring-vermillion classes
 
 **Checkpoint**: All user stories should now be independently functional. Theme toggle + spacing + hover visibility all working.
 
@@ -122,10 +122,10 @@ This is a single-project desktop application (Tauri + React):
 
 **Purpose**: Final verification and edge case testing
 
-- [ ] T022 Run full test suite via npm run test (Docker-based execution) and verify all tests pass
-- [ ] T023 [P] Execute manual testing checklist from quickstart.md Phase 4 (theme persistence, keyboard navigation, visual spacing, hover visibility, edge cases)
-- [ ] T024 [P] Verify no regressions: Feature 002 ruby text display still works, MinWidthOverlay still appears, no console errors
-- [ ] T025 Build verification: Run npm run build and verify Tauri app builds successfully with theme toggle functional in production build
+- [X] T022 Run full test suite via npm run test (Docker-based execution) and verify all tests pass
+- [X] T023 [P] Execute manual testing checklist from quickstart.md Phase 4 (theme persistence, keyboard navigation, visual spacing, hover visibility, edge cases)
+- [X] T024 [P] Verify no regressions: Feature 002 ruby text display still works, MinWidthOverlay still appears, no console errors
+- [X] T025 Build verification: Run npm run build and verify Tauri app builds successfully with theme toggle functional in production build
 
 ---
 

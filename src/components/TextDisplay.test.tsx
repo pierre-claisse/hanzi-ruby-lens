@@ -58,4 +58,33 @@ describe("TextDisplay", () => {
     expect(textContainer?.className).toMatch(/font-hanzi/);
     expect(textContainer?.className).toMatch(/leading-/);
   });
+
+  it("applies line height for comfortable reading", () => {
+    const { container } = render(<TextDisplay text={sampleText} />);
+    const textContainer = container.firstElementChild;
+    expect(textContainer?.className).toMatch(/leading-\[2\.5\]/);
+  });
+
+  it("handles long-pinyin words without overflow or misalignment", () => {
+    const longPinyinText: Text = {
+      segments: [
+        { type: "word", word: { characters: "乘風破浪", pinyin: "chéngfēngpòlàng" } },
+        { type: "plain", text: "，" },
+        { type: "word", word: { characters: "再接再厲", pinyin: "zàijiēzàilì" } },
+      ],
+    };
+    const { container } = render(<TextDisplay text={longPinyinText} />);
+
+    // Verify ruby elements are rendered
+    const rubies = container.querySelectorAll("ruby");
+    expect(rubies).toHaveLength(2);
+
+    // Verify no visual overflow (ruby elements have proper line-height)
+    const textContainer = container.firstElementChild;
+    expect(textContainer?.className).toMatch(/leading-\[2\.5\]/);
+
+    // Verify long pinyin is present
+    const firstRt = container.querySelector("rt");
+    expect(firstRt).toHaveTextContent("chéngfēngpòlàng");
+  });
 });

@@ -68,4 +68,29 @@ describe("RubyWord", () => {
     expect(rps[0]).toHaveTextContent("(");
     expect(rps[1]).toHaveTextContent(")");
   });
+
+  it("applies padding class for breathing room", () => {
+    const { container } = render(
+      <RubyWord word={{ characters: "你", pinyin: "nǐ" }} />,
+    );
+    const ruby = container.querySelector("ruby");
+    expect(ruby?.className).toMatch(/px-0\.5/);
+  });
+
+  it("applies hover styles with increased opacity", () => {
+    const { container } = render(
+      <RubyWord word={{ characters: "你", pinyin: "nǐ" }} />,
+    );
+    const ruby = container.querySelector("ruby");
+    expect(ruby?.className).toMatch(/hover:bg-vermillion\/12/);
+  });
+
+  it("applies focus-visible ring for keyboard accessibility", () => {
+    const { container } = render(
+      <RubyWord word={{ characters: "你", pinyin: "nǐ" }} />,
+    );
+    const ruby = container.querySelector("ruby");
+    expect(ruby?.className).toMatch(/focus-visible:ring-2/);
+    expect(ruby?.className).toMatch(/focus-visible:ring-vermillion/);
+  });
 });

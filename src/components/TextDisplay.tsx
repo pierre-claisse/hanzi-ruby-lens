@@ -9,7 +9,7 @@ interface TextDisplayProps {
 export function TextDisplay({ text }: TextDisplayProps) {
   if (text.segments.length === 0) {
     return (
-      <div className="font-hanzi text-2xl leading-[2.8]">
+      <div className="font-hanzi text-2xl leading-[2.5]">
         <p className="text-center text-ink/50 py-16">No text to display.</p>
         <MinWidthOverlay />
       </div>
@@ -17,7 +17,7 @@ export function TextDisplay({ text }: TextDisplayProps) {
   }
 
   return (
-    <div className="font-hanzi text-2xl leading-[2.8]">
+    <div className="font-hanzi text-2xl leading-[2.5]">
       {text.segments.map((segment, index) =>
         segment.type === "word" ? (
           <RubyWord key={index} word={segment.word} />

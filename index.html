@@ -4,6 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Hanzi Ruby Lens</title>
+    <script>
+      (function() {
+        try {
+          const theme = localStorage.getItem("theme");
+          if (theme === "dark") {
+            document.documentElement.classList.add("dark");
+          }
+        } catch (e) {
+          // Ignore localStorage errors (private browsing, quota exceeded)
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
