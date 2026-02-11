@@ -58,7 +58,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Modify RubyWord className in src/components/RubyWord.tsx - change `hover:bg-vermillion/12` to `hover:bg-vermillion/24`
+- [ ] T008 [US1] Modify RubyWord className in src/components/RubyWord.tsx - change `hover:bg-vermillion/12` to `hover:bg-vermillion/24` and verify `transition-colors duration-200 ease-in-out` is retained
 - [ ] T009 [US1] Run tests in Docker via `npm run test` - verify T007 test now passes
 - [ ] T010 [US1] Visual validation per quickstart.md Section "1. Hover Visibility (P1)" in both light and dark modes
 
@@ -122,7 +122,7 @@
 - [ ] T021 [US4] Modify TextDisplay container in src/components/TextDisplay.tsx - add `select-none cursor-default` to className for non-empty case (line ~20)
 - [ ] T022 [US4] Modify TextDisplay container in src/components/TextDisplay.tsx - add `select-none cursor-default` to className for empty case (line ~12)
 - [ ] T023 [US4] Run tests in Docker via `npm run test` - verify T019 and T020 tests now pass
-- [ ] T024 [US4] Visual validation per quickstart.md Section "4. Text Selection (P4)" - test mouse, keyboard (within reading area), and touch selection prevention
+- [ ] T024 [US4] Visual validation per quickstart.md Section "4. Text Selection (P4)" - test mouse, keyboard (within reading area), and touch selection prevention (Note: Full keyboard shortcut interception is future work per FR-006)
 
 **Checkpoint**: All four user stories are complete and independently functional - all refinements applied
 
@@ -147,7 +147,7 @@
 - **Setup (Phase 1)**: No dependencies - can start immediately
 - **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories
 - **User Stories (Phase 3-6)**: All depend on Foundational phase completion
-  - **MUST proceed SEQUENTIALLY** (P1 → P2 → P3 → P4) because all modify the same RubyWord className incrementally
+  - **SHOULD proceed sequentially (recommended)** (P1 → P2 → P3 → P4) because US1-US3 modify the same RubyWord className incrementally
   - Each story builds on the previous story's className changes
 - **Polish (Phase 7)**: Depends on all user stories being complete
 
