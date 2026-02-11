@@ -10,12 +10,32 @@
     "windows": [
       {
         "title": "Hanzi Ruby Lens",
-        "width": 800,
-        "height": 600
+        "width": 1024,
+        "height": 768,
+        "minWidth": 800,
+        "minHeight": 600,
+        "decorations": false,
+        "shadow": true,
+        "resizable": true
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "capabilities": [
+        {
+          "identifier": "main-window",
+          "description": "Main window permissions",
+          "windows": ["main"],
+          "permissions": [
+            "core:window:allow-close",
+            "core:window:allow-set-fullscreen",
+            "core:window:allow-is-fullscreen",
+            "core:window:allow-set-resizable",
+            "core:window:allow-start-dragging",
+            "core:window:default"
+          ]
+        }
+      ]
     }
   },
   "bundle": {
