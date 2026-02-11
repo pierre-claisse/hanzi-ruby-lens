@@ -69,20 +69,29 @@ describe("RubyWord", () => {
     expect(rps[1]).toHaveTextContent(")");
   });
 
-  it("applies padding class for breathing room", () => {
+  it("does not apply horizontal padding (authentic Chinese typography)", () => {
     const { container } = render(
       <RubyWord word={{ characters: "你", pinyin: "nǐ" }} />,
     );
     const ruby = container.querySelector("ruby");
-    expect(ruby?.className).toMatch(/px-0\.5/);
+    expect(ruby?.className).not.toMatch(/px-/);
   });
 
-  it("applies hover styles with increased opacity", () => {
+  it("applies vertical padding for pinyin background coverage", () => {
     const { container } = render(
       <RubyWord word={{ characters: "你", pinyin: "nǐ" }} />,
     );
     const ruby = container.querySelector("ruby");
-    expect(ruby?.className).toMatch(/hover:bg-vermillion\/12/);
+    expect(ruby?.className).toMatch(/pt-6/);
+    expect(ruby?.className).toMatch(/pb-1\.5/);
+  });
+
+  it("applies hover styles with increased opacity (24%)", () => {
+    const { container } = render(
+      <RubyWord word={{ characters: "你", pinyin: "nǐ" }} />,
+    );
+    const ruby = container.querySelector("ruby");
+    expect(ruby?.className).toMatch(/hover:bg-vermillion\/24/);
   });
 
   it("applies focus-visible ring for keyboard accessibility", () => {
