@@ -87,4 +87,16 @@ describe("TextDisplay", () => {
     const firstRt = container.querySelector("rt");
     expect(firstRt).toHaveTextContent("chéngfēngpòlàng");
   });
+
+  it("prevents text selection via select-none class", () => {
+    const { container } = render(<TextDisplay text={sampleText} />);
+    const textContainer = container.firstElementChild;
+    expect(textContainer?.className).toMatch(/select-none/);
+  });
+
+  it("maintains default cursor state throughout reading area", () => {
+    const { container } = render(<TextDisplay text={sampleText} />);
+    const textContainer = container.firstElementChild;
+    expect(textContainer?.className).toMatch(/cursor-default/);
+  });
 });
