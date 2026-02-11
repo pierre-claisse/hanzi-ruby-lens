@@ -28,3 +28,13 @@
     white-space: nowrap;
   }
 }
+
+/* Drag region cursor styles */
+[data-tauri-drag-region] {
+  cursor: grab;
+  user-select: none;
+}
+
+[data-tauri-drag-region]:active {
+  cursor: grabbing;
+}

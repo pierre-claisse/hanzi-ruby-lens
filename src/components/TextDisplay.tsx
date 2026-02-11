@@ -1,6 +1,5 @@
 import type { Text } from "../types/domain";
 import { RubyWord } from "./RubyWord";
-import { MinWidthOverlay } from "./MinWidthOverlay";
 
 interface TextDisplayProps {
   text: Text;
@@ -11,7 +10,6 @@ export function TextDisplay({ text }: TextDisplayProps) {
     return (
       <div className="font-hanzi text-2xl leading-[2.5] select-none cursor-default">
         <p className="text-center text-ink/50 py-16">No text to display.</p>
-        <MinWidthOverlay />
       </div>
     );
   }
@@ -25,7 +23,6 @@ export function TextDisplay({ text }: TextDisplayProps) {
           <span key={index}>{segment.text}</span>
         ),
       )}
-      <MinWidthOverlay />
     </div>
   );
 }

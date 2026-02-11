@@ -1,6 +1,16 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import App from "./App";
+
+// Mock Tauri window API
+vi.mock("@tauri-apps/api/window", () => ({
+  getCurrentWindow: () => ({
+    setFullscreen: vi.fn().mockResolvedValue(undefined),
+    isFullscreen: vi.fn().mockResolvedValue(false),
+    setResizable: vi.fn().mockResolvedValue(undefined),
+    close: vi.fn().mockResolvedValue(undefined),
+  }),
+}));
 
 describe("App", () => {
   it("renders TextDisplay with sample data containing ruby elements", () => {
@@ -9,9 +19,23 @@ describe("App", () => {
     expect(rubies.length).toBeGreaterThan(0);
   });
 
-  it("renders ThemeToggle button", () => {
+  it("renders TitleBar with title and three buttons", () => {
     render(<App />);
-    const themeToggleButton = screen.getByRole("button", { name: /switch to (light|dark) mode/i });
+
+    // Check title
+    const title = screen.getByText("Hanzi Ruby Lens");
+    expect(title).toBeInTheDocument();
+
+    // Check buttons (Theme, Fullscreen, Close)
+    const buttons = screen.getAllByRole("button");
+    expect(buttons).toHaveLength(3);
+  });
+
+  it("renders ThemeToggle button inside TitleBar", () => {
+    render(<App />);
+    const themeToggleButton = screen.getByRole("button", {
+      name: /switch to (light|dark) mode/i,
+    });
     expect(themeToggleButton).toBeInTheDocument();
   });
 });
