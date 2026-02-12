@@ -3,23 +3,23 @@
 @tailwind utilities;
 
 :root {
-  --color-paper: 254 252 243;
-  --color-ink: 45 45 45;
-  --color-vermillion: 200 75 49;
+  --color-background: 254 252 243;
+  --color-text: 45 45 45;
+  --color-accent: 200 75 49;
 }
 
 .dark {
-  --color-paper: 26 26 46;
-  --color-ink: 245 240 232;
+  --color-background: 14 14 34;
+  --color-text: 245 240 232;
 }
 
 @layer base {
   body {
-    @apply font-sans antialiased bg-paper text-ink transition-colors;
+    @apply font-sans antialiased bg-surface text-content transition-colors;
   }
 
   rt {
-    color: rgb(var(--color-vermillion));
+    color: rgb(var(--color-accent));
     ruby-align: center;
   }
 
@@ -27,6 +27,73 @@
     ruby-position: over;
     white-space: nowrap;
   }
+}
+
+/* Palette overrides — 6 palettes × light/dark */
+[data-palette="vermillion-scroll"] {
+  --color-background: 254 252 243;
+  --color-text: 45 45 45;
+  --color-accent: 200 75 49;
+}
+.dark[data-palette="vermillion-scroll"] {
+  --color-background: 14 14 34;
+  --color-text: 245 240 232;
+  --color-accent: 200 75 49;
+}
+
+[data-palette="jade-garden"] {
+  --color-background: 244 248 240;
+  --color-text: 42 58 46;
+  --color-accent: 46 139 87;
+}
+.dark[data-palette="jade-garden"] {
+  --color-background: 26 16 36;
+  --color-text: 216 236 219;
+  --color-accent: 46 139 87;
+}
+
+[data-palette="indigo-silk"] {
+  --color-background: 247 245 240;
+  --color-text: 44 44 58;
+  --color-accent: 74 105 189;
+}
+.dark[data-palette="indigo-silk"] {
+  --color-background: 30 18 10;
+  --color-text: 224 220 214;
+  --color-accent: 74 105 189;
+}
+
+[data-palette="plum-blossom"] {
+  --color-background: 251 245 243;
+  --color-text: 58 45 61;
+  --color-accent: 155 45 94;
+}
+.dark[data-palette="plum-blossom"] {
+  --color-background: 9 30 24;
+  --color-text: 240 228 232;
+  --color-accent: 155 45 94;
+}
+
+[data-palette="golden-pavilion"] {
+  --color-background: 253 248 238;
+  --color-text: 53 43 30;
+  --color-accent: 196 136 32;
+}
+.dark[data-palette="golden-pavilion"] {
+  --color-background: 14 11 31;
+  --color-text: 237 228 208;
+  --color-accent: 196 136 32;
+}
+
+[data-palette="ink-wash"] {
+  --color-background: 245 245 242;
+  --color-text: 51 51 51;
+  --color-accent: 119 119 119;
+}
+.dark[data-palette="ink-wash"] {
+  --color-background: 20 20 20;
+  --color-text: 217 217 214;
+  --color-accent: 153 153 153;
 }
 
 /* Prevent text selection in drag region */

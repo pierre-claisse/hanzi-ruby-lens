@@ -6,9 +6,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        paper: "rgb(var(--color-paper) / <alpha-value>)",
-        ink: "rgb(var(--color-ink) / <alpha-value>)",
-        vermillion: "rgb(var(--color-vermillion) / <alpha-value>)",
+        surface: "rgb(var(--color-background) / <alpha-value>)",
+        content: "rgb(var(--color-text) / <alpha-value>)",
+        accent: "rgb(var(--color-accent) / <alpha-value>)",
       },
       fontFamily: {
         hanzi: ['"Noto Sans TC Variable"', "sans-serif"],

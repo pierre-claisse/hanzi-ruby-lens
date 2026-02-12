@@ -1,20 +1,18 @@
 import { Sun, Moon } from "lucide-react";
-import { useTheme } from "../hooks/useTheme";
 
-export function ThemeToggle() {
-  const [theme, setTheme] = useTheme();
+interface ThemeToggleProps {
+  theme: "light" | "dark";
+  onToggle: () => void;
+}
 
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  };
-
+export function ThemeToggle({ theme, onToggle }: ThemeToggleProps) {
   return (
     <button
-      onClick={toggleTheme}
+      onClick={onToggle}
       onPointerDown={(e) => e.stopPropagation()}
       aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
       aria-pressed={theme === "dark"}
-      className="p-1.5 rounded-lg border border-ink/20 bg-paper text-ink hover:bg-ink/5 focus:outline-none focus:ring-2 focus:ring-vermillion focus:ring-offset-2 transition-colors cursor-pointer"
+      className="p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer"
     >
       {theme === "dark" ? (
         <Sun className="w-5 h-5" aria-hidden="true" />
