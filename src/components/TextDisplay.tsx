@@ -3,9 +3,10 @@ import { RubyWord } from "./RubyWord";
 
 interface TextDisplayProps {
   text: Text;
+  showPinyin?: boolean;
 }
 
-export function TextDisplay({ text }: TextDisplayProps) {
+export function TextDisplay({ text, showPinyin = true }: TextDisplayProps) {
   if (text.segments.length === 0) {
     return (
       <div className="font-hanzi text-2xl leading-[2.5] select-none cursor-default">
@@ -18,7 +19,7 @@ export function TextDisplay({ text }: TextDisplayProps) {
     <div className="font-hanzi text-2xl leading-[2.5] select-none cursor-default">
       {text.segments.map((segment, index) =>
         segment.type === "word" ? (
-          <RubyWord key={index} word={segment.word} />
+          <RubyWord key={index} word={segment.word} showPinyin={showPinyin} />
         ) : (
           <span key={index}>{segment.text}</span>
         ),

@@ -19,16 +19,17 @@ describe("App", () => {
     expect(rubies.length).toBeGreaterThan(0);
   });
 
-  it("renders TitleBar with title and three buttons", () => {
+  // T015: Updated to expect 4 buttons (Pinyin, Theme, Fullscreen, Close)
+  it("renders TitleBar with title and four buttons", () => {
     render(<App />);
 
     // Check title
     const title = screen.getByText("Hanzi Ruby Lens");
     expect(title).toBeInTheDocument();
 
-    // Check buttons (Theme, Fullscreen, Close)
+    // Check buttons (Pinyin, Theme, Fullscreen, Close)
     const buttons = screen.getAllByRole("button");
-    expect(buttons).toHaveLength(3);
+    expect(buttons).toHaveLength(4);
   });
 
   it("renders ThemeToggle button inside TitleBar", () => {

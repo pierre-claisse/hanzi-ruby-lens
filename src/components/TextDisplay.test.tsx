@@ -99,4 +99,25 @@ describe("TextDisplay", () => {
     const textContainer = container.firstElementChild;
     expect(textContainer?.className).toMatch(/cursor-default/);
   });
+
+  // T014: Passes showPinyin prop to all RubyWord components
+  it("passes showPinyin prop to all RubyWord components when showPinyin=true", () => {
+    const { container } = render(<TextDisplay text={sampleText} showPinyin={true} />);
+    const rts = container.querySelectorAll("rt");
+
+    // All <rt> elements should have opacity-100 class
+    rts.forEach((rt) => {
+      expect(rt.className).toMatch(/opacity-100/);
+    });
+  });
+
+  it("passes showPinyin prop to all RubyWord components when showPinyin=false", () => {
+    const { container } = render(<TextDisplay text={sampleText} showPinyin={false} />);
+    const rts = container.querySelectorAll("rt");
+
+    // All <rt> elements should have opacity-0 class
+    rts.forEach((rt) => {
+      expect(rt.className).toMatch(/opacity-0/);
+    });
+  });
 });
