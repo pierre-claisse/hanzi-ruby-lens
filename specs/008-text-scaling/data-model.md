@@ -10,12 +10,12 @@ A single integer value representing the current text zoom percentage. This is a 
 
 | Field | Type | Constraints | Default |
 |-------|------|-------------|---------|
-| zoomLevel | integer | 50 ≤ value ≤ 200, must be multiple of 10 | 100 |
+| zoomLevel | integer | 100 ≤ value ≤ 200, must be multiple of 10 | 100 |
 
 **Validation rules**:
 - Must be an integer (no floating point)
-- Must be a multiple of 10: {50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200}
-- Values outside [50, 200] are invalid → fall back to 100
+- Must be a multiple of 10: {100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200}
+- Values outside [100, 200] are invalid → fall back to 100
 - Non-multiple-of-10 values are invalid → fall back to 100
 - Non-numeric stored values are invalid → fall back to 100
 
@@ -51,15 +51,15 @@ App (root component)
 
 ```text
                     zoomIn()              zoomIn()
-    [50%] ──────────► [60%] ──────────► ... ──────────► [200%]
+    [100%] ─────────► [110%] ─────────► ... ──────────► [200%]
      MIN               │                                  MAX
       ▲                │                                   │
       │           zoomOut()                                │
       │                ▼                                   │
-    [50%] ◄────────── [60%] ◄────────── ... ◄────────── [200%]
+    [100%] ◄───────── [110%] ◄───────── ... ◄────────── [200%]
                     zoomOut()             zoomOut()
 
-    At MIN (50%):  zoomOut() → no-op, isMinZoom = true
+    At MIN (100%): zoomOut() → no-op, isMinZoom = true
     At MAX (200%): zoomIn()  → no-op, isMaxZoom = true
 ```
 
@@ -70,4 +70,4 @@ App (root component)
 | `theme` | string | `"light"` \| `"dark"` | `"light"` | 003-ui-polish |
 | `fullscreenPreference` | string | `"true"` \| `"false"` | `"false"` | 005-frameless-window |
 | `pinyinVisible` | string | `"true"` \| `"false"` | `"true"` | 006-pinyin-toggle |
-| `textZoomLevel` | string | `"50"` .. `"200"` (multiples of 10) | `"100"` | 008-text-scaling |
+| `textZoomLevel` | string | `"100"` .. `"200"` (multiples of 10) | `"100"` | 008-text-scaling |

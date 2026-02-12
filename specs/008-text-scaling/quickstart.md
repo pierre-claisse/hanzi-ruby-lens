@@ -4,7 +4,7 @@
 
 ## Overview
 
-Add text zoom controls (50%-200%, 10% steps) via keyboard shortcuts (Ctrl+/Ctrl-) and title bar buttons (ZoomIn/ZoomOut icons). Display current zoom percentage next to title. Persist zoom preference to localStorage.
+Add text zoom controls (100%-200%, 10% steps) via keyboard shortcuts (Ctrl+/Ctrl-) and title bar buttons (ZoomIn/ZoomOut icons). Display current zoom percentage next to title. Persist zoom preference to localStorage.
 
 ## New Files
 
@@ -24,7 +24,6 @@ Add text zoom controls (50%-200%, 10% steps) via keyboard shortcuts (Ctrl+/Ctrl-
 | `src/App.tsx` | Wire `useTextZoom` hook, pass props to TitleBar + TextDisplay |
 | `src/App.test.tsx` | Update button count (4 → 6), add zoom-related assertions |
 | `src/index.css` | Add zoom indicator animation keyframes |
-| `src-tauri/tauri.conf.json` | Add `zoomHotkeysEnabled: false` to disable native zoom shortcuts |
 
 ## Implementation Order
 
@@ -36,7 +35,8 @@ Add text zoom controls (50%-200%, 10% steps) via keyboard shortcuts (Ctrl+/Ctrl-
 6. **App.tsx wiring** — connect hook to TitleBar + TextDisplay
 7. **App.test.tsx updates** — adjust for new button count
 8. **index.css** — zoom indicator animation
-9. **tauri.conf.json** — disable native zoom shortcuts
+
+Note: No `tauri.conf.json` change needed — `zoomHotkeysEnabled` defaults to `false` in Tauri 2.
 
 ## Key Patterns
 
@@ -45,7 +45,7 @@ Add text zoom controls (50%-200%, 10% steps) via keyboard shortcuts (Ctrl+/Ctrl-
 const [zoomLevel, setZoomLevel] = useState<number>(() => {
   try {
     const stored = localStorage.getItem("textZoomLevel");
-    // validate: integer, multiple of 10, within [50, 200]
+    // validate: integer, multiple of 10, within [100, 200]
   } catch { console.error(...); }
   return 100;
 });
@@ -65,7 +65,7 @@ useEffect(() => {
       setZoomLevel(prev => Math.min(prev + 10, 200));
     } else if (e.ctrlKey && e.key === "-") {
       e.preventDefault();
-      setZoomLevel(prev => Math.max(prev - 10, 50));
+      setZoomLevel(prev => Math.max(prev - 10, 100));
     }
   };
   document.addEventListener("keydown", handleKeyDown);

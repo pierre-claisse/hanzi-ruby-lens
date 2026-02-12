@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add text zoom controls (50%-200% in 10% steps) to the reading interface via keyboard shortcuts (Ctrl+/Ctrl-) and title bar buttons (ZoomIn/ZoomOut lucide-react icons). Display current zoom percentage next to the title with smooth transition animation. Persist zoom preference to localStorage following established hook patterns. Achieve 100% test coverage for the new hook.
+Add text zoom controls (100%-200% in 10% steps) to the reading interface via keyboard shortcuts (Ctrl+/Ctrl-) and title bar buttons (ZoomIn/ZoomOut lucide-react icons). Display current zoom percentage next to the title with smooth transition animation. Persist zoom preference to localStorage following established hook patterns. Achieve 100% test coverage for the new hook.
 
 ## Technical Context
 
@@ -16,8 +16,8 @@ Add text zoom controls (50%-200% in 10% steps) to the reading interface via keyb
 **Target Platform**: Windows desktop (Tauri 2, WebView2)
 **Project Type**: Single (Tauri desktop app with React frontend)
 **Performance Goals**: Zoom changes apply under 100ms (SC-003), 100 consecutive rapid interactions without errors (SC-007)
-**Constraints**: Zoom range 50%-200%, increments of 10% only, zoom applies to text content only (not title bar)
-**Scale/Scope**: 4 new files, 5 modified files, ~200 lines new code + ~200 lines tests
+**Constraints**: Zoom range 100%-200%, increments of 10% only, zoom applies to text content only (not title bar)
+**Scale/Scope**: 4 new files, 5 modified files, ~200 lines new code + ~200 lines tests (tauri.conf.json unchanged — zoomHotkeysEnabled defaults to false)
 
 ## Constitution Check
 
@@ -88,7 +88,7 @@ src/
     └── sample-text.ts             # (unchanged)
 
 src-tauri/
-└── tauri.conf.json                # MODIFIED: add zoomHotkeysEnabled: false
+└── tauri.conf.json                # (unchanged — zoomHotkeysEnabled defaults to false)
 ```
 
 **Structure Decision**: Single project, frontend-only changes. No new directories. New files follow existing naming and location conventions (`src/hooks/`, `src/components/`).
@@ -112,13 +112,11 @@ Formula: `fontSize = 1.5 * (zoomLevel / 100)` rem (1.5rem = text-2xl base)
 
 The keydown event handler uses `setZoomLevel(prev => ...)` (functional state updates) rather than referencing `zoomLevel` directly. This avoids stale closures and allows the `useEffect` to have a stable dependency array (`[]`), since `setZoomLevel` from `useState` is guaranteed stable.
 
-### D4: Tauri Config + JavaScript Prevention
+### D4: Native Zoom Already Disabled by Default
 
-Native WebView2 zoom is disabled via two layers:
-1. `zoomHotkeysEnabled: false` in `tauri.conf.json` — platform-level prevention
-2. `e.preventDefault()` in JavaScript keydown handler — event-level prevention
+Tauri 2's `zoomHotkeysEnabled` defaults to `false` — native WebView2 zoom hotkeys are disabled out of the box. No `tauri.conf.json` change is needed.
 
-This defense-in-depth approach ensures custom zoom works reliably regardless of WebView2 behavior.
+The `e.preventDefault()` in the JavaScript keydown handler provides additional defense-in-depth, intercepting Ctrl+/- events before the webview processes them and routing them to our custom zoom logic.
 
 ### D5: Zoom Indicator Animation via React Key Prop
 
@@ -126,14 +124,14 @@ The zoom indicator uses `key={zoomLevel}` on the span element. When zoomLevel ch
 
 ### D6: Button Disabled State via HTML `disabled` Attribute
 
-Standard HTML `disabled` attribute with Tailwind `disabled:` variants. Disabled buttons are excluded from tab order (HTML spec behavior). At max zoom (200%), ZoomIn is disabled; at min zoom (50%), ZoomOut is disabled. Tab order preserves correct sequence for enabled buttons.
+Standard HTML `disabled` attribute with Tailwind `disabled:` variants. Disabled buttons are excluded from tab order (HTML spec behavior). At max zoom (200%), ZoomIn is disabled; at min zoom (100%), ZoomOut is disabled. Tab order preserves correct sequence for enabled buttons.
 
 ## Implementation Order
 
 ### Phase 1: Core Hook (no UI changes)
 
 1. Create `src/hooks/useTextZoom.ts`:
-   - Constants: MIN_ZOOM=50, MAX_ZOOM=200, DEFAULT_ZOOM=100, ZOOM_STEP=10
+   - Constants: MIN_ZOOM=100, MAX_ZOOM=200, DEFAULT_ZOOM=100, ZOOM_STEP=10
    - `useState<number>` with lazy initializer (localStorage read + validation)
    - `useEffect` for localStorage persistence
    - `useEffect` for keyboard shortcuts (Ctrl+=/+, Ctrl+-, with e.preventDefault())
@@ -179,14 +177,11 @@ Standard HTML `disabled` attribute with Tailwind `disabled:` variants. Disabled 
    - Pass zoom props to TitleBar
    - Pass `zoomLevel` to TextDisplay
 
-### Phase 4: Test Updates & Config
+### Phase 4: Test Updates
 
 9. Modify `src/App.test.tsx`:
    - Update "renders TitleBar with title and **six** buttons" test (4 → 6)
    - Update comment to reflect new button list
-
-10. Modify `src-tauri/tauri.conf.json`:
-    - Add `"zoomHotkeysEnabled": false` to the window configuration object
 
 ## Complexity Tracking
 

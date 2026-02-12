@@ -33,3 +33,8 @@
 [data-tauri-drag-region] {
   user-select: none;
 }
+
+@keyframes zoom-indicator-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

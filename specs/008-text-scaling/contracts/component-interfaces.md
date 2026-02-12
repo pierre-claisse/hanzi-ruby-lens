@@ -6,13 +6,13 @@
 
 ```typescript
 interface UseTextZoomReturn {
-  /** Current zoom level: 50-200, always a multiple of 10 */
+  /** Current zoom level: 100-200, always a multiple of 10 */
   zoomLevel: number;
   /** Increase zoom by 10%. No-op at MAX_ZOOM (200). */
   zoomIn: () => void;
-  /** Decrease zoom by 10%. No-op at MIN_ZOOM (50). */
+  /** Decrease zoom by 10%. No-op at MIN_ZOOM (100). */
   zoomOut: () => void;
-  /** True when zoomLevel === 50 (minimum boundary) */
+  /** True when zoomLevel === 100 (minimum boundary) */
   isMinZoom: boolean;
   /** True when zoomLevel === 200 (maximum boundary) */
   isMaxZoom: boolean;
@@ -22,7 +22,7 @@ function useTextZoom(): UseTextZoomReturn;
 ```
 
 **Behavioral contract**:
-- On mount: reads `localStorage.getItem("textZoomLevel")`, validates (integer, multiple of 10, within [50,200]), defaults to 100 if invalid or missing
+- On mount: reads `localStorage.getItem("textZoomLevel")`, validates (integer, multiple of 10, within [100,200]), defaults to 100 if invalid or missing
 - On zoomLevel change: writes `localStorage.setItem("textZoomLevel", String(zoomLevel))`
 - Keyboard listener: `document.addEventListener("keydown", ...)` for Ctrl+=/+ (zoom in) and Ctrl+- (zoom out), calls `e.preventDefault()`
 - Error handling: try-catch on localStorage read/write, `console.error` on failure, state still updates

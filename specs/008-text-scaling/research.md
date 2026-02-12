@@ -4,18 +4,19 @@
 
 ## R1: Preventing Browser Default Zoom in Tauri 2
 
-**Decision**: Use `e.preventDefault()` in JavaScript keydown handler + add `zoomHotkeysEnabled: false` to `tauri.conf.json` as defense-in-depth.
+**Decision**: Use `e.preventDefault()` in JavaScript keydown handler only. No `tauri.conf.json` change needed — `zoomHotkeysEnabled` defaults to `false` in Tauri 2.
 
-**Rationale**: Tauri 2 uses WRY which wraps WebView2 on Windows. WebView2 has built-in Ctrl+/- zoom that conflicts with custom zoom. Two-layer prevention ensures reliable behavior:
-1. `e.preventDefault()` in the keydown handler intercepts the event before the webview processes it
-2. `zoomHotkeysEnabled: false` in tauri.conf.json disables WebView2's `IsZoomControlEnabled` setting at the platform level, handling Ctrl+=, Ctrl++, Ctrl+-, and Ctrl+MouseWheel
+**Rationale**: Tauri 2 uses WRY which wraps WebView2 on Windows. The `zoomHotkeysEnabled` property at `app.windows[]` controls WebView2's `IsZoomControlEnabled` setting, but its **default is already `false`** — native zoom hotkeys (Ctrl+=, Ctrl++, Ctrl+-, Ctrl+MouseWheel) are disabled out of the box. Adding `"zoomHotkeysEnabled": false` to tauri.conf.json would be redundant.
+
+The `e.preventDefault()` in the JavaScript keydown handler serves as additional defense-in-depth, intercepting the keyboard event before the webview processes it and routing it to our custom zoom logic.
+
+**Key finding**: `zoomHotkeysEnabled` defaults to `false` in Tauri 2 (verified via Tauri Configuration Schema and WindowConfig docs). No config file change is required.
 
 **Alternatives considered**:
-- `tauri-plugin-prevent-default` crate: More granular control but adds a Rust dependency for something achievable with config + JS
-- JavaScript-only approach: Works but timing issues possible on first document load
-- Config-only approach: Works but doesn't intercept the event for our custom handler
+- `tauri-plugin-prevent-default` crate: More granular control but adds a Rust dependency for something unnecessary
+- Adding explicit `zoomHotkeysEnabled: false` to config: Redundant — already the default. Adds noise to config for no functional benefit.
 
-**Sources**: Tauri GitHub issues #7418, WRY #569, WebView2 IsZoomControlEnabled docs
+**Sources**: Tauri Configuration Schema (schema.tauri.app/config/2), WindowConfig docs (docs.rs/tauri-utils), WRY #569
 
 ## R2: CSS Font-Size Scaling with Ruby Elements
 
@@ -27,12 +28,11 @@
 - `rt` default font-size is 50% of parent (CSS Ruby spec) — scales automatically
 - `line-height` does NOT affect ruby annotation spacing (W3C CSSWG Issue #4979) — browser calculates ruby spacing independently based on annotation height
 - Unitless `line-height: 2.5` still provides proper inter-line spacing (scales with font-size)
-- Chromium minimum font-size setting (default 10px) could clip annotations at extreme zoom-out — at 50% zoom, base = 0.75rem = 12px, rt = 6px which is below 10px default minimum. Mitigation: this is a browser setting, not app-controllable. At 50% zoom, pinyin may render at 10px minimum instead of 6px. Acceptable trade-off per spec.
+- Chromium minimum font-size setting (default 10px) is not a concern since minimum zoom is 100% (base = 1.5rem = 24px, rt = 12px — well above minimums).
 
 **Zoom formula**: `fontSize = 1.5rem * (zoomLevel / 100)`
 - Base: 1.5rem (equivalent to Tailwind `text-2xl` at default root size)
-- At 50%: 0.75rem → rt at ~0.375rem
-- At 100%: 1.5rem → rt at ~0.75rem (current behavior)
+- At 100%: 1.5rem → rt at ~0.75rem (current behavior, also minimum zoom)
 - At 200%: 3rem → rt at ~1.5rem
 
 **Alternatives considered**:
@@ -102,10 +102,10 @@ For useTextZoom, the keyboard event handler uses `setZoomLevel(prev => ...)` (fu
 **State shape**: `useTextZoom` returns an object `{ zoomLevel, zoomIn, zoomOut, isMinZoom, isMaxZoom }` similar to `useFullscreen`'s object return pattern.
 
 **Constants**:
-- `MIN_ZOOM = 50`
+- `MIN_ZOOM = 100`
 - `MAX_ZOOM = 200`
 - `DEFAULT_ZOOM = 100`
 - `ZOOM_STEP = 10`
 - `STORAGE_KEY = "textZoomLevel"`
 
-**Validation on load**: Parsed value must be integer, multiple of 10, within [50, 200]. Invalid values fall back to 100.
+**Validation on load**: Parsed value must be integer, multiple of 10, within [100, 200]. Invalid values fall back to 100.
