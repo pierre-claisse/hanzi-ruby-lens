@@ -5,6 +5,9 @@ node_modules/
 dist/
 **/target/
 
+# Test coverage
+coverage/
+
 # Environment
 .env
 .env.*
