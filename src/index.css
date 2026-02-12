@@ -29,12 +29,7 @@
   }
 }
 
-/* Drag region cursor styles */
+/* Prevent text selection in drag region */
 [data-tauri-drag-region] {
-  cursor: grab;
   user-select: none;
-}
-
-[data-tauri-drag-region]:active {
-  cursor: grabbing;
 }

@@ -102,4 +102,71 @@ describe("RubyWord", () => {
     expect(ruby?.className).toMatch(/focus-visible:ring-2/);
     expect(ruby?.className).toMatch(/focus-visible:ring-vermillion/);
   });
+
+  // T010: Always renders <ruby> and <rt> regardless of showPinyin prop
+  it("always renders <ruby> and <rt> elements when showPinyin=true", () => {
+    const { container } = render(
+      <RubyWord word={{ characters: "你好", pinyin: "nǐhǎo" }} showPinyin={true} />,
+    );
+    const ruby = container.querySelector("ruby");
+    const rt = container.querySelector("rt");
+    expect(ruby).toBeInTheDocument();
+    expect(rt).toBeInTheDocument();
+  });
+
+  it("always renders <ruby> and <rt> elements when showPinyin=false", () => {
+    const { container } = render(
+      <RubyWord word={{ characters: "你好", pinyin: "nǐhǎo" }} showPinyin={false} />,
+    );
+    const ruby = container.querySelector("ruby");
+    const rt = container.querySelector("rt");
+    expect(ruby).toBeInTheDocument();
+    expect(rt).toBeInTheDocument();
+  });
+
+  // T011: When showPinyin=true, <rt> has opacity-100 class
+  it("applies opacity-100 class to <rt> when showPinyin=true", () => {
+    const { container } = render(
+      <RubyWord word={{ characters: "你好", pinyin: "nǐhǎo" }} showPinyin={true} />,
+    );
+    const rt = container.querySelector("rt");
+    expect(rt?.className).toMatch(/opacity-100/);
+  });
+
+  // T012: When showPinyin=false, <rt> has opacity-0 class
+  it("applies opacity-0 class to <rt> when showPinyin=false", () => {
+    const { container } = render(
+      <RubyWord word={{ characters: "你好", pinyin: "nǐhǎo" }} showPinyin={false} />,
+    );
+    const rt = container.querySelector("rt");
+    expect(rt?.className).toMatch(/opacity-0/);
+  });
+
+  // T012a: <rt> has transition-opacity duration-200 ease-in-out classes
+  it("has transition-opacity duration-200 ease-in-out classes on <rt>", () => {
+    const { container } = render(
+      <RubyWord word={{ characters: "你好", pinyin: "nǐhǎo" }} showPinyin={true} />,
+    );
+    const rt = container.querySelector("rt");
+    expect(rt?.className).toMatch(/transition-opacity/);
+    expect(rt?.className).toMatch(/duration-200/);
+    expect(rt?.className).toMatch(/ease-in-out/);
+  });
+
+  // T013: Always renders Chinese characters
+  it("always renders Chinese characters when showPinyin=true", () => {
+    const { container } = render(
+      <RubyWord word={{ characters: "你好", pinyin: "nǐhǎo" }} showPinyin={true} />,
+    );
+    const ruby = container.querySelector("ruby");
+    expect(ruby).toHaveTextContent("你好");
+  });
+
+  it("always renders Chinese characters when showPinyin=false", () => {
+    const { container } = render(
+      <RubyWord word={{ characters: "你好", pinyin: "nǐhǎo" }} showPinyin={false} />,
+    );
+    const ruby = container.querySelector("ruby");
+    expect(ruby).toHaveTextContent("你好");
+  });
 });
