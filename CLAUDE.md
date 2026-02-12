@@ -21,6 +21,8 @@ Auto-generated from all feature plans. Last updated: 2026-02-08
 - [if applicable, e.g., PostgreSQL, CoreData, files or N/A] (009-color-palettes)
 - TypeScript 5.5 (frontend), Rust stable (Tauri backend — no changes) + React 18.3, Tailwind CSS 3.4, lucide-react 0.563.0 (`Palette` icon), @tauri-apps/api 2.0 (009-color-palettes)
 - Browser localStorage (key: `"colorPalette"`, value: palette ID string) (009-color-palettes)
+- TypeScript 5.5 (frontend), Rust stable (Tauri backend — no changes) + React 18.3, Tauri 2 (no new dependencies) (010-disable-context-menu)
+- N/A (no persistence) (010-disable-context-menu)
 
 - Rust (stable, latest) + TypeScript 5.x + Tauri 2, React 18+, Vite 5+, Tailwind CSS 3+, (001-dev-build-pipeline)
 
@@ -40,9 +42,9 @@ cargo test; cargo clippy
 Rust (stable, latest) + TypeScript 5.x: Follow standard conventions
 
 ## Recent Changes
+- 010-disable-context-menu: Added TypeScript 5.5 (frontend), Rust stable (Tauri backend — no changes) + React 18.3, Tauri 2 (no new dependencies)
 - 009-color-palettes: Added TypeScript 5.5 (frontend), Rust stable (Tauri backend — no changes) + React 18.3, Tailwind CSS 3.4, lucide-react 0.563.0 (`Palette` icon), @tauri-apps/api 2.0
 - 009-color-palettes: Added [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION] + [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]
-- 008-text-scaling: Added TypeScript 5.5 (frontend), Rust stable (Tauri backend — no changes) + React 18.3, Tailwind CSS 3.4, lucide-react 0.563.0, @tauri-apps/api 2.0
 
 
 <!-- MANUAL ADDITIONS START -->

@@ -24,6 +24,15 @@ function App() {
     return () => document.removeEventListener("keydown", handler);
   }, []);
 
+  // Suppress default browser context menu on right-click (FR-001)
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+    document.addEventListener("contextmenu", handler);
+    return () => document.removeEventListener("contextmenu", handler);
+  }, []);
+
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
   };
