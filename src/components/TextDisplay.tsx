@@ -13,7 +13,7 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100 }: TextDi
   if (text.segments.length === 0) {
     return (
       <div className="font-hanzi leading-[2.5] select-none cursor-default" style={{ fontSize }}>
-        <p className="text-center text-ink/50 py-16">No text to display.</p>
+        <p className="text-center text-content/50 py-16">No text to display.</p>
       </div>
     );
   }

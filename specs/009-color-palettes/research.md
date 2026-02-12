@@ -10,14 +10,14 @@
 
 **Alternatives considered**:
 - **JS `setProperty()` per token** — Requires coordinating with theme state; palette hook must know current theme and react to theme changes to set correct variant values. More coupling, more code.
-- **Generate CSS at runtime** — Over-engineered for 7 fixed palettes. Adds build complexity for no benefit.
+- **Generate CSS at runtime** — Over-engineered for 6 fixed palettes. Adds build complexity for no benefit.
 - **Single large CSS class per palette** — Would duplicate all Tailwind utility mappings; not how the existing system works.
 
 ## 2. Palette Data Location
 
 **Decision**: TypeScript constant array in `src/data/palettes.ts` (for dropdown UI: names, IDs, hex colors for swatches) plus CSS rules in `src/index.css` (for runtime color application: RGB space-separated values).
 
-**Rationale**: Palette hex values are needed in TypeScript for rendering color swatches in the dropdown. CSS needs the same colors as space-separated RGB for the `rgb()` function. This is minimal, justified duplication — the TS file serves the UI, the CSS file serves the rendering engine. Both are static (7 palettes, never change at runtime).
+**Rationale**: Palette hex values are needed in TypeScript for rendering color swatches in the dropdown. CSS needs the same colors as space-separated RGB for the `rgb()` function. This is minimal, justified duplication — the TS file serves the UI, the CSS file serves the rendering engine. Both are static (6 palettes, never change at runtime).
 
 **Alternatives considered**:
 - **Single source in TS, inject via JS** — Eliminates CSS rules but requires JS↔CSS coordination for every palette/theme change. Slower, more complex.
@@ -86,7 +86,7 @@
 | Tailwind token | `ink` | `content` |
 | Tailwind token | `vermillion` | `accent` |
 
-**Rationale**: With 7 palettes whose colors range from jade green to indigo blue to monochrome grey, "paper/ink/vermillion" are no longer accurate names. Generic names reflect the token's *role* (background, text, accent) rather than a specific palette's colors. Per user directive.
+**Rationale**: With 6 palettes whose colors range from jade green to indigo blue to monochrome grey, "paper/ink/vermillion" are no longer accurate names. Generic names reflect the token's *role* (background, text, accent) rather than a specific palette's colors. Per user directive.
 
 **Why different Tailwind names from CSS names?** Tailwind prefixes like `text-` and `bg-` combine with the token name. Using `--color-text` directly as a Tailwind token would produce `text-text` (text color: text) — ugly and confusing. Similarly `bg-background` is redundant. The Tailwind tokens `surface`/`content`/`accent` produce clean utility classes:
 - `bg-surface`, `text-content`, `border-content/20`, `hover:bg-content/5`, `focus:ring-accent`

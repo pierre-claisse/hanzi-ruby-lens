@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add 7 culturally-themed color palettes with a dropdown selector in the title bar. Colors applied via CSS `[data-palette]` attribute selectors — the `useColorPalette` hook sets a data attribute on `<html>` and CSS rules override `--color-background`, `--color-text`, `--color-accent` custom properties per palette and theme mode. Existing CSS properties renamed from `--color-paper`/`--color-ink`/`--color-vermillion` to generic names; Tailwind tokens renamed from `paper`/`ink`/`vermillion` to `surface`/`content`/`accent`. Palette toggle uses lucide-react `Palette` icon. Dropdown shows palette names with 3 color swatches (no icons). Full keyboard navigation: Enter to open/select, Up/Down arrows with wrapping, Tab or click-outside to dismiss. Preference persisted to localStorage. Refactoring: rename color tokens across all components + lift `useTheme` from ThemeToggle to App for theme-aware swatch rendering.
+Add 6 culturally-themed color palettes with a dropdown selector in the title bar. Colors applied via CSS `[data-palette]` attribute selectors — the `useColorPalette` hook sets a data attribute on `<html>` and CSS rules override `--color-background`, `--color-text`, `--color-accent` custom properties per palette and theme mode. Existing CSS properties renamed from `--color-paper`/`--color-ink`/`--color-vermillion` to generic names; Tailwind tokens renamed from `paper`/`ink`/`vermillion` to `surface`/`content`/`accent`. Palette toggle uses lucide-react `Palette` icon. Dropdown shows palette names with 3 color swatches (no icons). Full keyboard navigation: Enter to open/select, Up/Down arrows with wrapping, Tab or click-outside to dismiss. Preference persisted to localStorage. Refactoring: rename color tokens across all components + lift `useTheme` from ThemeToggle to App for theme-aware swatch rendering.
 
 ## Technical Context
 
@@ -16,8 +16,8 @@ Add 7 culturally-themed color palettes with a dropdown selector in the title bar
 **Target Platform**: Windows (Tauri 2 desktop app)
 **Project Type**: Single (Tauri + React frontend)
 **Performance Goals**: Color switch under 100ms (CSS-only via attribute selector)
-**Constraints**: 100% hook test coverage, keyboard-accessible, 14 valid palette × theme combinations
-**Scale/Scope**: 7 palettes, 3 tokens each, light/dark variants = 42 color values total
+**Constraints**: 100% hook test coverage, keyboard-accessible, 12 valid palette × theme combinations
+**Scale/Scope**: 6 palettes, 3 tokens each, light/dark variants = 36 color values total
 
 ## Constitution Check
 
@@ -27,10 +27,10 @@ Add 7 culturally-themed color palettes with a dropdown selector in the title bar
 
 | Principle | Status | Notes |
 |-----------|--------|-------|
-| I. Content-First Design | PASS | Palette dropdown is unobtrusive title bar control. Colors serve text readability. Transitions use CSS `transition-colors` (200-300ms). Both light and dark modes first-class (14 combinations). |
+| I. Content-First Design | PASS | Palette dropdown is unobtrusive title bar control. Colors serve text readability. Transitions use CSS `transition-colors` (200-300ms). Both light and dark modes first-class (12 combinations). |
 | II. Offline-First Data | JUSTIFIED | localStorage instead of SQLite for UI preference — consistent with existing useTheme, usePinyinVisibility, useTextZoom. Palette preference is view-layer state, not domain data. SQLite for a string would violate Principle IV. |
 | III. DDD with CQRS | N/A | Color palettes are a UI presentation concern, not domain logic. No new entities, aggregates, or commands. Text and Word domain model unaffected. |
-| IV. Principled Simplicity | PASS | Static 7-palette array (no database, no API). Single hook for state. CSS attribute selectors for color application. No speculative features. |
+| IV. Principled Simplicity | PASS | Static 6-palette array (no database, no API). Single hook for state. CSS attribute selectors for color application. No speculative features. |
 | V. Test-First Imperative | PASS | 100% hook coverage required (FR-026). Tests written before/alongside implementation. Tests run in Docker via existing pipeline. |
 | VI. Docker-Only Execution | PASS | No changes to Docker pipeline. Existing `npm run test` / `npm run build` in Docker. |
 | Visual Identity | PASS | Ruby annotations use accent color (FR-027 → `rt { color: rgb(var(--color-accent)); }`). All palettes provide accent tokens. |
@@ -64,7 +64,7 @@ specs/009-color-palettes/
 src/
 ├── data/
 │   ├── sample-text.ts          # (existing)
-│   └── palettes.ts             # NEW — 7 palette definitions
+│   └── palettes.ts             # NEW — 6 palette definitions
 ├── hooks/
 │   ├── useTheme.ts             # (existing, unchanged)
 │   ├── useTheme.test.ts        # (existing, unchanged)

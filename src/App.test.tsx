@@ -19,17 +19,17 @@ describe("App", () => {
     expect(rubies.length).toBeGreaterThan(0);
   });
 
-  // Updated to expect 6 buttons (Pinyin, ZoomIn, ZoomOut, Theme, Fullscreen, Close)
-  it("renders TitleBar with title and six buttons", () => {
+  // Updated to expect 7 buttons (Pinyin, ZoomIn, ZoomOut, Palette, Theme, Fullscreen, Close)
+  it("renders TitleBar with title and seven buttons", () => {
     render(<App />);
 
     // Check title
     const title = screen.getByText("Hanzi Ruby Lens");
     expect(title).toBeInTheDocument();
 
-    // Check buttons (Pinyin, ZoomIn, ZoomOut, Theme, Fullscreen, Close)
+    // Check buttons (Pinyin, ZoomIn, ZoomOut, Palette, Theme, Fullscreen, Close)
     const buttons = screen.getAllByRole("button");
-    expect(buttons).toHaveLength(6);
+    expect(buttons).toHaveLength(7);
   });
 
   it("renders ThemeToggle button inside TitleBar", () => {

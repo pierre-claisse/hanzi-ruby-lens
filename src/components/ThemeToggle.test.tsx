@@ -1,171 +1,81 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ThemeToggle } from "./ThemeToggle";
 
 describe("ThemeToggle", () => {
-  let localStorageMock: { [key: string]: string };
-
-  beforeEach(() => {
-    // Reset localStorage mock before each test
-    localStorageMock = {};
-
-    global.localStorage = {
-      getItem: vi.fn((key: string) => localStorageMock[key] || null),
-      setItem: vi.fn((key: string, value: string) => {
-        localStorageMock[key] = value;
-      }),
-      removeItem: vi.fn((key: string) => {
-        delete localStorageMock[key];
-      }),
-      clear: vi.fn(() => {
-        localStorageMock = {};
-      }),
-      length: 0,
-      key: vi.fn(() => null),
-    } as Storage;
-
-    // Reset document.documentElement.classList
-    document.documentElement.className = "";
-  });
-
-  // T004: "renders with moon icon in light mode by default"
-  it("renders with moon icon in light mode by default", () => {
-    render(<ThemeToggle />);
+  it("renders moon icon in light mode", () => {
+    render(<ThemeToggle theme="light" onToggle={vi.fn()} />);
 
     const button = screen.getByRole("button", { name: /switch to dark mode/i });
     expect(button).toBeInTheDocument();
 
-    // Moon icon should be visible in light mode
     const svg = button.querySelector("svg");
     expect(svg).toBeInTheDocument();
   });
 
-  // T005: "toggles to dark mode on click and persists to localStorage"
-  it("toggles to dark mode on click and persists to localStorage", () => {
-    render(<ThemeToggle />);
+  it("renders sun icon in dark mode", () => {
+    render(<ThemeToggle theme="dark" onToggle={vi.fn()} />);
+
+    const button = screen.getByRole("button", { name: /switch to light mode/i });
+    expect(button).toBeInTheDocument();
+  });
+
+  it("calls onToggle when clicked", () => {
+    const onToggle = vi.fn();
+    render(<ThemeToggle theme="light" onToggle={onToggle} />);
 
     const button = screen.getByRole("button", { name: /switch to dark mode/i });
-
-    // Click to toggle to dark mode
     fireEvent.click(button);
 
-    // Verify localStorage was updated
-    expect(localStorage.setItem).toHaveBeenCalledWith("theme", "dark");
+    expect(onToggle).toHaveBeenCalledTimes(1);
+  });
 
-    // Verify document class was updated
-    expect(document.documentElement.classList.contains("dark")).toBe(true);
+  it("has correct aria-label in light mode", () => {
+    render(<ThemeToggle theme="light" onToggle={vi.fn()} />);
 
-    // Verify button label changed
-    expect(button).toHaveAttribute("aria-label", "Switch to light mode");
-
-    // Click again to toggle back to light mode
-    fireEvent.click(button);
-
-    expect(localStorage.setItem).toHaveBeenCalledWith("theme", "light");
-    expect(document.documentElement.classList.contains("dark")).toBe(false);
+    const button = screen.getByRole("button");
     expect(button).toHaveAttribute("aria-label", "Switch to dark mode");
   });
 
-  // T006: "is keyboard accessible with Tab, Enter, and Space keys"
-  it("is keyboard accessible with Tab, Enter, and Space keys", () => {
-    render(<ThemeToggle />);
-
-    const button = screen.getByRole("button", { name: /switch to dark mode/i });
-
-    // Verify button is focusable (native button behavior)
-    button.focus();
-    expect(document.activeElement).toBe(button);
-
-    // Verify button has proper ARIA attributes for screen readers
-    expect(button).toHaveAttribute("aria-label");
-    expect(button).toHaveAttribute("aria-pressed");
-
-    // Test button activation (Enter/Space trigger onClick in browsers)
-    // Native <button> elements handle Enter and Space automatically
-    fireEvent.click(button);
-    expect(localStorage.setItem).toHaveBeenCalledWith("theme", "dark");
-    expect(document.documentElement.classList.contains("dark")).toBe(true);
-  });
-
-  // T007: "handles localStorage unavailable gracefully (silent fallback)"
-  it("handles localStorage unavailable gracefully (silent fallback)", () => {
-    // Mock localStorage to throw errors (private browsing mode)
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-    global.localStorage = {
-      getItem: vi.fn(() => {
-        throw new Error("QuotaExceededError");
-      }),
-      setItem: vi.fn(() => {
-        throw new Error("QuotaExceededError");
-      }),
-      removeItem: vi.fn(),
-      clear: vi.fn(),
-      length: 0,
-      key: vi.fn(() => null),
-    } as Storage;
-
-    // Component should still render without crashing
-    render(<ThemeToggle />);
+  it("has correct aria-label in dark mode", () => {
+    render(<ThemeToggle theme="dark" onToggle={vi.fn()} />);
 
     const button = screen.getByRole("button");
-    expect(button).toBeInTheDocument();
-
-    // Click should not crash (even though persistence fails)
-    fireEvent.click(button);
-    expect(button).toBeInTheDocument();
-
-    // Verify error was logged
-    expect(consoleErrorSpy).toHaveBeenCalled();
-
-    consoleErrorSpy.mockRestore();
+    expect(button).toHaveAttribute("aria-label", "Switch to light mode");
   });
 
-  // T008: "initializes from localStorage if dark theme is stored"
-  it("initializes from localStorage if dark theme is stored", () => {
-    // Pre-populate localStorage with dark theme
-    localStorageMock["theme"] = "dark";
+  it("has aria-pressed matching dark theme state", () => {
+    const { rerender } = render(<ThemeToggle theme="light" onToggle={vi.fn()} />);
 
-    render(<ThemeToggle />);
+    const button = screen.getByRole("button");
+    expect(button).toHaveAttribute("aria-pressed", "false");
 
-    // Verify button shows correct initial state (sun icon, indicating dark mode is active)
-    const button = screen.getByRole("button", { name: /switch to light mode/i });
-    expect(button).toBeInTheDocument();
-
-    // Verify document class was applied on mount
-    expect(document.documentElement.classList.contains("dark")).toBe(true);
+    rerender(<ThemeToggle theme="dark" onToggle={vi.fn()} />);
+    expect(button).toHaveAttribute("aria-pressed", "true");
   });
 
-  // T029a: "calls e.stopPropagation() on pointerDown event"
   it("calls e.stopPropagation() on pointerDown event", () => {
-    render(<ThemeToggle />);
+    render(<ThemeToggle theme="light" onToggle={vi.fn()} />);
 
     const button = screen.getByRole("button", { name: /switch to dark mode/i });
 
-    // Create a mock pointerDown event with stopPropagation
     const mockStopPropagation = vi.fn();
     const pointerDownEvent = new PointerEvent("pointerdown", { bubbles: true });
     Object.defineProperty(pointerDownEvent, "stopPropagation", {
       value: mockStopPropagation,
     });
 
-    // Fire pointerDown event
     fireEvent(button, pointerDownEvent);
 
-    // Verify stopPropagation was called
     expect(mockStopPropagation).toHaveBeenCalled();
   });
 
-  // T034a: "button has p-1.5 padding class and cursor-pointer class"
   it("button has p-1.5 padding class and cursor-pointer class", () => {
-    render(<ThemeToggle />);
+    render(<ThemeToggle theme="light" onToggle={vi.fn()} />);
 
     const button = screen.getByRole("button", { name: /switch to dark mode/i });
 
-    // Verify padding is p-1.5 (not p-2)
     expect(button.className).toMatch(/p-1\.5/);
-
-    // Verify cursor-pointer class
     expect(button.className).toMatch(/cursor-pointer/);
   });
 });

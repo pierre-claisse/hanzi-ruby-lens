@@ -91,7 +91,7 @@ describe("RubyWord", () => {
       <RubyWord word={{ characters: "你", pinyin: "nǐ" }} />,
     );
     const ruby = container.querySelector("ruby");
-    expect(ruby?.className).toMatch(/hover:bg-vermillion\/24/);
+    expect(ruby?.className).toMatch(/hover:bg-accent\/24/);
   });
 
   it("applies focus-visible ring for keyboard accessibility", () => {
@@ -100,7 +100,7 @@ describe("RubyWord", () => {
     );
     const ruby = container.querySelector("ruby");
     expect(ruby?.className).toMatch(/focus-visible:ring-2/);
-    expect(ruby?.className).toMatch(/focus-visible:ring-vermillion/);
+    expect(ruby?.className).toMatch(/focus-visible:ring-accent/);
   });
 
   // T010: Always renders <ruby> and <rt> regardless of showPinyin prop

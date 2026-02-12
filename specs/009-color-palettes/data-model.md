@@ -12,6 +12,8 @@ A named, immutable set of three color tokens with light and dark mode variants. 
 |-------------|--------|------------------------------------------|
 | `id`        | string | Kebab-case unique identifier (e.g., `"jade-garden"`) |
 | `name`      | string | Display name (e.g., `"Jade Garden"`)     |
+| `lightName` | string | Evocative variant name for light mode (e.g., `"Bamboo Mist"`) |
+| `darkName`  | string | Evocative variant name for dark mode (e.g., `"Firefly Dusk"`) |
 | `light`     | `{ background: string; text: string; accent: string }` | Hex colors for light mode |
 | `dark`      | `{ background: string; text: string; accent: string }` | Hex colors for dark mode  |
 
@@ -19,7 +21,7 @@ A named, immutable set of three color tokens with light and dark mode variants. 
 - `id` must be unique across all palettes
 - `id` must be valid as a CSS attribute value (no spaces, lowercase, kebab-case)
 - All hex color strings must be valid 6-digit hex codes (`#RRGGBB`)
-- Exactly 7 palettes (Vermillion Scroll, Jade Garden, Indigo Silk, Cinnabar & Smoke, Plum Blossom, Golden Pavilion, Ink Wash)
+- Exactly 6 palettes (Vermillion Scroll, Jade Garden, Indigo Silk, Plum Blossom, Golden Pavilion, Ink Wash)
 
 **Identity**: Each palette is identified by its `id` string. No two palettes share an ID.
 
@@ -32,7 +34,7 @@ The user's selected palette, stored as a single string in localStorage.
 | `colorPalette`| string | localStorage     | `"vermillion-scroll"` |
 
 **Validation rules**:
-- Value must match one of the 7 known palette IDs
+- Value must match one of the 6 known palette IDs
 - Invalid values (including `null`, empty string, unknown ID) fall back to `"vermillion-scroll"`
 
 **Lifecycle**:
@@ -42,15 +44,14 @@ The user's selected palette, stored as a single string in localStorage.
 
 ## Palette ID Registry
 
-| ID                 | Display Name        |
-|--------------------|---------------------|
-| `vermillion-scroll`| Vermillion Scroll   |
-| `jade-garden`      | Jade Garden         |
-| `indigo-silk`      | Indigo Silk         |
-| `cinnabar-smoke`   | Cinnabar & Smoke    |
-| `plum-blossom`     | Plum Blossom        |
-| `golden-pavilion`  | Golden Pavilion     |
-| `ink-wash`         | Ink Wash            |
+| ID                 | Display Name        | Light Variant            | Dark Variant              |
+|--------------------|---------------------|--------------------------|---------------------------|
+| `vermillion-scroll`| Vermillion Scroll   | Lamplit Vellum           | Midnight Study            |
+| `jade-garden`      | Jade Garden         | Bamboo Mist             | Firefly Dusk     |
+| `indigo-silk`      | Indigo Silk         | Porcelain Dawn        | Earthen Kiln              |
+| `plum-blossom`     | Plum Blossom        | Blush Parchment          | Teal Forest               |
+| `golden-pavilion`  | Golden Pavilion     | Imperial Gilt          | Palace Lanterns           |
+| `ink-wash`         | Ink Wash            | Rice Paper               | Fresh Ink                 |
 
 ## State Transitions
 
@@ -58,13 +59,14 @@ The user's selected palette, stored as a single string in localStorage.
 
 ```
 CLOSED ──Enter/Click──► OPEN (focusedIndex = selectedIndex)
-OPEN ──Enter──────────► CLOSED (palette updated, focus → button)
-OPEN ──Click item──────► CLOSED (palette updated, focus → button)
+OPEN ──Enter──────────► OPEN (palette updated, dropdown stays open)
+OPEN ──Click item──────► OPEN (palette updated, focusedIndex = clicked item, dropdown stays open)
 OPEN ──Tab────────────► CLOSED (no change, focus → next button)
 OPEN ──Click outside──► CLOSED (no change)
 OPEN ──Click toggle───► CLOSED (no change)
-OPEN ──ArrowDown──────► OPEN (focusedIndex = (focusedIndex + 1) % 7)
-OPEN ──ArrowUp────────► OPEN (focusedIndex = (focusedIndex - 1 + 7) % 7)
+OPEN ──ArrowDown──────► OPEN (focusedIndex = (focusedIndex + 1) % 6)
+OPEN ──ArrowUp────────► OPEN (focusedIndex = (focusedIndex - 1 + 6) % 6)
+Space key ─────────────► NO EFFECT (globally suppressed on all buttons)
 ```
 
 ## Relationships

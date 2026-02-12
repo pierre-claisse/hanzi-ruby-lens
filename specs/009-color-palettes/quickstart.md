@@ -4,13 +4,13 @@
 
 ## Overview
 
-Add 7 culturally-themed color palettes with a dropdown selector in the title bar. Colors applied via CSS `[data-palette]` attribute selectors. Rename CSS properties to `--color-background`/`--color-text`/`--color-accent` and Tailwind tokens to `surface`/`content`/`accent`. Palette toggle uses lucide-react `Palette` icon. Dropdown shows palette names with 3 color swatches. Keyboard-accessible (Enter, arrows, Tab). Preference persisted to localStorage.
+Add 6 culturally-themed color palettes with a dropdown selector in the title bar. Colors applied via CSS `[data-palette]` attribute selectors. Rename CSS properties to `--color-background`/`--color-text`/`--color-accent` and Tailwind tokens to `surface`/`content`/`accent`. Palette toggle uses lucide-react `Palette` icon. Dropdown shows palette common name, theme-specific variant name (smaller/dimmer/italic), and 3 color swatches. Keyboard-accessible (Enter, arrows, Tab). Preference persisted to localStorage.
 
 ## New Files
 
 | File | Purpose |
 |------|---------|
-| `src/data/palettes.ts` | 7 palette definitions (id, name, hex colors per mode) |
+| `src/data/palettes.ts` | 6 palette definitions (id, name, lightName, darkName, hex colors per mode) |
 | `src/hooks/useColorPalette.ts` | Palette state, localStorage persistence, `data-palette` attribute |
 | `src/hooks/useColorPalette.test.ts` | 100% coverage tests for useColorPalette hook |
 | `src/components/PaletteSelector.tsx` | Toggle button + dropdown (keyboard nav, click-outside, swatches) |
@@ -20,7 +20,7 @@ Add 7 culturally-themed color palettes with a dropdown selector in the title bar
 | File | Change |
 |------|--------|
 | `tailwind.config.ts` | Rename color tokens: `paper`→`surface`, `ink`→`content`, `vermillion`→`accent` |
-| `src/index.css` | Rename CSS properties + add 14 `[data-palette]` CSS rule blocks (7 palettes × light/dark) |
+| `src/index.css` | Rename CSS properties + add 12 `[data-palette]` CSS rule blocks (6 palettes × light/dark) |
 | `src/App.tsx` | Add `useColorPalette()`, lift `useTheme()`, rename color classes |
 | `src/components/TitleBar.tsx` | Add PaletteSelector, accept palette + theme props, rename color classes |
 | `src/components/ThemeToggle.tsx` | Refactor to props-driven, rename color classes |
@@ -46,7 +46,7 @@ Add 7 culturally-themed color palettes with a dropdown selector in the title bar
   --color-accent: 200 75 49;
 }
 .dark {
-  --color-background: 26 26 46;
+  --color-background: 14 14 34;
   --color-text: 245 240 232;
 }
 
@@ -57,7 +57,7 @@ Add 7 culturally-themed color palettes with a dropdown selector in the title bar
   --color-accent: 200 75 49;
 }
 .dark[data-palette="vermillion-scroll"] {
-  --color-background: 26 26 46;
+  --color-background: 14 14 34;
   --color-text: 245 240 232;
   --color-accent: 200 75 49;
 }
@@ -68,11 +68,11 @@ Add 7 culturally-themed color palettes with a dropdown selector in the title bar
   --color-accent: 46 139 87;
 }
 .dark[data-palette="jade-garden"] {
-  --color-background: 27 36 32;
-  --color-text: 224 234 219;
+  --color-background: 26 16 36;
+  --color-text: 216 236 219;
   --color-accent: 46 139 87;
 }
-/* ... etc for all 7 palettes */
+/* ... etc for all 6 palettes */
 ```
 
 **Tailwind config** (renamed tokens):
@@ -109,19 +109,17 @@ All hex→RGB conversions for CSS rules:
 | Palette | Mode | background | text | accent |
 |---------|------|------------|------|--------|
 | Vermillion Scroll | light | 254 252 243 | 45 45 45 | 200 75 49 |
-| Vermillion Scroll | dark | 26 26 46 | 245 240 232 | 200 75 49 |
+| Vermillion Scroll | dark | 14 14 34 | 245 240 232 | 200 75 49 |
 | Jade Garden | light | 244 248 240 | 42 58 46 | 46 139 87 |
-| Jade Garden | dark | 27 36 32 | 224 234 219 | 46 139 87 |
-| Indigo Silk | light | 247 245 240 | 44 44 58 | 59 89 152 |
-| Indigo Silk | dark | 20 22 43 | 232 228 221 | 107 140 206 |
-| Cinnabar & Smoke | light | 250 247 242 | 26 26 26 | 191 48 48 |
-| Cinnabar & Smoke | dark | 28 26 23 | 240 235 227 | 212 64 64 |
+| Jade Garden | dark | 26 16 36 | 216 236 219 | 46 139 87 |
+| Indigo Silk | light | 247 245 240 | 44 44 58 | 74 105 189 |
+| Indigo Silk | dark | 30 18 10 | 224 220 214 | 74 105 189 |
 | Plum Blossom | light | 251 245 243 | 58 45 61 | 155 45 94 |
-| Plum Blossom | dark | 34 28 38 | 240 228 232 | 199 91 142 |
+| Plum Blossom | dark | 9 30 24 | 240 228 232 | 155 45 94 |
 | Golden Pavilion | light | 253 248 238 | 53 43 30 | 196 136 32 |
-| Golden Pavilion | dark | 31 27 20 | 237 228 208 | 212 160 48 |
+| Golden Pavilion | dark | 14 11 31 | 237 228 208 | 196 136 32 |
 | Ink Wash | light | 245 245 242 | 51 51 51 | 119 119 119 |
-| Ink Wash | dark | 29 29 29 | 217 217 214 | 153 153 153 |
+| Ink Wash | dark | 20 20 20 | 217 217 214 | 153 153 153 |
 
 ## Key Patterns
 
@@ -145,6 +143,23 @@ useEffect(() => {
 }, [paletteId]);
 ```
 
+### Global Space Key Suppression (FR-028)
+
+Space key is globally suppressed on all `<button>` elements via a document-level `keydown` handler in App.tsx. This prevents native browser behavior (Space fires `click` on buttons).
+
+```typescript
+// In App.tsx
+useEffect(() => {
+  const handler = (e: KeyboardEvent) => {
+    if (e.key === " " && e.target instanceof HTMLButtonElement) {
+      e.preventDefault();
+    }
+  };
+  document.addEventListener("keydown", handler);
+  return () => document.removeEventListener("keydown", handler);
+}, []);
+```
+
 ### Dropdown Keyboard Navigation
 
 ```typescript
@@ -154,10 +169,29 @@ const handleKeyDown = (e: React.KeyboardEvent) => {
     return;
   }
   switch (e.key) {
-    case "ArrowDown": e.preventDefault(); setFocusedIndex(i => (i + 1) % 7); break;
-    case "ArrowUp":   e.preventDefault(); setFocusedIndex(i => (i - 1 + 7) % 7); break;
-    case "Enter":     e.preventDefault(); onSelect(palettes[focusedIndex].id); setIsOpen(false); break;
+    case "ArrowDown": e.preventDefault(); setFocusedIndex(i => (i + 1) % 6); break;
+    case "ArrowUp":   e.preventDefault(); setFocusedIndex(i => (i - 1 + 6) % 6); break;
+    case "Enter":     e.preventDefault(); onSelect(palettes[focusedIndex].id); break; // stays open (FR-029)
   }
+};
+```
+
+### Dropdown Focus Preservation (click bug fix)
+
+The dropdown `<ul>` needs `onMouseDown preventDefault` to prevent focus from leaving the toggle button when clicking list items. Without this, the `onBlur` handler fires (with `relatedTarget = null` since `<li>` isn't focusable) and closes the dropdown before the `click` event reaches the `<li>`.
+
+```typescript
+<ul onMouseDown={(e) => e.preventDefault()} onPointerDown={(e) => e.stopPropagation()}>
+```
+
+### Mouse Click Syncs Focused Index
+
+When a palette item is mouse-clicked, `handleItemClick` updates both the selection (`onSelect`) AND the focused index (`setFocusedIndex`), ensuring the focused highlight moves to the clicked item instead of staying where arrow keys left it.
+
+```typescript
+const handleItemClick = (id: string, index: number) => {
+  onSelect(id);
+  setFocusedIndex(index);
 };
 ```
 
@@ -213,7 +247,7 @@ Test cases:
 - localStorage read error → console.error + default
 - localStorage write error → console.error + state still works
 - `setPalette` with unknown ID is no-op
-- `palettes` returns all 7 palettes
+- `palettes` returns all 6 palettes
 
 Coverage targets:
 - Statements: 100%

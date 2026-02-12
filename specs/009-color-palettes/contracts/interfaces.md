@@ -18,6 +18,8 @@ interface PaletteColors {
 interface ColorPalette {
   id: string;         // Kebab-case slug (e.g., "jade-garden")
   name: string;       // Display name (e.g., "Jade Garden")
+  lightName: string;  // Evocative variant name for light mode (e.g., "Bamboo Mist")
+  darkName: string;   // Evocative variant name for dark mode (e.g., "Firefly Dusk")
   light: PaletteColors;
   dark: PaletteColors;
 }
@@ -67,13 +69,16 @@ function PaletteSelector(props: PaletteSelectorProps): JSX.Element;
 **Behavior contract**:
 - Renders a toggle button with `Palette` icon (lucide-react)
 - Toggle button opens/closes dropdown on click or Enter (not Space)
-- Dropdown lists all palettes by name with 3 color swatches per item
+- Dropdown lists all palettes by common name with theme-specific variant name (smaller, dimmer, italic) and 3 color swatches per item
+- Variant name reflects current `theme` (e.g., "Lamplit Vellum" in light, "Midnight Study" in dark)
 - Swatches show colors for the current `theme` variant
 - Selected palette has a visual indicator (distinct from focused)
-- Keyboard: Up/Down arrows move focus (wrapping), Enter selects
-- Tab closes dropdown, focus moves to next title bar element
+- Mouse-clicking an item moves both selected AND focused indicators to that item
+- Keyboard: Up/Down arrows move focus (wrapping), Enter selects (dropdown stays open)
+- Selecting a palette (click or Enter) does NOT close the dropdown
+- Dropdown closes ONLY via: click outside, Tab away, or toggle button click
 - Click outside closes dropdown without changing palette
-- Returns focus to toggle button after selection or Escape
+- `onMouseDown preventDefault` on dropdown prevents blur-driven close on item click
 
 ## 4. ThemeToggle Component (refactored)
 
