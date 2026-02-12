@@ -15,6 +15,8 @@ Auto-generated from all feature plans. Last updated: 2026-02-08
 - Browser localStorage for Pinyin visibility preference (boolean) (006-pinyin-toggle)
 - TypeScript 5.5 (frontend), React 18.3 + Vitest (test runner), @testing-library/react (renderHook, act, waitFor), @tauri-apps/api 2.0 (window APIs to be mocked) (007-hook-tests)
 - N/A (test-only feature, no data persistence changes) (007-hook-tests)
+- TypeScript 5.5 (frontend), Rust stable (Tauri backend — no changes) + React 18.3, Tailwind CSS 3.4, lucide-react 0.563.0, @tauri-apps/api 2.0 (008-text-scaling)
+- Browser localStorage (key: `"textZoomLevel"`, value: string integer) (008-text-scaling)
 
 - Rust (stable, latest) + TypeScript 5.x + Tauri 2, React 18+, Vite 5+, Tailwind CSS 3+, (001-dev-build-pipeline)
 
@@ -34,9 +36,9 @@ cargo test; cargo clippy
 Rust (stable, latest) + TypeScript 5.x: Follow standard conventions
 
 ## Recent Changes
+- 008-text-scaling: Added TypeScript 5.5 (frontend), Rust stable (Tauri backend — no changes) + React 18.3, Tailwind CSS 3.4, lucide-react 0.563.0, @tauri-apps/api 2.0
 - 007-hook-tests: Added TypeScript 5.5 (frontend), React 18.3 + Vitest (test runner), @testing-library/react (renderHook, act, waitFor), @tauri-apps/api 2.0 (window APIs to be mocked)
 - 006-pinyin-toggle: Added TypeScript 5.5 (frontend), Rust stable (Tauri backend - no changes) + React 18.3, Tailwind CSS 3.4, lucide-react 0.563, @tauri-apps/api 2.0
-- 005-frameless-window: Added TypeScript 5.x (frontend), Rust stable (Tauri backend) + React 18, Tauri 2, Tailwind CSS 3.x, lucide-react (icons - to be added)
 
 
 <!-- MANUAL ADDITIONS START -->
