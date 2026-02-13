@@ -1,5 +1,7 @@
 import { useMemo, useRef, useEffect, useCallback } from "react";
 import type { Text } from "../types/domain";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { RubyWord } from "./RubyWord";
 import { WordContextMenu } from "./WordContextMenu";
 import { useWordNavigation } from "../hooks/useWordNavigation";
@@ -14,6 +16,7 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100 }: TextDi
   const fontSize = `${1.5 * zoomLevel / 100}rem`;
   const containerRef = useRef<HTMLDivElement>(null);
   const wordRefs = useRef<Map<number, HTMLElement>>(new Map());
+  const trackedIndexRef = useRef(0);
 
   // Build a mapping from segment index to word-only index
   const wordIndexMap = useMemo(() => {
@@ -30,11 +33,42 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100 }: TextDi
 
   const wordCount = wordIndexMap.size;
 
+  const handleMenuAction = useCallback((entryIndex: number) => {
+    const currentTrackedIndex = trackedIndexRef.current;
+    let characters = "";
+    for (const [segIndex, wIndex] of wordIndexMap) {
+      if (wIndex === currentTrackedIndex) {
+        const segment = text.segments[segIndex];
+        if (segment.type === "word") characters = segment.word.characters;
+        break;
+      }
+    }
+    if (!characters) return;
+    if (entryIndex === 0) {
+      const url = `https://dict.revised.moe.edu.tw/search.jsp?md=1&word=${encodeURIComponent(characters)}&qMd=0&qCol=1&sound=1#radio_sound_1`;
+      openUrl(url);
+    } else if (entryIndex === 1) {
+      const url = `https://translate.google.com/?sl=zh-TW&tl=en&text=${encodeURIComponent(characters)}`;
+      openUrl(url);
+    } else if (entryIndex === 2) {
+      writeText(characters);
+    }
+  }, [wordIndexMap, text.segments]);
+
   const {
     trackedIndex, isFocused, menuOpen, menuFocusedIndex,
     handleFocus, handleBlur, handleWordHover, handleKeyDown,
     openMenuForWord, closeMenu, handleMenuEntryHover,
-  } = useWordNavigation({ wordCount });
+  } = useWordNavigation({ wordCount, onMenuAction: handleMenuAction });
+
+  // Keep ref in sync with hook state
+  trackedIndexRef.current = trackedIndex;
+
+  // Wrapper for mouse clicks: action + close menu (keyboard Enter already closes via hook)
+  const handleMenuClick = useCallback((entryIndex: number) => {
+    handleMenuAction(entryIndex);
+    closeMenu();
+  }, [handleMenuAction, closeMenu]);
 
   // Click-outside handler for context menu
   useEffect(() => {
@@ -118,6 +152,7 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100 }: TextDi
           focusedIndex={menuFocusedIndex}
           position={getMenuPosition()}
           onEntryHover={handleMenuEntryHover}
+          onAction={handleMenuClick}
         />
       )}
     </div>
