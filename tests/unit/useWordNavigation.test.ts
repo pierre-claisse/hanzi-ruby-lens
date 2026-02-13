@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useWordNavigation } from "../../src/hooks/useWordNavigation";
 
@@ -216,8 +216,9 @@ describe("useWordNavigation", () => {
     const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
 
     act(() => { result.current.openMenuForWord(0); });
-    act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowDown")); });
-    act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowDown")); });
+    act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowDown")); }); // 0 → 1
+    act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowDown")); }); // 1 → 2
+    act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowDown")); }); // 2 → 0 (wrap)
 
     expect(result.current.menuFocusedIndex).toBe(0);
   });
@@ -238,18 +239,39 @@ describe("useWordNavigation", () => {
     act(() => { result.current.openMenuForWord(0); });
     act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowUp")); });
 
-    expect(result.current.menuFocusedIndex).toBe(1);
+    expect(result.current.menuFocusedIndex).toBe(2); // wraps to last entry (3 entries: 0,1,2)
   });
 
-  // --- Menu mode: Enter no-op ---
+  // --- Menu mode: Enter triggers action and closes menu ---
 
-  it("does nothing on Enter in menu mode (menu stays open)", () => {
+  it("calls onMenuAction with menuFocusedIndex on Enter in menu mode", () => {
+    const onMenuAction = vi.fn();
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, onMenuAction }));
+
+    act(() => { result.current.openMenuForWord(0); });
+    act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowDown")); }); // focus index 1
+    act(() => { result.current.handleKeyDown(makeKeyEvent("Enter")); });
+
+    expect(onMenuAction).toHaveBeenCalledWith(1);
+  });
+
+  it("closes menu after Enter in menu mode", () => {
+    const onMenuAction = vi.fn();
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, onMenuAction }));
+
+    act(() => { result.current.openMenuForWord(0); });
+    act(() => { result.current.handleKeyDown(makeKeyEvent("Enter")); });
+
+    expect(result.current.menuOpen).toBe(false);
+  });
+
+  it("closes menu on Enter in menu mode without onMenuAction", () => {
     const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
 
     act(() => { result.current.openMenuForWord(0); });
     act(() => { result.current.handleKeyDown(makeKeyEvent("Enter")); });
 
-    expect(result.current.menuOpen).toBe(true);
+    expect(result.current.menuOpen).toBe(false);
   });
 
   // --- Menu mode: Escape no-op ---

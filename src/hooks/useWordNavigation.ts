@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 
 interface UseWordNavigationProps {
   wordCount: number;
+  onMenuAction?: (index: number) => void;
 }
 
 interface UseWordNavigationReturn {
@@ -18,9 +19,9 @@ interface UseWordNavigationReturn {
   handleMenuEntryHover: (index: number) => void;
 }
 
-const MENU_ENTRY_COUNT = 2;
+const MENU_ENTRY_COUNT = 3;
 
-export function useWordNavigation({ wordCount }: UseWordNavigationProps): UseWordNavigationReturn {
+export function useWordNavigation({ wordCount, onMenuAction }: UseWordNavigationProps): UseWordNavigationReturn {
   const [trackedIndex, setTrackedIndex] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -65,6 +66,8 @@ export function useWordNavigation({ wordCount }: UseWordNavigationProps): UseWor
           break;
         case "Enter":
           e.preventDefault();
+          onMenuAction?.(menuFocusedIndex);
+          closeMenu();
           break;
         case "Escape":
           // FR-016: Escape does nothing
@@ -88,7 +91,7 @@ export function useWordNavigation({ wordCount }: UseWordNavigationProps): UseWor
         setMenuFocusedIndex(0);
         break;
     }
-  }, [menuOpen, wordCount, closeMenu]);
+  }, [menuOpen, wordCount, menuFocusedIndex, closeMenu, onMenuAction]);
 
   const handleFocus = useCallback(() => {
     setIsFocused(true);
