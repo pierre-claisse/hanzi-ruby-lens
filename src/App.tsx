@@ -39,6 +39,11 @@ function App() {
 
   return (
     <>
+      <div className="bg-surface text-content min-h-screen px-6 pt-24 pb-12">
+        <div className="max-w-2xl mx-auto">
+          <TextDisplay text={sampleText} showPinyin={pinyinVisible} zoomLevel={zoomLevel} />
+        </div>
+      </div>
       <TitleBar
         pinyinVisible={pinyinVisible}
         onPinyinToggle={setPinyinVisible}
@@ -53,11 +58,6 @@ function App() {
         theme={theme}
         onThemeToggle={toggleTheme}
       />
-      <div className="bg-surface text-content min-h-screen px-6 pt-24 pb-12">
-        <div className="max-w-2xl mx-auto">
-          <TextDisplay text={sampleText} showPinyin={pinyinVisible} zoomLevel={zoomLevel} />
-        </div>
-      </div>
     </>
   );
 }
