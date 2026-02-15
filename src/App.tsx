@@ -1,13 +1,14 @@
 import { useEffect } from "react";
 import { TextDisplay } from "./components/TextDisplay";
 import { TitleBar } from "./components/TitleBar";
-import { sampleText } from "./data/sample-text";
 import { usePinyinVisibility } from "./hooks/usePinyinVisibility";
 import { useTextZoom } from "./hooks/useTextZoom";
 import { useTheme } from "./hooks/useTheme";
 import { useColorPalette } from "./hooks/useColorPalette";
+import { useTextLoader } from "./hooks/useTextLoader";
 
 function App() {
+  const { text } = useTextLoader();
   const [pinyinVisible, setPinyinVisible] = usePinyinVisibility();
   const { zoomLevel, zoomIn, zoomOut, isMinZoom, isMaxZoom } = useTextZoom();
   const [theme, setTheme] = useTheme();
@@ -41,7 +42,7 @@ function App() {
     <>
       <div className="bg-surface text-content min-h-screen px-6 pt-24 pb-12">
         <div className="max-w-2xl mx-auto">
-          <TextDisplay text={sampleText} showPinyin={pinyinVisible} zoomLevel={zoomLevel} />
+          <TextDisplay text={text} showPinyin={pinyinVisible} zoomLevel={zoomLevel} />
         </div>
       </div>
       <TitleBar

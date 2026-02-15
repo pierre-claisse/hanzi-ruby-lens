@@ -12,6 +12,11 @@ vi.mock("@tauri-apps/api/window", () => ({
   }),
 }));
 
+// Mock Tauri core invoke — return null (first launch fallback to sampleText)
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: vi.fn().mockResolvedValue(null),
+}));
+
 describe("App", () => {
   it("renders TextDisplay with sample data containing ruby elements", () => {
     const { container } = render(<App />);
