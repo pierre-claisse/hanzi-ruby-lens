@@ -23,7 +23,7 @@ export const RubyWord = forwardRef<HTMLElement, RubyWordProps>(
         onMouseEnter={onMouseEnter}
         onContextMenu={onContextMenu}
       >
-        {word.characters}
+        <span>{word.characters}</span>
         <rp>(</rp>
         <rt className={`text-accent transition-opacity duration-200 ease-in-out ${showPinyin ? 'opacity-100' : 'opacity-0'}`}>
           {word.pinyin}

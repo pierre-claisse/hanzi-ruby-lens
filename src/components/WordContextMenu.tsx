@@ -20,7 +20,7 @@ export function WordContextMenu({ focusedIndex, position, onEntryHover, onAction
       className="absolute z-50 w-48 rounded-lg border border-content/20 bg-surface shadow-lg py-1"
       style={{ top: position.top, left: position.left }}
       onPointerDown={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.preventDefault()}
+      onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
     >
       {MENU_ENTRIES.map(({ label, icon: Icon }, index) => (
         <div

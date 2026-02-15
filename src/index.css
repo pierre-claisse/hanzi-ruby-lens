@@ -18,13 +18,12 @@
     @apply font-sans antialiased bg-surface text-content transition-colors;
   }
 
+  /* Native ruby rendering — wrap base characters in <span> so Chromium
+     treats them as a single ruby base unit (prevents annotation distribution
+     across individual CJK characters). */
   rt {
     color: rgb(var(--color-accent));
-    ruby-align: center;
-  }
-
-  ruby {
-    ruby-position: over;
+    font-size: 0.5em;
     white-space: nowrap;
   }
 }
@@ -94,6 +93,25 @@
   --color-background: 20 20 20;
   --color-text: 217 217 214;
   --color-accent: 153 153 153;
+}
+
+/* Themed scrollbar — uses palette CSS custom properties */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(var(--color-background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-text) / 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--color-text) / 0.35);
 }
 
 /* Prevent text selection in drag region */

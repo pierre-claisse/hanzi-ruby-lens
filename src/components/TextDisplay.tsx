@@ -1,5 +1,5 @@
 import { useMemo, useRef, useEffect, useCallback } from "react";
-import type { Text } from "../types/domain";
+import type { Text, TextSegment } from "../types/domain";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 import { RubyWord } from "./RubyWord";
@@ -10,6 +10,42 @@ interface TextDisplayProps {
   text: Text;
   showPinyin?: boolean;
   zoomLevel?: number;
+}
+
+interface Block {
+  segmentIndices: number[];
+  isHeading: boolean;
+}
+
+function buildBlocks(segments: TextSegment[]): Block[] {
+  const blocks: Block[] = [];
+  let currentIndices: number[] = [];
+
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    if (seg.type === "plain" && seg.text.includes("\n\n")) {
+      if (currentIndices.length > 0) {
+        const charCount = currentIndices.reduce((sum, idx) => {
+          const s = segments[idx];
+          return sum + (s.type === "word" ? s.word.characters.length : s.text.length);
+        }, 0);
+        blocks.push({ segmentIndices: currentIndices, isHeading: charCount <= 15 });
+      }
+      currentIndices = [];
+    } else {
+      currentIndices.push(i);
+    }
+  }
+
+  if (currentIndices.length > 0) {
+    const charCount = currentIndices.reduce((sum, idx) => {
+      const s = segments[idx];
+      return sum + (s.type === "word" ? s.word.characters.length : s.text.length);
+    }, 0);
+    blocks.push({ segmentIndices: currentIndices, isHeading: charCount <= 15 });
+  }
+
+  return blocks;
 }
 
 export function TextDisplay({ text, showPinyin = true, zoomLevel = 100 }: TextDisplayProps) {
@@ -32,6 +68,9 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100 }: TextDi
   }, [text.segments]);
 
   const wordCount = wordIndexMap.size;
+
+  // Split segments into paragraph blocks; detect headings by character count
+  const blocks = useMemo(() => buildBlocks(text.segments), [text.segments]);
 
   const handleMenuAction = useCallback((entryIndex: number) => {
     const currentTrackedIndex = trackedIndexRef.current;
@@ -70,13 +109,12 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100 }: TextDi
     closeMenu();
   }, [handleMenuAction, closeMenu]);
 
-  // Click-outside handler for context menu
+  // Click-outside handler: any mousedown not on the menu closes it
+  // (WordContextMenu stops mouseDown propagation, so menu clicks don't reach here)
   useEffect(() => {
     if (!menuOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        closeMenu();
-      }
+    const handler = () => {
+      closeMenu();
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -120,33 +158,45 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100 }: TextDi
   return (
     <div
       ref={containerRef}
-      className="font-hanzi leading-[2.5] whitespace-pre-line select-none cursor-default outline-none relative"
+      className="font-hanzi leading-[2.5] select-none cursor-default outline-none relative"
       style={{ fontSize }}
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onFocus={handleFocus}
       onBlur={handleContainerBlur}
     >
-      {text.segments.map((segment, index) => {
-        if (segment.type === "word") {
-          const wIndex = wordIndexMap.get(index)!;
-          return (
-            <RubyWord
-              key={index}
-              word={segment.word}
-              showPinyin={showPinyin}
-              isHighlighted={isFocused ? wIndex === trackedIndex : undefined}
-              onMouseEnter={() => handleWordHover(wIndex)}
-              onContextMenu={(e) => handleContextMenu(e, wIndex)}
-              ref={(el: HTMLElement | null) => {
-                if (el) wordRefs.current.set(wIndex, el);
-                else wordRefs.current.delete(wIndex);
-              }}
-            />
-          );
-        }
-        return <span key={index}>{segment.text}</span>;
-      })}
+      {blocks.map((block, blockIdx) => (
+        <div
+          key={blockIdx}
+          className={
+            block.isHeading
+              ? "text-[1.4em] font-bold text-center mb-4"
+              : "text-justify whitespace-pre-line mb-6"
+          }
+        >
+          {block.segmentIndices.map((globalIdx) => {
+            const segment = text.segments[globalIdx];
+            if (segment.type === "word") {
+              const wIndex = wordIndexMap.get(globalIdx)!;
+              return (
+                <RubyWord
+                  key={globalIdx}
+                  word={segment.word}
+                  showPinyin={showPinyin}
+                  isHighlighted={isFocused ? wIndex === trackedIndex : undefined}
+                  onMouseEnter={() => handleWordHover(wIndex)}
+                  onContextMenu={(e) => handleContextMenu(e, wIndex)}
+                  ref={(el: HTMLElement | null) => {
+                    if (el) wordRefs.current.set(wIndex, el);
+                    else wordRefs.current.delete(wIndex);
+                  }}
+                />
+              );
+            }
+            return <span key={globalIdx}>{segment.text}</span>;
+          })}
+        </div>
+      ))}
       {menuOpen && isFocused && (
         <WordContextMenu
           focusedIndex={menuFocusedIndex}
