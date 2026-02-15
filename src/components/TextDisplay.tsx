@@ -120,7 +120,7 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100 }: TextDi
   return (
     <div
       ref={containerRef}
-      className="font-hanzi leading-[2.5] select-none cursor-default outline-none relative"
+      className="font-hanzi leading-[2.5] whitespace-pre-line select-none cursor-default outline-none relative"
       style={{ fontSize }}
       tabIndex={0}
       onKeyDown={handleKeyDown}
