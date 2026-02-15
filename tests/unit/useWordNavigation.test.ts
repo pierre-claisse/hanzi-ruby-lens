@@ -355,9 +355,9 @@ describe("useWordNavigation", () => {
     expect(result.current.menuFocusedIndex).toBe(1);
   });
 
-  // --- Menu mode: mouse hover closes menu (FR-019) ---
+  // --- Menu mode: mouse hover suppressed while menu open (FR-019 / 014-ux-bugfixes) ---
 
-  it("closes menu when mouse hovers a different word", () => {
+  it("keeps menu open when mouse hovers a different word", () => {
     const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
 
     act(() => { result.current.openMenuForWord(1); });
@@ -365,8 +365,8 @@ describe("useWordNavigation", () => {
 
     act(() => { result.current.handleWordHover(3); });
 
-    expect(result.current.menuOpen).toBe(false);
-    expect(result.current.trackedIndex).toBe(3);
+    expect(result.current.menuOpen).toBe(true);
+    expect(result.current.trackedIndex).toBe(1);
   });
 
   it("keeps menu open when mouse hovers the same word", () => {

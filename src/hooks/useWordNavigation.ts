@@ -107,11 +107,9 @@ export function useWordNavigation({ wordCount, onMenuAction }: UseWordNavigation
   }, []);
 
   const handleWordHover = useCallback((index: number) => {
-    if (menuOpen && index !== trackedIndex) {
-      closeMenu();
-    }
+    if (menuOpen) return;
     setTrackedIndex(index);
-  }, [menuOpen, trackedIndex, closeMenu]);
+  }, [menuOpen]);
 
   return {
     trackedIndex, isFocused, menuOpen, menuFocusedIndex,

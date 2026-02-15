@@ -40,8 +40,8 @@ function App() {
 
   return (
     <>
-      <div className="bg-surface text-content min-h-screen px-6 pt-24 pb-12">
-        <div className="max-w-2xl mx-auto">
+      <div className="bg-surface text-content min-h-screen px-8 pt-24 pb-12">
+        <div className="max-w-5xl mx-auto">
           <TextDisplay text={text} showPinyin={pinyinVisible} zoomLevel={zoomLevel} />
         </div>
       </div>

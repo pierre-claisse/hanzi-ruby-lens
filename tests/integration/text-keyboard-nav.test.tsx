@@ -342,7 +342,7 @@ describe("Text Keyboard Navigation Integration", () => {
     expect(items[0].className).not.toContain("bg-content/10");
   });
 
-  it("mouse hover on different word closes menu (FR-019)", () => {
+  it("mouse hover on different word keeps menu open (014-ux-bugfixes)", () => {
     const { container } = render(<TextDisplay text={testText} />);
     const textArea = container.firstElementChild as HTMLElement;
 
@@ -355,8 +355,8 @@ describe("Text Keyboard Navigation Integration", () => {
     const rubies = getRubyElements(container);
     fireEvent.mouseEnter(rubies[1]); // hover second word
 
-    expect(container.querySelector("[role='menu']")).not.toBeInTheDocument();
-    expect(hasHighlight(rubies[1])).toBe(true);
+    expect(container.querySelector("[role='menu']")).toBeInTheDocument();
+    expect(hasHighlight(rubies[0])).toBe(true);
   });
 
   it("mouse hover on same word keeps menu open", () => {
