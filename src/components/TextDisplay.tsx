@@ -12,39 +12,61 @@ interface TextDisplayProps {
   zoomLevel?: number;
 }
 
+type BlockItem =
+  | { kind: "word"; segmentIndex: number }
+  | { kind: "text"; text: string };
+
 interface Block {
-  segmentIndices: number[];
+  items: BlockItem[];
   isHeading: boolean;
+}
+
+function blockCharCount(items: BlockItem[], segments: TextSegment[]): number {
+  return items.reduce((sum, item) => {
+    if (item.kind === "word") {
+      const seg = segments[item.segmentIndex];
+      return sum + (seg.type === "word" ? seg.word.characters.length : 0);
+    }
+    return sum + item.text.length;
+  }, 0);
 }
 
 function buildBlocks(segments: TextSegment[]): Block[] {
   const blocks: Block[] = [];
-  let currentIndices: number[] = [];
+  let current: BlockItem[] = [];
+
+  const flush = () => {
+    if (current.length > 0) {
+      blocks.push({ items: current, isHeading: blockCharCount(current, segments) <= 15 });
+      current = [];
+    }
+  };
 
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i];
     if (seg.type === "plain" && seg.text.includes("\n\n")) {
-      if (currentIndices.length > 0) {
-        const charCount = currentIndices.reduce((sum, idx) => {
-          const s = segments[idx];
-          return sum + (s.type === "word" ? s.word.characters.length : s.text.length);
-        }, 0);
-        blocks.push({ segmentIndices: currentIndices, isHeading: charCount <= 15 });
+      const parts = seg.text.split(/\n\n+/);
+      if (parts[0].trim()) {
+        current.push({ kind: "text", text: parts[0].trim() });
       }
-      currentIndices = [];
+      flush();
+      for (let j = 1; j < parts.length - 1; j++) {
+        if (parts[j].trim()) {
+          current.push({ kind: "text", text: parts[j].trim() });
+          flush();
+        }
+      }
+      if (parts.length > 1 && parts[parts.length - 1].trim()) {
+        current.push({ kind: "text", text: parts[parts.length - 1].trim() });
+      }
+    } else if (seg.type === "word") {
+      current.push({ kind: "word", segmentIndex: i });
     } else {
-      currentIndices.push(i);
+      current.push({ kind: "text", text: seg.text });
     }
   }
 
-  if (currentIndices.length > 0) {
-    const charCount = currentIndices.reduce((sum, idx) => {
-      const s = segments[idx];
-      return sum + (s.type === "word" ? s.word.characters.length : s.text.length);
-    }, 0);
-    blocks.push({ segmentIndices: currentIndices, isHeading: charCount <= 15 });
-  }
-
+  flush();
   return blocks;
 }
 
@@ -174,14 +196,15 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100 }: TextDi
               : "text-justify whitespace-pre-line mb-6"
           }
         >
-          {block.segmentIndices.map((globalIdx) => {
-            const segment = text.segments[globalIdx];
-            if (segment.type === "word") {
-              const wIndex = wordIndexMap.get(globalIdx)!;
+          {block.items.map((item, itemIdx) => {
+            if (item.kind === "word") {
+              const seg = text.segments[item.segmentIndex];
+              if (seg.type !== "word") return null;
+              const wIndex = wordIndexMap.get(item.segmentIndex)!;
               return (
                 <RubyWord
-                  key={globalIdx}
-                  word={segment.word}
+                  key={item.segmentIndex}
+                  word={seg.word}
                   showPinyin={showPinyin}
                   isHighlighted={isFocused ? wIndex === trackedIndex : undefined}
                   onMouseEnter={() => handleWordHover(wIndex)}
@@ -193,7 +216,7 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100 }: TextDi
                 />
               );
             }
-            return <span key={globalIdx}>{segment.text}</span>;
+            return <span key={`t-${blockIdx}-${itemIdx}`}>{item.text}</span>;
           })}
         </div>
       ))}
