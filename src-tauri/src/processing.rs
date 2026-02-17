@@ -25,20 +25,33 @@ pub fn build_prompt(raw_input: &str) -> String {
 }
 
 pub fn parse_claude_response(stdout: &str) -> Result<Vec<TextSegment>, AppError> {
-    let envelope: serde_json::Value = serde_json::from_str(stdout)
-        .map_err(|e| AppError::Processing(format!("Failed to parse CLI response: {e}")))?;
+    let envelope: serde_json::Value = serde_json::from_str(stdout).map_err(|e| {
+        let preview: String = stdout.chars().take(300).collect();
+        AppError::Processing(format!(
+            "Failed to parse CLI response: {e}\nStdout preview ({} chars): {preview}",
+            stdout.len()
+        ))
+    })?;
 
     let result = envelope
         .get("result")
         .and_then(|v| v.as_str())
         .ok_or_else(|| {
-            AppError::Processing("CLI response missing result field".to_string())
+            let keys: Vec<&str> = envelope.as_object().map_or(vec![], |o| o.keys().map(|k| k.as_str()).collect());
+            AppError::Processing(format!(
+                "CLI response missing result field. Envelope keys: {keys:?}"
+            ))
         })?;
 
     let json_str = strip_code_fences(result);
 
-    let segments: Vec<TextSegment> = serde_json::from_str(&json_str)
-        .map_err(|e| AppError::Processing(format!("Failed to parse segments: {e}")))?;
+    let segments: Vec<TextSegment> = serde_json::from_str(&json_str).map_err(|e| {
+        let preview: String = json_str.chars().take(300).collect();
+        AppError::Processing(format!(
+            "Failed to parse segments: {e}\nResponse preview ({} chars): {preview}",
+            json_str.len()
+        ))
+    })?;
 
     Ok(segments)
 }

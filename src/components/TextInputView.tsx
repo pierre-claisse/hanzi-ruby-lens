@@ -6,6 +6,8 @@ interface TextInputViewProps {
   onCancel: () => void;
 }
 
+const MAX_LENGTH = 1500;
+
 export function TextInputView({ initialValue, onSubmit, onCancel }: TextInputViewProps) {
   const [value, setValue] = useState(initialValue);
   const [error, setError] = useState<string | null>(null);
@@ -30,9 +32,13 @@ export function TextInputView({ initialValue, onSubmit, onCancel }: TextInputVie
         placeholder="在此輸入或貼上中文..."
         value={value}
         onChange={(e) => setValue(e.target.value)}
+        maxLength={MAX_LENGTH}
         disabled={isSaving}
         autoFocus
       />
+      <div className="text-content/40 text-sm text-right px-1">
+        {value.length}/{MAX_LENGTH}
+      </div>
       {error && (
         <div role="alert" className="text-red-500 text-sm px-1">
           {error}
@@ -41,7 +47,7 @@ export function TextInputView({ initialValue, onSubmit, onCancel }: TextInputVie
       <div className="flex justify-end gap-3">
         <button
           type="button"
-          className="px-5 py-2 text-content/60 hover:text-content transition-colors rounded-lg"
+          className="px-5 py-2 text-content/60 hover:text-content transition-colors rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
           onClick={onCancel}
           disabled={isSaving}
         >
@@ -49,7 +55,7 @@ export function TextInputView({ initialValue, onSubmit, onCancel }: TextInputVie
         </button>
         <button
           type="button"
-          className="px-5 py-2 bg-accent text-white rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="px-5 py-2 bg-accent text-white rounded-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
           onClick={handleSubmit}
           disabled={isSaving}
         >
