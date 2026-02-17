@@ -8,6 +8,6 @@ export type TextSegment =
   | { type: "plain"; text: string };
 
 export interface Text {
-  rawInput?: string;
+  rawInput: string;
   segments: TextSegment[];
 }

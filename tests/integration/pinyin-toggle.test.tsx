@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import App from "../../src/App";
 
 // Mock Tauri window API
@@ -9,6 +9,17 @@ vi.mock("@tauri-apps/api/window", () => ({
     isFullscreen: vi.fn().mockResolvedValue(false),
     setResizable: vi.fn().mockResolvedValue(undefined),
     close: vi.fn().mockResolvedValue(undefined),
+  }),
+}));
+
+// Mock Tauri core invoke — return text with segments so reading view renders
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: vi.fn().mockResolvedValue({
+    rawInput: "你好世界",
+    segments: [
+      { type: "word", word: { characters: "你好", pinyin: "nǐhǎo" } },
+      { type: "word", word: { characters: "世界", pinyin: "shìjiè" } },
+    ],
   }),
 }));
 
@@ -38,6 +49,11 @@ describe("Pinyin Toggle Integration", () => {
   // T016: End-to-end toggle flow (click → hide → click → show)
   it("toggles Pinyin visibility end-to-end", async () => {
     const { container } = render(<App />);
+
+    // Wait for text to load (async)
+    await waitFor(() => {
+      expect(container.querySelectorAll("rt").length).toBeGreaterThan(0);
+    });
 
     // Find the Pinyin toggle button
     const pinyinToggle = screen.getByRole("button", { name: /hide pinyin/i });
@@ -82,6 +98,12 @@ describe("Pinyin Toggle Integration", () => {
   it("persists Pinyin visibility preference across app reloads", async () => {
     // First render: Default state (visible)
     let { container } = render(<App />);
+
+    // Wait for text to load
+    await waitFor(() => {
+      expect(container.querySelectorAll("rt").length).toBeGreaterThan(0);
+    });
+
     let pinyinToggle = screen.getByRole("button", { name: /hide pinyin/i });
 
     // Hide Pinyin
@@ -95,6 +117,12 @@ describe("Pinyin Toggle Integration", () => {
     // Simulate page reload: cleanup and re-render
     cleanup();
     ({ container } = render(<App />));
+
+    // Wait for text to load after reload
+    await waitFor(() => {
+      expect(container.querySelectorAll("rt").length).toBeGreaterThan(0);
+    });
+
     pinyinToggle = screen.getByRole("button", { name: /show pinyin/i });
 
     // Verify Pinyin remains hidden after reload
@@ -111,6 +139,12 @@ describe("Pinyin Toggle Integration", () => {
   // T018: Multiple rapid toggles work correctly (no UI flicker)
   it("handles rapid toggles without UI flicker", async () => {
     const { container } = render(<App />);
+
+    // Wait for text to load
+    await waitFor(() => {
+      expect(container.querySelectorAll("rt").length).toBeGreaterThan(0);
+    });
+
     const pinyinToggle = screen.getByRole("button", { name: /hide pinyin/i });
 
     // Perform 5 rapid clicks
@@ -137,8 +171,14 @@ describe("Pinyin Toggle Integration", () => {
     expect(rts.length).toBeGreaterThan(0);
   });
 
-  it("preserves Chinese characters in DOM during rapid toggles", () => {
+  it("preserves Chinese characters in DOM during rapid toggles", async () => {
     const { container } = render(<App />);
+
+    // Wait for text to load
+    await waitFor(() => {
+      expect(container.querySelectorAll("rt").length).toBeGreaterThan(0);
+    });
+
     const pinyinToggle = screen.getByRole("button", { name: /hide pinyin/i });
 
     // Get initial Chinese character count
