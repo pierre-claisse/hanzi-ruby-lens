@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import App from "./App";
 
 // Mock Tauri window API
@@ -12,36 +12,66 @@ vi.mock("@tauri-apps/api/window", () => ({
   }),
 }));
 
-// Mock Tauri core invoke — return null (first launch fallback to sampleText)
+// Mock Tauri core invoke
+const mockInvoke = vi.fn();
 vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn().mockResolvedValue(null),
+  invoke: (...args: unknown[]) => mockInvoke(...args),
 }));
 
 describe("App", () => {
-  it("renders TextDisplay with sample data containing ruby elements", () => {
-    const { container } = render(<App />);
-    const rubies = container.querySelectorAll("ruby");
-    expect(rubies.length).toBeGreaterThan(0);
+  beforeEach(() => {
+    mockInvoke.mockReset();
   });
 
-  // Updated to expect 7 buttons (Pinyin, ZoomIn, ZoomOut, Palette, Theme, Fullscreen, Close)
-  it("renders TitleBar with title and seven buttons", () => {
+  it("renders empty state when no text saved", async () => {
+    mockInvoke.mockResolvedValue(null);
+
     render(<App />);
 
-    // Check title
-    const title = screen.getByText("Hanzi Ruby Lens");
-    expect(title).toBeInTheDocument();
-
-    // Check buttons (Pinyin, ZoomIn, ZoomOut, Palette, Theme, Fullscreen, Close)
-    const buttons = screen.getAllByRole("button");
-    expect(buttons).toHaveLength(7);
-  });
-
-  it("renders ThemeToggle button inside TitleBar", () => {
-    render(<App />);
-    const themeToggleButton = screen.getByRole("button", {
-      name: /switch to (light|dark) mode/i,
+    await waitFor(() => {
+      expect(
+        screen.getByText(/paste chinese text to read with pinyin annotations/i),
+      ).toBeInTheDocument();
     });
-    expect(themeToggleButton).toBeInTheDocument();
+  });
+
+  it("renders TextDisplay with ruby elements when text has segments", async () => {
+    mockInvoke.mockResolvedValue({
+      rawInput: "你好世界",
+      segments: [
+        { type: "word", word: { characters: "你好", pinyin: "nǐhǎo" } },
+        { type: "word", word: { characters: "世界", pinyin: "shìjiè" } },
+      ],
+    });
+
+    const { container } = render(<App />);
+
+    await waitFor(() => {
+      const rubies = container.querySelectorAll("ruby");
+      expect(rubies.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("renders TitleBar with title", async () => {
+    mockInvoke.mockResolvedValue(null);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Hanzi Ruby Lens")).toBeInTheDocument();
+    });
+  });
+
+  it("renders ThemeToggle button inside TitleBar", async () => {
+    mockInvoke.mockResolvedValue(null);
+
+    render(<App />);
+
+    await waitFor(() => {
+      const themeToggleButton = screen.getByRole("button", {
+        name: /switch to (light|dark) mode/i,
+      });
+      expect(themeToggleButton).toBeInTheDocument();
+    });
   });
 });

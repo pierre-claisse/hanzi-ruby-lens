@@ -1,18 +1,23 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { TextDisplay } from "./components/TextDisplay";
 import { TitleBar } from "./components/TitleBar";
+import { EmptyState } from "./components/EmptyState";
+import { TextInputView } from "./components/TextInputView";
+import { SavedState } from "./components/SavedState";
 import { usePinyinVisibility } from "./hooks/usePinyinVisibility";
 import { useTextZoom } from "./hooks/useTextZoom";
 import { useTheme } from "./hooks/useTheme";
 import { useColorPalette } from "./hooks/useColorPalette";
 import { useTextLoader } from "./hooks/useTextLoader";
+import type { AppView } from "./hooks/useTextLoader";
 
 function App() {
-  const { text } = useTextLoader();
+  const { text, isLoading, appView, setView, saveText } = useTextLoader();
   const [pinyinVisible, setPinyinVisible] = usePinyinVisibility();
   const { zoomLevel, zoomIn, zoomOut, isMinZoom, isMaxZoom } = useTextZoom();
   const [theme, setTheme] = useTheme();
   const { paletteId, setPalette, palettes } = useColorPalette();
+  const previousViewRef = useRef<AppView>(appView);
 
   // Suppress Space key on all buttons — Enter is the only activation key (FR-028)
   useEffect(() => {
@@ -38,13 +43,71 @@ function App() {
     setTheme(theme === "dark" ? "light" : "dark");
   };
 
+  const handleEnterText = useCallback(() => {
+    previousViewRef.current = appView;
+    setView("input");
+  }, [appView, setView]);
+
+  const handleSubmit = useCallback(async (rawInput: string) => {
+    await saveText(rawInput);
+    if (rawInput === "") {
+      setView("empty");
+    } else {
+      setView("saved");
+    }
+  }, [saveText, setView]);
+
+  const handleCancel = useCallback(() => {
+    setView(previousViewRef.current);
+  }, [setView]);
+
+  const handleEdit = useCallback(() => {
+    previousViewRef.current = appView;
+    setView("input");
+  }, [appView, setView]);
+
+  const showEdit = appView === "reading" || appView === "saved";
+
+  const renderContent = () => {
+    if (isLoading) return null;
+
+    switch (appView) {
+      case "empty":
+        return (
+          <div className="bg-surface text-content min-h-screen pt-24 pb-12">
+            <EmptyState onEnterText={handleEnterText} />
+          </div>
+        );
+      case "input":
+        return (
+          <div className="bg-surface text-content min-h-screen pt-16 pb-4 flex flex-col">
+            <TextInputView
+              initialValue={text?.rawInput ?? ""}
+              onSubmit={handleSubmit}
+              onCancel={handleCancel}
+            />
+          </div>
+        );
+      case "saved":
+        return (
+          <div className="bg-surface text-content min-h-screen pt-24 pb-12">
+            <SavedState onEdit={handleEdit} />
+          </div>
+        );
+      case "reading":
+        return (
+          <div className="bg-surface text-content min-h-screen px-8 pt-24 pb-12">
+            <div className="max-w-5xl mx-auto">
+              <TextDisplay text={text!} showPinyin={pinyinVisible} zoomLevel={zoomLevel} />
+            </div>
+          </div>
+        );
+    }
+  };
+
   return (
     <>
-      <div className="bg-surface text-content min-h-screen px-8 pt-24 pb-12">
-        <div className="max-w-5xl mx-auto">
-          <TextDisplay text={text} showPinyin={pinyinVisible} zoomLevel={zoomLevel} />
-        </div>
-      </div>
+      {renderContent()}
       <TitleBar
         pinyinVisible={pinyinVisible}
         onPinyinToggle={setPinyinVisible}
@@ -58,6 +121,8 @@ function App() {
         onPaletteSelect={setPalette}
         theme={theme}
         onThemeToggle={toggleTheme}
+        onEdit={handleEdit}
+        showEdit={showEdit}
       />
     </>
   );

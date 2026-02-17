@@ -15,6 +15,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 const testText: Text = {
+  rawInput: "我，現在覺得",
   segments: [
     { type: "word", word: { characters: "我", pinyin: "wǒ" } },
     { type: "plain", text: "，" },

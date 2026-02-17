@@ -23,7 +23,7 @@ describe("Text Persistence Integration", () => {
     mockInvoke.mockReset();
   });
 
-  it("renders loaded text from database (not just sampleText)", async () => {
+  it("renders loaded text from database (reading view)", async () => {
     const persistedText = {
       rawInput: "測試持久化",
       segments: [
@@ -42,32 +42,28 @@ describe("Text Persistence Integration", () => {
     expect(screen.getByText("持久化")).toBeInTheDocument();
   });
 
-  it("falls back to sampleText when load returns null (first launch)", async () => {
+  it("shows empty state when load returns null (first launch)", async () => {
     mockInvoke.mockResolvedValue(null);
 
-    const { container } = render(<App />);
+    render(<App />);
 
-    // sampleText should render — it contains ruby elements with Chinese characters
     await waitFor(() => {
-      const rubies = container.querySelectorAll("ruby");
-      expect(rubies.length).toBeGreaterThan(0);
+      expect(
+        screen.getByText(/paste chinese text/i),
+      ).toBeInTheDocument();
     });
-
-    // Verify sampleText's known content is present (字母 appears multiple times)
-    const matches = screen.getAllByText("字母");
-    expect(matches.length).toBeGreaterThan(0);
   });
 
-  it("falls back to sampleText when load errors (corrupted DB)", async () => {
+  it("shows empty state when load errors (corrupted DB)", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     mockInvoke.mockRejectedValue("Database error: corrupted");
 
-    const { container } = render(<App />);
+    render(<App />);
 
-    // Should still render sampleText
     await waitFor(() => {
-      const rubies = container.querySelectorAll("ruby");
-      expect(rubies.length).toBeGreaterThan(0);
+      expect(
+        screen.getByText(/paste chinese text/i),
+      ).toBeInTheDocument();
     });
 
     consoleSpy.mockRestore();

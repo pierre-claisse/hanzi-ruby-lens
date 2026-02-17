@@ -1,3 +1,4 @@
+import { Pencil } from 'lucide-react';
 import { PinyinToggle } from './PinyinToggle';
 import { ZoomInButton } from './ZoomInButton';
 import { ZoomOutButton } from './ZoomOutButton';
@@ -20,9 +21,11 @@ interface TitleBarProps {
   onPaletteSelect: (id: string) => void;
   theme: "light" | "dark";
   onThemeToggle: () => void;
+  onEdit?: () => void;
+  showEdit?: boolean;
 }
 
-export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, onZoomOut, isMinZoom, isMaxZoom, palettes, selectedPaletteId, onPaletteSelect, theme, onThemeToggle }: TitleBarProps) {
+export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, onZoomOut, isMinZoom, isMaxZoom, palettes, selectedPaletteId, onPaletteSelect, theme, onThemeToggle, onEdit, showEdit }: TitleBarProps) {
   return (
     <header
       data-tauri-drag-region
@@ -41,6 +44,17 @@ export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, o
       </div>
 
       <div className="flex gap-1">
+        {showEdit && onEdit && (
+          <button
+            type="button"
+            className="w-8 h-8 flex items-center justify-center rounded text-content/60 hover:text-content hover:bg-content/10 transition-colors"
+            onClick={onEdit}
+            onPointerDown={(e) => e.stopPropagation()}
+            aria-label="Edit text"
+          >
+            <Pencil size={16} />
+          </button>
+        )}
         <PinyinToggle visible={pinyinVisible} onToggle={onPinyinToggle} />
         <ZoomInButton onClick={onZoomIn} disabled={isMaxZoom} />
         <ZoomOutButton onClick={onZoomOut} disabled={isMinZoom} />
