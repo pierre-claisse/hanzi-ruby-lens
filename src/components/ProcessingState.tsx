@@ -20,14 +20,14 @@ export function ProcessingState({
         <div className="flex gap-4">
           <button
             type="button"
-            className="px-5 py-2 text-content/60 hover:text-content border border-content/10 rounded-lg transition-colors"
+            className="px-5 py-2 text-content/60 hover:text-content border border-content/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
             onClick={onRetry}
           >
             Retry
           </button>
           <button
             type="button"
-            className="px-5 py-2 text-content/60 hover:text-content border border-content/10 rounded-lg transition-colors"
+            className="px-5 py-2 text-content/60 hover:text-content border border-content/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
             onClick={onEdit}
           >
             Edit
@@ -55,14 +55,14 @@ export function ProcessingState({
       <div className="flex gap-4">
         <button
           type="button"
-          className="px-5 py-2 text-content/60 hover:text-content border border-content/10 rounded-lg transition-colors"
+          className="px-5 py-2 text-content/60 hover:text-content border border-content/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
           onClick={onProcess}
         >
           Process
         </button>
         <button
           type="button"
-          className="px-5 py-2 text-content/60 hover:text-content border border-content/10 rounded-lg transition-colors"
+          className="px-5 py-2 text-content/60 hover:text-content border border-content/10 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
           onClick={onEdit}
         >
           Edit

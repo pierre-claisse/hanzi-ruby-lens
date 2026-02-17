@@ -10,7 +10,7 @@ export function EmptyState({ onEnterText }: EmptyStateProps) {
       </p>
       <button
         type="button"
-        className="px-6 py-3 bg-accent text-white rounded-lg text-base font-medium hover:opacity-90 transition-opacity"
+        className="px-6 py-3 bg-accent text-white rounded-lg text-base font-medium hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
         onClick={onEnterText}
       >
         Enter Text

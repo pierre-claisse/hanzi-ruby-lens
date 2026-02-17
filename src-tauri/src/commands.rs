@@ -96,7 +96,7 @@ pub async fn process_text(
     };
 
     // First attempt
-    let output = tokio::time::timeout(Duration::from_secs(120), run_cli())
+    let output = tokio::time::timeout(Duration::from_secs(600), run_cli())
         .await
         .map_err(|_| AppError::Processing("Processing timed out. Please try again.".to_string()))?
         .map_err(|e| {
@@ -110,17 +110,7 @@ pub async fn process_text(
             }
         })?;
 
-    // Retry once on transient API errors
-    let segments = match parse_output(output) {
-        Ok(segments) => segments,
-        Err(_first_err) => {
-            let output = tokio::time::timeout(Duration::from_secs(120), run_cli())
-                .await
-                .map_err(|_| AppError::Processing("Processing timed out. Please try again.".to_string()))?
-                .map_err(|e| AppError::Processing(format!("Processing failed: {e}")))?;
-            parse_output(output)?
-        }
-    };
+    let segments = parse_output(output)?;
 
     let text = Text {
         raw_input,
