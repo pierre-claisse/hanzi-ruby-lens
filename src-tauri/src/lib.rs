@@ -2,6 +2,7 @@ mod commands;
 mod database;
 mod domain;
 mod error;
+mod processing;
 mod state;
 
 use std::sync::Mutex;
@@ -19,6 +20,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::save_text,
             commands::load_text,
+            commands::process_text,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

@@ -47,12 +47,12 @@ export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, o
         {showEdit && onEdit && (
           <button
             type="button"
-            className="w-8 h-8 flex items-center justify-center rounded text-content/60 hover:text-content hover:bg-content/10 transition-colors"
+            className="p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer"
             onClick={onEdit}
             onPointerDown={(e) => e.stopPropagation()}
             aria-label="Edit text"
           >
-            <Pencil size={16} />
+            <Pencil className="w-5 h-5" aria-hidden="true" />
           </button>
         )}
         <PinyinToggle visible={pinyinVisible} onToggle={onPinyinToggle} />
