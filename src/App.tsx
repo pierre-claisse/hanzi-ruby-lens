@@ -3,7 +3,7 @@ import { TextDisplay } from "./components/TextDisplay";
 import { TitleBar } from "./components/TitleBar";
 import { EmptyState } from "./components/EmptyState";
 import { TextInputView } from "./components/TextInputView";
-import { SavedState } from "./components/SavedState";
+import { ProcessingState } from "./components/ProcessingState";
 import { usePinyinVisibility } from "./hooks/usePinyinVisibility";
 import { useTextZoom } from "./hooks/useTextZoom";
 import { useTheme } from "./hooks/useTheme";
@@ -12,7 +12,17 @@ import { useTextLoader } from "./hooks/useTextLoader";
 import type { AppView } from "./hooks/useTextLoader";
 
 function App() {
-  const { text, isLoading, appView, setView, saveText } = useTextLoader();
+  const {
+    text,
+    isLoading,
+    appView,
+    setView,
+    saveText,
+    processText,
+    isProcessing,
+    processingError,
+    retryProcessing,
+  } = useTextLoader();
   const [pinyinVisible, setPinyinVisible] = usePinyinVisibility();
   const { zoomLevel, zoomIn, zoomOut, isMinZoom, isMaxZoom } = useTextZoom();
   const [theme, setTheme] = useTheme();
@@ -53,9 +63,12 @@ function App() {
     if (rawInput === "") {
       setView("empty");
     } else {
-      setView("saved");
+      setView("processing");
+      processText(rawInput).catch(() => {
+        // Error is handled by processingError state in useTextLoader
+      });
     }
-  }, [saveText, setView]);
+  }, [saveText, setView, processText]);
 
   const handleCancel = useCallback(() => {
     setView(previousViewRef.current);
@@ -66,7 +79,7 @@ function App() {
     setView("input");
   }, [appView, setView]);
 
-  const showEdit = appView === "reading" || appView === "saved";
+  const showEdit = appView === "reading" || appView === "processing";
 
   const renderContent = () => {
     if (isLoading) return null;
@@ -80,7 +93,7 @@ function App() {
         );
       case "input":
         return (
-          <div className="bg-surface text-content min-h-screen pt-16 pb-4 flex flex-col">
+          <div className="bg-surface text-content h-screen pt-16 pb-4 flex flex-col">
             <TextInputView
               initialValue={text?.rawInput ?? ""}
               onSubmit={handleSubmit}
@@ -88,10 +101,16 @@ function App() {
             />
           </div>
         );
-      case "saved":
+      case "processing":
         return (
-          <div className="bg-surface text-content min-h-screen pt-24 pb-12">
-            <SavedState onEdit={handleEdit} />
+          <div className="bg-surface text-content h-screen pt-24 pb-12 flex flex-col">
+            <ProcessingState
+              isProcessing={isProcessing}
+              error={processingError}
+              onProcess={retryProcessing}
+              onRetry={retryProcessing}
+              onEdit={handleEdit}
+            />
           </div>
         );
       case "reading":

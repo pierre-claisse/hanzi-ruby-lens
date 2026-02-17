@@ -30,6 +30,8 @@ Auto-generated from all feature plans. Last updated: 2026-02-08
 - TypeScript 5.5 (frontend), Rust stable (Tauri backend — no Rust changes) + React 18.3, Tailwind CSS 3.4, Tauri 2 (014-ux-bugfixes)
 - N/A (no data changes) (014-ux-bugfixes)
 - SQLite via existing `save_text`/`load_text` Tauri commands (no schema changes) (015-text-input-ui)
+- Rust stable (backend, new command), TypeScript 5.5 (frontend) + Tauri 2, React 18.3, tokio (for async process spawning — already included by Tauri) (016-pinyin-segmentation)
+- SQLite via existing `save_text`/`load_text` commands (no schema changes) (016-pinyin-segmentation)
 
 - Rust (stable, latest) + TypeScript 5.x + Tauri 2, React 18+, Vite 5+, Tailwind CSS 3+, (001-dev-build-pipeline)
 
@@ -49,9 +51,9 @@ cargo test; cargo clippy
 Rust (stable, latest) + TypeScript 5.x: Follow standard conventions
 
 ## Recent Changes
+- 016-pinyin-segmentation: Added Rust stable (backend, new command), TypeScript 5.5 (frontend) + Tauri 2, React 18.3, tokio (for async process spawning — already included by Tauri)
+- 016-pinyin-segmentation: Added Rust stable (backend, new command), TypeScript 5.5 (frontend) + Tauri 2, React 18.3, tokio (for async process spawning — already included by Tauri)
 - 015-text-input-ui: Added TypeScript 5.5 (frontend), Rust stable (Tauri backend — no changes) + React 18.3, Tailwind CSS 3.4, lucide-react 0.563.0, @tauri-apps/api 2.0
-- 014-ux-bugfixes: Added TypeScript 5.5 (frontend), Rust stable (Tauri backend — no Rust changes) + React 18.3, Tailwind CSS 3.4, Tauri 2
-- 013-sqlite-foundation: Added Rust stable (backend), TypeScript 5.5 (frontend) + rusqlite 0.38 (bundled), thiserror 2, serde/serde_json (existing)
 
 
 <!-- MANUAL ADDITIONS START -->

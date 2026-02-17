@@ -93,9 +93,9 @@ describe("useTextLoader", () => {
     expect(result.current.appView).toBe("empty");
   });
 
-  it("derives 'saved' view when load returns text with empty segments", async () => {
-    const savedText: Text = { rawInput: "一些文字", segments: [] };
-    mockInvoke.mockResolvedValue(savedText);
+  it("derives 'processing' view when load returns text with empty segments", async () => {
+    const unprocessedText: Text = { rawInput: "一些文字", segments: [] };
+    mockInvoke.mockResolvedValue(unprocessedText);
 
     const { result } = renderHook(() => useTextLoader());
 
@@ -103,7 +103,20 @@ describe("useTextLoader", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.appView).toBe("saved");
+    expect(result.current.appView).toBe("processing");
+  });
+
+  it("derives 'empty' view when load returns text with empty rawInput and empty segments", async () => {
+    const emptyText: Text = { rawInput: "", segments: [] };
+    mockInvoke.mockResolvedValue(emptyText);
+
+    const { result } = renderHook(() => useTextLoader());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(result.current.appView).toBe("empty");
   });
 
   it("derives 'reading' view when load returns text with segments", async () => {
