@@ -1,4 +1,4 @@
-import { BookSearch, Languages, Copy } from "lucide-react";
+import { BookSearch, Languages, Copy, Pencil } from "lucide-react";
 
 interface WordContextMenuProps {
   focusedIndex: number;
@@ -10,6 +10,7 @@ interface WordContextMenuProps {
 const MENU_ENTRIES = [
   { label: "MOE Dictionary", icon: BookSearch },
   { label: "Google Translate", icon: Languages },
+  { label: "Edit Pinyin", icon: Pencil },
   { label: "Copy", icon: Copy },
 ];
 

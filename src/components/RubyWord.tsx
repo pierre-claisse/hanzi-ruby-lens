@@ -1,20 +1,44 @@
-import { forwardRef } from "react";
+import { forwardRef, useRef, useEffect } from "react";
 import type { Word } from "../types/domain";
 
 interface RubyWordProps {
   word: Word;
   showPinyin?: boolean;
   isHighlighted?: boolean;
+  isEditing?: boolean;
+  editValue?: string;
+  onEditChange?: (value: string) => void;
+  onEditConfirm?: () => void;
+  onEditCancel?: () => void;
   onMouseEnter?: () => void;
   onContextMenu?: (e: React.MouseEvent) => void;
 }
 
 export const RubyWord = forwardRef<HTMLElement, RubyWordProps>(
-  function RubyWord({ word, showPinyin = true, isHighlighted, onMouseEnter, onContextMenu }, ref) {
+  function RubyWord({ word, showPinyin = true, isHighlighted, isEditing, editValue, onEditChange, onEditConfirm, onEditCancel, onMouseEnter, onContextMenu }, ref) {
+    const inputRef = useRef<HTMLInputElement>(null);
     const inFocusMode = isHighlighted !== undefined;
     const highlightClass = inFocusMode
       ? (isHighlighted ? "bg-accent/24" : "")
       : "hover:bg-accent/24";
+
+    useEffect(() => {
+      if (isEditing && inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.select();
+      }
+    }, [isEditing]);
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      e.stopPropagation();
+      if (e.key === "Enter") {
+        e.preventDefault();
+        onEditConfirm?.();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        onEditCancel?.();
+      }
+    };
 
     return (
       <ruby
@@ -25,8 +49,21 @@ export const RubyWord = forwardRef<HTMLElement, RubyWordProps>(
       >
         <span>{word.characters}</span>
         <rp>(</rp>
-        <rt className={`text-accent transition-opacity duration-200 ease-in-out ${showPinyin ? 'opacity-100' : 'opacity-0'}`}>
-          {word.pinyin}
+        <rt className={`text-accent transition-opacity duration-200 ease-in-out ${showPinyin || isEditing ? 'opacity-100' : 'opacity-0'}`}>
+          {isEditing ? (
+            <input
+              ref={inputRef}
+              type="text"
+              value={editValue ?? ""}
+              onChange={(e) => onEditChange?.(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={() => onEditCancel?.()}
+              className="bg-surface border border-accent/50 rounded px-1 text-accent text-center outline-none"
+              style={{ fontSize: "inherit", width: `${Math.max((editValue?.length || 1) + 1, 3)}ch` }}
+            />
+          ) : (
+            word.pinyin
+          )}
         </rt>
         <rp>)</rp>
       </ruby>

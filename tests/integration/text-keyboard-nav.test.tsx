@@ -178,10 +178,11 @@ describe("Text Keyboard Navigation Integration", () => {
     expect(menu).toBeInTheDocument();
 
     const items = container.querySelectorAll("[role='menuitem']");
-    expect(items).toHaveLength(3);
+    expect(items).toHaveLength(4);
     expect(items[0]).toHaveTextContent("MOE Dictionary");
     expect(items[1]).toHaveTextContent("Google Translate");
-    expect(items[2]).toHaveTextContent("Copy");
+    expect(items[2]).toHaveTextContent("Edit Pinyin");
+    expect(items[3]).toHaveTextContent("Copy");
   });
 
   it("renders icons in menu entries", () => {
@@ -212,7 +213,7 @@ describe("Text Keyboard Navigation Integration", () => {
     expect(hasHighlight(rubies[1])).toBe(true);
   });
 
-  it("navigates menu entries with ArrowDown (wrapping over 3 entries)", () => {
+  it("navigates menu entries with ArrowDown (wrapping over 4 entries)", () => {
     const { container } = render(<TextDisplay text={testText} />);
     const textArea = container.firstElementChild as HTMLElement;
 
@@ -234,12 +235,17 @@ describe("Text Keyboard Navigation Integration", () => {
     expect(items[2].className).toContain("bg-content/10");
     expect(items[1].className).not.toContain("bg-content/10");
 
+    // ArrowDown → fourth entry
+    fireEvent.keyDown(textArea, { key: "ArrowDown" });
+    expect(items[3].className).toContain("bg-content/10");
+    expect(items[2].className).not.toContain("bg-content/10");
+
     // ArrowDown again → wraps to first
     fireEvent.keyDown(textArea, { key: "ArrowDown" });
     expect(items[0].className).toContain("bg-content/10");
   });
 
-  it("navigates menu entries with ArrowUp (wrapping over 3 entries)", () => {
+  it("navigates menu entries with ArrowUp (wrapping over 4 entries)", () => {
     const { container } = render(<TextDisplay text={testText} />);
     const textArea = container.firstElementChild as HTMLElement;
 
@@ -248,9 +254,9 @@ describe("Text Keyboard Navigation Integration", () => {
 
     const items = container.querySelectorAll("[role='menuitem']");
 
-    // ArrowUp from first → wraps to last (third entry)
+    // ArrowUp from first → wraps to last (fourth entry)
     fireEvent.keyDown(textArea, { key: "ArrowUp" });
-    expect(items[2].className).toContain("bg-content/10");
+    expect(items[3].className).toContain("bg-content/10");
   });
 
   it("Enter on MOE Dictionary triggers openUrl and closes menu", () => {
@@ -534,7 +540,7 @@ describe("Text Keyboard Navigation Integration", () => {
     fireEvent.keyDown(textArea, { key: "Enter" }); // open menu on first word ("我", pinyin: "wǒ")
 
     const items = container.querySelectorAll("[role='menuitem']");
-    fireEvent.click(items[2]); // click "Copy" (third entry)
+    fireEvent.click(items[3]); // click "Copy" (fourth entry)
 
     expect(writeText).toHaveBeenCalledWith("我");
   });
@@ -546,6 +552,7 @@ describe("Text Keyboard Navigation Integration", () => {
     fireEvent.focus(textArea);
     fireEvent.keyDown(textArea, { key: "Enter" }); // open menu
     fireEvent.keyDown(textArea, { key: "ArrowDown" }); // focus "Google Translate"
+    fireEvent.keyDown(textArea, { key: "ArrowDown" }); // focus "Edit Pinyin"
     fireEvent.keyDown(textArea, { key: "ArrowDown" }); // focus "Copy"
     fireEvent.keyDown(textArea, { key: "Enter" }); // activate "Copy"
 
@@ -560,6 +567,7 @@ describe("Text Keyboard Navigation Integration", () => {
     fireEvent.keyDown(textArea, { key: "ArrowRight" }); // navigate to "現在"
     fireEvent.keyDown(textArea, { key: "Enter" }); // open menu
     fireEvent.keyDown(textArea, { key: "ArrowDown" }); // "Google Translate"
+    fireEvent.keyDown(textArea, { key: "ArrowDown" }); // "Edit Pinyin"
     fireEvent.keyDown(textArea, { key: "ArrowDown" }); // "Copy"
     fireEvent.keyDown(textArea, { key: "Enter" }); // activate "Copy"
 
@@ -574,7 +582,7 @@ describe("Text Keyboard Navigation Integration", () => {
     fireEvent.keyDown(textArea, { key: "Enter" });
 
     const items = container.querySelectorAll("[role='menuitem']");
-    fireEvent.click(items[2]); // click "Copy"
+    fireEvent.click(items[3]); // click "Copy"
 
     expect(container.querySelector("[role='menu']")).not.toBeInTheDocument();
   });

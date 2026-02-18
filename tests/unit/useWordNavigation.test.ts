@@ -218,7 +218,8 @@ describe("useWordNavigation", () => {
     act(() => { result.current.openMenuForWord(0); });
     act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowDown")); }); // 0 → 1
     act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowDown")); }); // 1 → 2
-    act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowDown")); }); // 2 → 0 (wrap)
+    act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowDown")); }); // 2 → 3
+    act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowDown")); }); // 3 → 0 (wrap)
 
     expect(result.current.menuFocusedIndex).toBe(0);
   });
@@ -239,7 +240,7 @@ describe("useWordNavigation", () => {
     act(() => { result.current.openMenuForWord(0); });
     act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowUp")); });
 
-    expect(result.current.menuFocusedIndex).toBe(2); // wraps to last entry (3 entries: 0,1,2)
+    expect(result.current.menuFocusedIndex).toBe(3); // wraps to last entry (4 entries: 0,1,2,3)
   });
 
   // --- Menu mode: Enter triggers action and closes menu ---

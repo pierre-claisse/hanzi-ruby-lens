@@ -19,6 +19,7 @@ function App() {
     setView,
     saveText,
     processText,
+    updatePinyin,
     isProcessing,
     processingError,
     retryProcessing,
@@ -79,6 +80,10 @@ function App() {
     setView("input");
   }, [appView, setView]);
 
+  const handleShowPinyin = useCallback(() => {
+    setPinyinVisible(true);
+  }, [setPinyinVisible]);
+
   const showEdit = appView === "reading" || appView === "processing";
 
   const renderContent = () => {
@@ -117,7 +122,7 @@ function App() {
         return (
           <div className="bg-surface text-content min-h-screen px-8 pt-24 pb-12">
             <div className="max-w-5xl mx-auto">
-              <TextDisplay text={text!} showPinyin={pinyinVisible} zoomLevel={zoomLevel} />
+              <TextDisplay text={text!} showPinyin={pinyinVisible} zoomLevel={zoomLevel} onPinyinEdit={updatePinyin} onShowPinyin={handleShowPinyin} />
             </div>
           </div>
         );
