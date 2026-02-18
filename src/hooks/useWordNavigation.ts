@@ -19,7 +19,7 @@ interface UseWordNavigationReturn {
   handleMenuEntryHover: (index: number) => void;
 }
 
-const MENU_ENTRY_COUNT = 3;
+const MENU_ENTRY_COUNT = 4;
 
 export function useWordNavigation({ wordCount, onMenuAction }: UseWordNavigationProps): UseWordNavigationReturn {
   const [trackedIndex, setTrackedIndex] = useState(0);

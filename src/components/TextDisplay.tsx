@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect, useCallback } from "react";
+import { useMemo, useRef, useEffect, useCallback, useState } from "react";
 import type { Text, TextSegment } from "../types/domain";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
@@ -10,6 +10,8 @@ interface TextDisplayProps {
   text: Text;
   showPinyin?: boolean;
   zoomLevel?: number;
+  onPinyinEdit?: (segmentIndex: number, newPinyin: string) => void;
+  onShowPinyin?: () => void;
 }
 
 type BlockItem =
@@ -70,11 +72,13 @@ function buildBlocks(segments: TextSegment[]): Block[] {
   return blocks;
 }
 
-export function TextDisplay({ text, showPinyin = true, zoomLevel = 100 }: TextDisplayProps) {
+export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyinEdit, onShowPinyin }: TextDisplayProps) {
   const fontSize = `${1.5 * zoomLevel / 100}rem`;
   const containerRef = useRef<HTMLDivElement>(null);
   const wordRefs = useRef<Map<number, HTMLElement>>(new Map());
   const trackedIndexRef = useRef(0);
+  const [editingWordIndex, setEditingWordIndex] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   // Build a mapping from segment index to word-only index
   const wordIndexMap = useMemo(() => {
@@ -94,27 +98,36 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100 }: TextDi
   // Split segments into paragraph blocks; detect headings by character count
   const blocks = useMemo(() => buildBlocks(text.segments), [text.segments]);
 
+  // Reverse map: word index → segment index
+  const wordToSegmentIndex = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const [segIndex, wIndex] of wordIndexMap) {
+      map.set(wIndex, segIndex);
+    }
+    return map;
+  }, [wordIndexMap]);
+
   const handleMenuAction = useCallback((entryIndex: number) => {
     const currentTrackedIndex = trackedIndexRef.current;
-    let characters = "";
-    for (const [segIndex, wIndex] of wordIndexMap) {
-      if (wIndex === currentTrackedIndex) {
-        const segment = text.segments[segIndex];
-        if (segment.type === "word") characters = segment.word.characters;
-        break;
-      }
-    }
-    if (!characters) return;
+    const segIndex = wordToSegmentIndex.get(currentTrackedIndex);
+    if (segIndex === undefined) return;
+    const segment = text.segments[segIndex];
+    if (segment.type !== "word") return;
+
     if (entryIndex === 0) {
-      const url = `https://dict.revised.moe.edu.tw/search.jsp?md=1&word=${encodeURIComponent(characters)}&qMd=0&qCol=1&sound=1#radio_sound_1`;
+      const url = `https://dict.revised.moe.edu.tw/search.jsp?md=1&word=${encodeURIComponent(segment.word.characters)}&qMd=0&qCol=1&sound=1#radio_sound_1`;
       openUrl(url);
     } else if (entryIndex === 1) {
-      const url = `https://translate.google.com/?sl=zh-TW&tl=en&text=${encodeURIComponent(characters)}`;
+      const url = `https://translate.google.com/?sl=zh-TW&tl=en&text=${encodeURIComponent(segment.word.characters)}`;
       openUrl(url);
     } else if (entryIndex === 2) {
-      writeText(characters);
+      if (!showPinyin) onShowPinyin?.();
+      setEditingWordIndex(currentTrackedIndex);
+      setEditValue(segment.word.pinyin);
+    } else if (entryIndex === 3) {
+      writeText(segment.word.characters);
     }
-  }, [wordIndexMap, text.segments]);
+  }, [wordToSegmentIndex, text.segments, showPinyin, onShowPinyin]);
 
   const {
     trackedIndex, isFocused, menuOpen, menuFocusedIndex,
@@ -164,6 +177,25 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100 }: TextDi
     }
   }, [handleBlur]);
 
+  const handleEditConfirm = useCallback(() => {
+    if (editingWordIndex === null) return;
+    const trimmed = editValue.trim();
+    if (!trimmed) return; // FR-007: reject empty
+    const segIndex = wordToSegmentIndex.get(editingWordIndex);
+    if (segIndex !== undefined) {
+      onPinyinEdit?.(segIndex, trimmed);
+    }
+    setEditingWordIndex(null);
+    setEditValue("");
+    containerRef.current?.focus(); // FR-009: return focus
+  }, [editingWordIndex, editValue, wordToSegmentIndex, onPinyinEdit]);
+
+  const handleEditCancel = useCallback(() => {
+    setEditingWordIndex(null);
+    setEditValue("");
+    containerRef.current?.focus(); // FR-009: return focus
+  }, []);
+
   const handleContextMenu = useCallback((e: React.MouseEvent, wordIndex: number) => {
     e.preventDefault();
     openMenuForWord(wordIndex);
@@ -201,12 +233,18 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100 }: TextDi
               const seg = text.segments[item.segmentIndex];
               if (seg.type !== "word") return null;
               const wIndex = wordIndexMap.get(item.segmentIndex)!;
+              const isEditingThis = editingWordIndex === wIndex;
               return (
                 <RubyWord
                   key={item.segmentIndex}
                   word={seg.word}
                   showPinyin={showPinyin}
                   isHighlighted={isFocused ? wIndex === trackedIndex : undefined}
+                  isEditing={isEditingThis}
+                  editValue={isEditingThis ? editValue : undefined}
+                  onEditChange={isEditingThis ? setEditValue : undefined}
+                  onEditConfirm={isEditingThis ? handleEditConfirm : undefined}
+                  onEditCancel={isEditingThis ? handleEditCancel : undefined}
                   onMouseEnter={() => handleWordHover(wIndex)}
                   onContextMenu={(e) => handleContextMenu(e, wIndex)}
                   ref={(el: HTMLElement | null) => {

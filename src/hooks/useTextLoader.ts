@@ -18,6 +18,7 @@ interface UseTextLoaderReturn {
   setView: (view: AppView) => void;
   saveText: (rawInput: string) => Promise<void>;
   processText: (rawInput: string) => Promise<Text>;
+  updatePinyin: (segmentIndex: number, newPinyin: string) => Promise<void>;
   isProcessing: boolean;
   processingError: string | null;
   retryProcessing: () => Promise<void>;
@@ -67,6 +68,17 @@ export function useTextLoader(): UseTextLoaderReturn {
     }
   }, []);
 
+  const updatePinyin = useCallback(async (segmentIndex: number, newPinyin: string) => {
+    if (!text) return;
+    const updatedSegments = text.segments.map((seg, i) => {
+      if (i !== segmentIndex || seg.type !== "word") return seg;
+      return { ...seg, word: { ...seg.word, pinyin: newPinyin } };
+    });
+    const updatedText: Text = { ...text, segments: updatedSegments };
+    await invoke("save_text", { text: updatedText });
+    setText(updatedText);
+  }, [text]);
+
   const retryProcessing = useCallback(async () => {
     if (!text?.rawInput) return;
     setProcessingError(null);
@@ -90,6 +102,7 @@ export function useTextLoader(): UseTextLoaderReturn {
     setView: setAppView,
     saveText,
     processText,
+    updatePinyin,
     isProcessing,
     processingError,
     retryProcessing,
