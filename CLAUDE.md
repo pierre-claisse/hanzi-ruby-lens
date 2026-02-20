@@ -2,7 +2,7 @@
 
 ## Technology Stack
 
-- **Frontend**: TypeScript 5.5, React 18.3, Vite 5, Tailwind CSS 3.4
+- **Frontend**: TypeScript 5.9, React 19, Vite 5, Tailwind CSS 3.4
 - **Backend**: Rust (stable), Tauri 2
 - **Database**: SQLite (rusqlite 0.38, bundled) — `%APPDATA%\com.hanzirubylens.app\hanzi-ruby-lens.db`
 - **LLM**: Claude CLI (Opus) for pinyin segmentation
