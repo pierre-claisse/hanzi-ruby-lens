@@ -131,7 +131,6 @@ function App() {
 
   return (
     <>
-      {renderContent()}
       <TitleBar
         pinyinVisible={pinyinVisible}
         onPinyinToggle={setPinyinVisible}
@@ -147,7 +146,9 @@ function App() {
         onThemeToggle={toggleTheme}
         onEdit={handleEdit}
         showEdit={showEdit}
+        rawInput={text?.rawInput ?? ""}
       />
+      {renderContent()}
     </>
   );
 }

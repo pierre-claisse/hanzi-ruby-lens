@@ -6,8 +6,8 @@ services:
       - type: bind
         source: ../
         target: C:/app
-      - cargo-target:C:/app/src-tauri/target
-      - node-modules:C:/app/node_modules
+      - cargo-target-v2:C:/app/src-tauri/target
+      - node-modules-v2:C:/app/node_modules
     working_dir: C:/app
     command:
       [
@@ -20,5 +20,5 @@ services:
       ]
 
 volumes:
-  cargo-target:
-  node-modules:
+  cargo-target-v2:
+  node-modules-v2:

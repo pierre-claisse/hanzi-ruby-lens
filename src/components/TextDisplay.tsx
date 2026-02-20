@@ -138,6 +138,25 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
   // Keep ref in sync with hook state
   trackedIndexRef.current = trackedIndex;
 
+  // Scroll tracked word into view when focused (accounts for fixed title bar).
+  // Uses requestAnimationFrame to run after the browser's native focus scroll.
+  useEffect(() => {
+    if (!isFocused) return;
+    const id = requestAnimationFrame(() => {
+      const wordEl = wordRefs.current.get(trackedIndex);
+      if (!wordEl) return;
+      const rect = wordEl.getBoundingClientRect();
+      const top = 64; // title bar (48px) + padding (16px)
+      const bottom = window.innerHeight - 16;
+      if (rect.top < top) {
+        window.scrollBy({ top: rect.top - top, behavior: "instant" });
+      } else if (rect.bottom > bottom) {
+        window.scrollBy({ top: rect.bottom - bottom, behavior: "instant" });
+      }
+    });
+    return () => cancelAnimationFrame(id);
+  }, [trackedIndex, isFocused]);
+
   // Wrapper for mouse clicks: action + close menu (keyboard Enter already closes via hook)
   const handleMenuClick = useCallback((entryIndex: number) => {
     handleMenuAction(entryIndex);
