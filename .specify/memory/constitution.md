@@ -1,22 +1,32 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 1.0.0 → 1.1.0
-  Bump rationale: MINOR — added Domain Language section (no principles changed).
+  Version change: 1.1.0 → 1.2.0
+  Bump rationale: MINOR — removed font/typeface constraints from Visual
+  Identity (relaxes two rules; no existing code breaks).
 
-  Added sections:
-    - Domain Language (ubiquitous vocabulary: Text, Word)
+  Added sections: None.
 
-  Changed sections: None.
+  Changed sections:
+    - Visual Identity — removed two font-specific rules:
+        • "Chinese text MUST use Noto Sans CJK TC (or Noto Serif CJK TC
+          for a more literary feel)." (was MUST)
+        • "Pinyin and UI text SHOULD use Inter or system sans-serif."
+          (was SHOULD)
+      Retained ruby annotation sizing and accent color rules unchanged.
+
   Removed sections: None.
 
   Template sync status:
-    ✅ .specify/templates/plan-template.md — no changes needed.
-    ✅ .specify/templates/spec-template.md — no changes needed.
-    ✅ .specify/templates/tasks-template.md — no changes needed.
+    ✅ .specify/templates/plan-template.md — no font references; no
+       changes needed.
+    ✅ .specify/templates/spec-template.md — no font references; no
+       changes needed.
+    ✅ .specify/templates/tasks-template.md — no font references; no
+       changes needed.
     ✅ .claude/commands/speckit.plan.md — reads constitution dynamically.
     ✅ .claude/commands/speckit.analyze.md — extracts MUST/SHOULD
-       normative statements; Domain Language uses MUST/SHOULD accordingly.
+       normative statements; fewer rules to check, no update needed.
     ✅ README.md — minimal; no constitution references to update.
 
   Deferred TODOs: None.
@@ -169,9 +179,6 @@ amendment.
 
 The visual identity is refined, warm, and typographically focused.
 
-- Chinese text MUST use Noto Sans CJK TC (or Noto Serif CJK TC for a
-  more literary feel).
-- Pinyin and UI text SHOULD use Inter or system sans-serif.
 - Ruby annotations MUST render at roughly 50 % of base Chinese font
   size.
 - Ruby annotations MUST use the accent color for visual distinction.
@@ -214,4 +221,4 @@ comply.
   strong recommendations.
 - When a SHOULD rule is violated, justification MUST be documented.
 
-**Version**: 1.1.0 | **Ratified**: 2026-02-08 | **Last Amended**: 2026-02-09
+**Version**: 1.2.0 | **Ratified**: 2026-02-08 | **Last Amended**: 2026-02-20
