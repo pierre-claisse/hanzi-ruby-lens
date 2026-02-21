@@ -6,6 +6,7 @@
   --color-background: 254 252 243;
   --color-text: 45 45 45;
   --color-accent: 200 75 49;
+  --font-palette: "Cactus Classical Serif";
 }
 
 .dark {
@@ -19,7 +20,7 @@
   }
 
   body {
-    @apply font-sans antialiased bg-surface text-content transition-colors;
+    @apply font-palette antialiased bg-surface text-content transition-colors;
   }
 
   /* Native ruby rendering — wrap base characters in <span> so Chromium
@@ -29,6 +30,7 @@
     color: rgb(var(--color-accent));
     font-size: 0.5em;
     white-space: nowrap;
+    padding-bottom: 5px;
   }
 }
 
@@ -37,6 +39,7 @@
   --color-background: 254 252 243;
   --color-text: 45 45 45;
   --color-accent: 200 75 49;
+  --font-palette: "Cactus Classical Serif";
 }
 .dark[data-palette="vermillion-scroll"] {
   --color-background: 14 14 34;
@@ -48,6 +51,7 @@
   --color-background: 244 248 240;
   --color-text: 42 58 46;
   --color-accent: 46 139 87;
+  --font-palette: "LXGW WenKai TC";
 }
 .dark[data-palette="jade-garden"] {
   --color-background: 26 16 36;
@@ -59,6 +63,7 @@
   --color-background: 247 245 240;
   --color-text: 44 44 58;
   --color-accent: 74 105 189;
+  --font-palette: "Chiron Hei HK Variable";
 }
 .dark[data-palette="indigo-silk"] {
   --color-background: 30 18 10;
@@ -70,6 +75,7 @@
   --color-background: 251 245 243;
   --color-text: 58 45 61;
   --color-accent: 155 45 94;
+  --font-palette: "Huninn";
 }
 .dark[data-palette="plum-blossom"] {
   --color-background: 9 30 24;
@@ -81,6 +87,7 @@
   --color-background: 253 248 238;
   --color-text: 53 43 30;
   --color-accent: 196 136 32;
+  --font-palette: "Chiron Sung HK WS";
 }
 .dark[data-palette="golden-pavilion"] {
   --color-background: 14 11 31;
@@ -92,6 +99,7 @@
   --color-background: 245 245 242;
   --color-text: 51 51 51;
   --color-accent: 119 119 119;
+  --font-palette: "Chocolate Classical Sans";
 }
 .dark[data-palette="ink-wash"] {
   --color-background: 20 20 20;

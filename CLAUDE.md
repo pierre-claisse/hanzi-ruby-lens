@@ -7,7 +7,7 @@
 - **Database**: SQLite (rusqlite 0.38, bundled) — `%APPDATA%\com.hanzirubylens.app\hanzi-ruby-lens.db`
 - **LLM**: Claude CLI (Opus) for pinyin segmentation
 - **Testing**: Vitest + @testing-library/react (frontend), cargo test (Rust)
-- **Key dependencies**: lucide-react, @fontsource-variable/noto-sans-tc, @fontsource-variable/inter, @tauri-apps/plugin-opener, @tauri-apps/plugin-clipboard-manager
+- **Key dependencies**: lucide-react, @fontsource/cactus-classical-serif, @fontsource/chocolate-classical-sans, @fontsource/lxgw-wenkai-tc, @fontsource-variable/chiron-hei-hk, @fontsource/huninn, chiron-sung-hk-webfont, @tauri-apps/plugin-opener, @tauri-apps/plugin-clipboard-manager
 
 ## Project Structure
 

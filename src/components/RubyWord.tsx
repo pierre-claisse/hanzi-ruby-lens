@@ -44,7 +44,7 @@ export function RubyWord({ word, ref, showPinyin = true, isHighlighted, isEditin
   return (
     <ruby
       ref={ref}
-      className={`font-hanzi rounded pt-6 pb-1.5 transition-colors duration-200 ease-in-out ${highlightClass} focus-visible:ring-2 focus-visible:ring-accent`}
+      className={`rounded pt-6 pb-1.5 transition-colors duration-200 ease-in-out ${highlightClass} focus-visible:ring-2 focus-visible:ring-accent`}
       onMouseEnter={onMouseEnter}
       onContextMenu={onContextMenu}
     >

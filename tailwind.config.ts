@@ -11,8 +11,7 @@ export default {
         accent: "rgb(var(--color-accent) / <alpha-value>)",
       },
       fontFamily: {
-        hanzi: ['"Noto Sans TC Variable"', "sans-serif"],
-        sans: ['"Inter Variable"', "sans-serif"],
+        palette: ['var(--font-palette)', "sans-serif"],
       },
       opacity: {
         "8": "0.08",

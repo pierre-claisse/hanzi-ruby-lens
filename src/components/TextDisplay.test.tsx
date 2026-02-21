@@ -57,7 +57,6 @@ describe("TextDisplay", () => {
   it("has correct line-height and font classes for ruby spacing", () => {
     const { container } = render(<TextDisplay text={sampleText} />);
     const textContainer = container.firstElementChild;
-    expect(textContainer?.className).toMatch(/font-hanzi/);
     expect(textContainer?.className).toMatch(/leading-/);
   });
 

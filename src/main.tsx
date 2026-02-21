@@ -1,5 +1,10 @@
-import "@fontsource-variable/noto-sans-tc";
-import "@fontsource-variable/inter";
+import "@fontsource/cactus-classical-serif";
+import "@fontsource/chocolate-classical-sans";
+import "@fontsource/lxgw-wenkai-tc";
+import "@fontsource-variable/chiron-hei-hk";
+import "@fontsource/huninn";
+import "chiron-sung-hk-webfont/css/vf.css";
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";

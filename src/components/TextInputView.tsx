@@ -28,7 +28,7 @@ export function TextInputView({ initialValue, onSubmit, onCancel }: TextInputVie
   return (
     <div className="flex flex-col h-full px-8 py-6 gap-4">
       <textarea
-        className="flex-1 w-full p-4 bg-surface border border-content/10 rounded-lg text-content font-hanzi text-lg resize-none focus:outline-none focus:border-accent/50"
+        className="flex-1 w-full p-4 bg-surface border border-content/10 rounded-lg text-content text-lg resize-none focus:outline-none focus:border-accent/50"
         placeholder="在此輸入或貼上中文..."
         value={value}
         onChange={(e) => setValue(e.target.value)}

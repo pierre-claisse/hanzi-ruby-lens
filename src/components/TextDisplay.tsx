@@ -222,7 +222,7 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
 
   if (text.segments.length === 0) {
     return (
-      <div className="font-hanzi leading-[2.5] select-none cursor-default" style={{ fontSize }}>
+      <div className="leading-[2.5] select-none cursor-default" style={{ fontSize }}>
         <p className="text-center text-content/50 py-16">No text to display.</p>
       </div>
     );
@@ -231,7 +231,7 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
   return (
     <div
       ref={containerRef}
-      className="font-hanzi leading-[2.5] select-none cursor-default outline-none relative"
+      className="leading-[2.5] select-none cursor-default outline-none relative"
       style={{ fontSize }}
       tabIndex={0}
       onKeyDown={handleKeyDown}
