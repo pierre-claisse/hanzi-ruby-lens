@@ -1,6 +1,7 @@
 interface ProcessingStateProps {
   isProcessing: boolean;
   error: string | null;
+  elapsedTime?: string;
   onProcess: () => void;
   onRetry: () => void;
   onEdit: () => void;
@@ -9,6 +10,7 @@ interface ProcessingStateProps {
 export function ProcessingState({
   isProcessing,
   error,
+  elapsedTime,
   onProcess,
   onRetry,
   onEdit,
@@ -41,7 +43,7 @@ export function ProcessingState({
     return (
       <div className="flex flex-col items-center justify-center flex-1 px-8">
         <div className="mb-6 h-8 w-8 rounded-full border-2 border-content/20 border-t-content/60 animate-spin" />
-        <p className="text-content/60 text-lg text-center">Processing text...</p>
+        <p className="text-content/60 text-lg text-center">Processing text...{elapsedTime != null && ` (${elapsedTime})`}</p>
       </div>
     );
   }

@@ -40,7 +40,7 @@ pub async fn process_text(
         cmd.args([
             "-p",
             "--model",
-            "opus",
+            "sonnet",
             "--output-format",
             "json",
             "--max-turns",

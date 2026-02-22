@@ -9,6 +9,7 @@ import { useTextZoom } from "./hooks/useTextZoom";
 import { useTheme } from "./hooks/useTheme";
 import { useColorPalette } from "./hooks/useColorPalette";
 import { useTextLoader } from "./hooks/useTextLoader";
+import { useElapsedTime } from "./hooks/useElapsedTime";
 import type { AppView } from "./hooks/useTextLoader";
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
   const { zoomLevel, zoomIn, zoomOut, isMinZoom, isMaxZoom } = useTextZoom();
   const [theme, setTheme] = useTheme();
   const { paletteId, setPalette, palettes } = useColorPalette();
+  const { formatted: elapsedTime } = useElapsedTime(isProcessing);
   const previousViewRef = useRef<AppView>(appView);
 
   // Suppress Space key on all buttons — Enter is the only activation key (FR-028)
@@ -112,6 +114,7 @@ function App() {
             <ProcessingState
               isProcessing={isProcessing}
               error={processingError}
+              elapsedTime={elapsedTime}
               onProcess={retryProcessing}
               onRetry={retryProcessing}
               onEdit={handleEdit}
