@@ -1,33 +1,41 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 1.1.0 → 1.2.0
-  Bump rationale: MINOR — removed font/typeface constraints from Visual
-  Identity (relaxes two rules; no existing code breaks).
-
-  Added sections: None.
+  Version change: 1.2.0 → 2.0.0
+  Bump rationale: MAJOR — backward-incompatible domain model redesign.
+    Single-text model replaced by multi-text library; texts become
+    immutable after processing (no regeneration); autosave removed;
+    empty texts forbidden; Word corrections now persist permanently.
 
   Changed sections:
-    - Visual Identity — removed two font-specific rules:
-        • "Chinese text MUST use Noto Sans CJK TC (or Noto Serif CJK TC
-          for a more literary feel)." (was MUST)
-        • "Pinyin and UI text SHOULD use Inter or system sans-serif."
-          (was SHOULD)
-      Retained ruby annotation sizing and accent color rules unchanged.
+    - Preamble: clarified "library of texts" vision.
+    - Domain Language > Text: complete rewrite.
+        • Removed: single-text constraint ("holds exactly one Text").
+        • Removed: mutability ("editable by the user (modification or
+          full replacement)").
+        • Removed: autosave rule.
+        • Removed: empty-text permission.
+        • Removed: LLM regeneration-on-save with pinyin overwrite.
+        • Added: multi-text collection model.
+        • Added: immutability after processing (raw content MUST NOT
+          be replaced or reprocessed).
+        • Added: explicit prohibition of empty texts.
+    - Domain Language > Word: removed ephemeral/regeneration sentence;
+        added explicit persistence guarantee for pinyin corrections.
+    - Technical Constraints > LLM integration: updated model reference
+        from "latest Opus" to "latest Sonnet" (reflects commands.rs
+        change in commit f253424).
 
+  Added sections: None.
   Removed sections: None.
 
   Template sync status:
-    ✅ .specify/templates/plan-template.md — no font references; no
-       changes needed.
-    ✅ .specify/templates/spec-template.md — no font references; no
-       changes needed.
-    ✅ .specify/templates/tasks-template.md — no font references; no
-       changes needed.
-    ✅ .claude/commands/speckit.plan.md — reads constitution dynamically.
-    ✅ .claude/commands/speckit.analyze.md — extracts MUST/SHOULD
-       normative statements; fewer rules to check, no update needed.
-    ✅ README.md — minimal; no constitution references to update.
+    ✅ .specify/templates/plan-template.md — no autosave or single-text
+       references; no changes needed.
+    ✅ .specify/templates/spec-template.md — generic template; no
+       project-specific references to update.
+    ✅ .specify/templates/tasks-template.md — generic template; no
+       project-specific references to update.
 
   Deferred TODOs: None.
 -->
@@ -43,7 +51,8 @@ via LLM and correctable by the user.
 
 Born from the study of 知識的365堂課 (a traditional-character translation
 of *The Intellectual Devotional* by David S. Kidder and Noah D. Oppenheim),
-the app is designed to support any book in Chinese.
+the app is designed to grow into a personal library of annotated Chinese
+texts, preserving the user's pinyin corrections across sessions.
 
 **The Chinese characters are the star. Everything else serves them.**
 
@@ -130,21 +139,24 @@ treated as a violation.
 
 ### Text
 
-The complete body of Chinese content entered by the user. In the current
-release cycle, the application holds exactly one Text.
+The complete body of Chinese content entered by the user. The application
+holds a collection of Texts; there is no limit on their number.
 
-- A Text MUST be editable by the user (modification or full replacement).
-- A Text MUST autosave after a brief delay following user input.
-- Saving an empty Text MUST be permitted; the UI MUST show a placeholder.
-- When a Text is saved, its Words MUST be regenerated via LLM. Any
-  previously corrected Word pinyin MUST be overwritten without warning.
+- A Text MUST NOT be empty: it MUST contain at least one Chinese
+  character.
+- A Text is immutable once created: its raw Chinese content MUST NOT
+  be replaced, edited, or reprocessed via LLM after initial processing.
+- Only pinyin annotations on a Text's Words MUST remain correctable by
+  the user.
+- There is no autosave: persistence operations MUST be explicit user
+  actions (e.g., confirming a pinyin correction).
 - A Text is the aggregate root of the domain model.
 
 ### Word
 
 An ordered segment of a Text, consisting of one or more Chinese
 characters and their pinyin as a single unit. Words are produced by
-LLM analysis of the full Text.
+LLM analysis of the full Text at creation time.
 
 - A Word MUST contain one or more Chinese characters and exactly one
   pinyin string representing the whole Word.
@@ -154,9 +166,8 @@ LLM analysis of the full Text.
 - Pinyin MUST be displayed as a single unit per Word
   (e.g., "xiànzài" for 現在, not "xiàn zài").
 - A Word's pinyin MUST be individually correctable by the user.
-- A Word's corrected pinyin MUST autosave.
-- Words are ephemeral: they MUST be fully regenerated when their parent
-  Text is saved. Corrections do not survive Text regeneration.
+- A Word's corrected pinyin MUST persist permanently and MUST NOT be
+  overwritten by any automatic process.
 - A Chinese character MUST NOT exist as an independent domain entity.
   Characters are the string content of a Word, nothing more.
 
@@ -173,7 +184,7 @@ amendment.
 - **Styling**: Tailwind CSS + shadcn/ui
 - **Database**: SQLite, embedded locally, accessed via Tauri's Rust
   backend
-- **LLM integration**: Claude CLI with the latest Opus model
+- **LLM integration**: Claude CLI with the latest Sonnet model
 
 ### Visual Identity
 
@@ -221,4 +232,4 @@ comply.
   strong recommendations.
 - When a SHOULD rule is violated, justification MUST be documented.
 
-**Version**: 1.2.0 | **Ratified**: 2026-02-08 | **Last Amended**: 2026-02-20
+**Version**: 2.0.0 | **Ratified**: 2026-02-08 | **Last Amended**: 2026-02-22
