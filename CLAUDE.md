@@ -5,7 +5,7 @@
 - **Frontend**: TypeScript 5.9, React 19, Vite 5, Tailwind CSS 3.4
 - **Backend**: Rust (stable), Tauri 2
 - **Database**: SQLite (rusqlite 0.38, bundled) — `%APPDATA%\com.hanzirubylens.app\hanzi-ruby-lens.db`
-- **LLM**: Claude CLI (Opus) for pinyin segmentation
+- **Text processing**: Native Rust libraries (jieba-rs, chinese_dictionary, pinyin) for segmentation and pinyin annotation
 - **Testing**: Vitest + @testing-library/react (frontend), cargo test (Rust)
 - **Key dependencies**: lucide-react, @fontsource/cactus-classical-serif, @fontsource/chocolate-classical-sans, @fontsource/lxgw-wenkai-tc, @fontsource-variable/chiron-hei-hk, @fontsource/huninn, chiron-sung-hk-webfont, @tauri-apps/plugin-opener, @tauri-apps/plugin-clipboard-manager
 
@@ -25,7 +25,7 @@ src-tauri/src/
 ├── lib.rs                     # Tauri entry point, plugin/command registration
 ├── commands.rs                # IPC commands: save_text, load_text, process_text
 ├── database.rs                # SQLite operations (initialize, save, load)
-├── processing.rs              # Claude CLI integration (prompt building, response parsing)
+├── processing.rs              # Native Chinese text processing (segmentation + pinyin)
 ├── domain.rs                  # Rust domain structs (mirrors TypeScript types)
 ├── error.rs                   # AppError type
 ├── state.rs                   # AppState (Mutex<db>)

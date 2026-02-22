@@ -1,41 +1,43 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 1.2.0 → 2.0.0
-  Bump rationale: MAJOR — backward-incompatible domain model redesign.
-    Single-text model replaced by multi-text library; texts become
-    immutable after processing (no regeneration); autosave removed;
-    empty texts forbidden; Word corrections now persist permanently.
+  Version change: 2.0.0 → 3.0.0
+  Bump rationale: MAJOR — removal of constitutional LLM dependency.
+    The "LLM integration: Claude CLI with the latest Sonnet model"
+    technical constraint is removed entirely. All references to LLM
+    processing throughout the document are replaced with
+    technology-neutral language ("text processing libraries").
+    This is backward-incompatible: code that relied on Claude CLI
+    as a constitutional guarantee can no longer cite it.
 
   Changed sections:
-    - Preamble: clarified "library of texts" vision.
-    - Domain Language > Text: complete rewrite.
-        • Removed: single-text constraint ("holds exactly one Text").
-        • Removed: mutability ("editable by the user (modification or
-          full replacement)").
-        • Removed: autosave rule.
-        • Removed: empty-text permission.
-        • Removed: LLM regeneration-on-save with pinyin overwrite.
-        • Added: multi-text collection model.
-        • Added: immutability after processing (raw content MUST NOT
-          be replaced or reprocessed).
-        • Added: explicit prohibition of empty texts.
-    - Domain Language > Word: removed ephemeral/regeneration sentence;
-        added explicit persistence guarantee for pinyin corrections.
-    - Technical Constraints > LLM integration: updated model reference
-        from "latest Opus" to "latest Sonnet" (reflects commands.rs
-        change in commit f253424).
+    - Preamble: "generated via LLM" → "generated via text processing
+        libraries".
+    - Core Principles > II. Offline-First Data: "without further LLM
+        calls" → "without further processing".
+    - Domain Language > Text: "reprocessed via LLM" → "reprocessed".
+    - Domain Language > Word: "produced by LLM analysis of the full
+        Text at creation time" → "produced by text processing of the
+        full Text at creation time".
+    - Technical Constraints > Technology Stack: removed bullet
+        "LLM integration: Claude CLI with the latest Sonnet model".
+      Added bullet "Text processing: native Rust libraries
+        (dictionary-based segmentation and pinyin annotation)".
 
   Added sections: None.
   Removed sections: None.
 
   Template sync status:
-    ✅ .specify/templates/plan-template.md — no autosave or single-text
-       references; no changes needed.
+    ✅ .specify/templates/plan-template.md — generic template; no
+       LLM or Claude references to update.
     ✅ .specify/templates/spec-template.md — generic template; no
-       project-specific references to update.
+       LLM or Claude references to update.
     ✅ .specify/templates/tasks-template.md — generic template; no
-       project-specific references to update.
+       LLM or Claude references to update.
+    ⚠ CLAUDE.md — contains "LLM: Claude CLI (Opus) for pinyin
+       segmentation" and "processing.rs # Claude CLI integration"
+       in project structure comments. These will be updated during
+       feature 023 implementation when the files themselves change.
 
   Deferred TODOs: None.
 -->
@@ -47,7 +49,7 @@
 Hanzi Ruby Lens is a Windows desktop application for Mandarin Chinese
 learners. It provides an elegant reading interface with pinyin ruby
 annotations for any Chinese text (traditional or simplified), generated
-via LLM and correctable by the user.
+via text processing libraries and correctable by the user.
 
 Born from the study of 知識的365堂課 (a traditional-character translation
 of *The Intellectual Devotional* by David S. Kidder and Noah D. Oppenheim),
@@ -76,7 +78,7 @@ all times.
 
 All generated data MUST be stored locally. Once a content unit has been
 processed, it MUST be readable and studyable entirely offline without
-further LLM calls.
+further processing.
 
 - All data MUST reside in a local SQLite database.
 - The database file MUST be directly exportable and importable as an
@@ -145,7 +147,7 @@ holds a collection of Texts; there is no limit on their number.
 - A Text MUST NOT be empty: it MUST contain at least one Chinese
   character.
 - A Text is immutable once created: its raw Chinese content MUST NOT
-  be replaced, edited, or reprocessed via LLM after initial processing.
+  be replaced, edited, or reprocessed after initial processing.
 - Only pinyin annotations on a Text's Words MUST remain correctable by
   the user.
 - There is no autosave: persistence operations MUST be explicit user
@@ -156,7 +158,7 @@ holds a collection of Texts; there is no limit on their number.
 
 An ordered segment of a Text, consisting of one or more Chinese
 characters and their pinyin as a single unit. Words are produced by
-LLM analysis of the full Text at creation time.
+text processing of the full Text at creation time.
 
 - A Word MUST contain one or more Chinese characters and exactly one
   pinyin string representing the whole Word.
@@ -184,7 +186,8 @@ amendment.
 - **Styling**: Tailwind CSS + shadcn/ui
 - **Database**: SQLite, embedded locally, accessed via Tauri's Rust
   backend
-- **LLM integration**: Claude CLI with the latest Sonnet model
+- **Text processing**: Native Rust libraries (dictionary-based
+  segmentation and pinyin annotation)
 
 ### Visual Identity
 
@@ -232,4 +235,4 @@ comply.
   strong recommendations.
 - When a SHOULD rule is violated, justification MUST be documented.
 
-**Version**: 2.0.0 | **Ratified**: 2026-02-08 | **Last Amended**: 2026-02-22
+**Version**: 3.0.0 | **Ratified**: 2026-02-08 | **Last Amended**: 2026-02-22
