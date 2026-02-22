@@ -68,32 +68,22 @@ describe("Tauri Command Contract: process_text", () => {
   });
 
   it("rejects with error string on processing failure", async () => {
-    mockInvoke.mockRejectedValue("Processing error: Claude CLI not found. Please install it and ensure it is in your PATH.");
+    mockInvoke.mockRejectedValue("Processing error: Text processing failed.");
 
     const { invoke } = await import("@tauri-apps/api/core");
 
     await expect(
       invoke("process_text", { rawInput: "test" }),
-    ).rejects.toContain("Claude CLI not found");
+    ).rejects.toContain("Processing error");
   });
 
-  it("rejects with error string on timeout", async () => {
-    mockInvoke.mockRejectedValue("Processing error: Processing timed out. Please try again.");
+  it("rejects with error string on database failure", async () => {
+    mockInvoke.mockRejectedValue("Database error: Failed to save text.");
 
     const { invoke } = await import("@tauri-apps/api/core");
 
     await expect(
       invoke("process_text", { rawInput: "test" }),
-    ).rejects.toContain("timed out");
-  });
-
-  it("rejects with error string on malformed response", async () => {
-    mockInvoke.mockRejectedValue("Processing error: Failed to parse CLI response");
-
-    const { invoke } = await import("@tauri-apps/api/core");
-
-    await expect(
-      invoke("process_text", { rawInput: "test" }),
-    ).rejects.toContain("parse");
+    ).rejects.toContain("Database error");
   });
 });
