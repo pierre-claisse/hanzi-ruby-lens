@@ -18,9 +18,11 @@ pub fn run() {
             db: Mutex::new(None),
         })
         .invoke_handler(tauri::generate_handler![
-            commands::save_text,
+            commands::create_text,
+            commands::list_texts,
             commands::load_text,
-            commands::process_text,
+            commands::update_pinyin,
+            commands::delete_text,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

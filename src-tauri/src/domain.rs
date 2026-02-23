@@ -18,6 +18,17 @@ pub enum TextSegment {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Text {
+    pub id: i64,
+    pub title: String,
+    pub created_at: String,
     pub raw_input: String,
     pub segments: Vec<TextSegment>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TextPreview {
+    pub id: i64,
+    pub title: String,
+    pub created_at: String,
 }

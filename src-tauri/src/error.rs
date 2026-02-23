@@ -6,6 +6,8 @@ pub enum AppError {
     Database(#[from] rusqlite::Error),
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+    #[error("{0}")]
+    Validation(String),
 }
 
 impl Serialize for AppError {

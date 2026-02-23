@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import App from "../../src/App";
+import type { Text, TextPreview } from "../../src/types/domain";
 
 // Mock Tauri window API
 vi.mock("@tauri-apps/api/window", () => ({
@@ -12,21 +14,50 @@ vi.mock("@tauri-apps/api/window", () => ({
   }),
 }));
 
-// Mock Tauri core invoke — return text with segments so reading view renders
+const sampleText: Text = {
+  id: 1,
+  title: "Pinyin Test",
+  createdAt: "2026-02-23T12:00:00",
+  rawInput: "你好世界",
+  segments: [
+    { type: "word", word: { characters: "你好", pinyin: "nǐhǎo" } },
+    { type: "word", word: { characters: "世界", pinyin: "shìjiè" } },
+  ],
+};
+
+const samplePreviews: TextPreview[] = [
+  { id: 1, title: "Pinyin Test", createdAt: "2026-02-23T12:00:00" },
+];
+
+// Mock Tauri core invoke — route by command
+const mockInvoke = vi.fn();
 vi.mock("@tauri-apps/api/core", () => ({
-  invoke: vi.fn().mockResolvedValue({
-    rawInput: "你好世界",
-    segments: [
-      { type: "word", word: { characters: "你好", pinyin: "nǐhǎo" } },
-      { type: "word", word: { characters: "世界", pinyin: "shìjiè" } },
-    ],
-  }),
+  invoke: (...args: unknown[]) => mockInvoke(...args),
 }));
+
+/** Navigate from library to reading view by clicking a preview, wait for ruby elements */
+async function navigateToReading(user: ReturnType<typeof userEvent.setup>, container: HTMLElement) {
+  await waitFor(() => {
+    expect(screen.getByText("Pinyin Test")).toBeInTheDocument();
+  });
+  await user.click(screen.getByText("Pinyin Test"));
+  // Wait for reading view to render ruby elements
+  await waitFor(() => {
+    expect(container.querySelectorAll("rt").length).toBeGreaterThan(0);
+  });
+}
 
 describe("Pinyin Toggle Integration", () => {
   let localStorageMock: { [key: string]: string };
 
   beforeEach(() => {
+    mockInvoke.mockReset();
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "list_texts") return Promise.resolve(samplePreviews);
+      if (cmd === "load_text") return Promise.resolve(sampleText);
+      return Promise.resolve(null);
+    });
+
     // Reset localStorage mock before each test
     localStorageMock = {};
 
@@ -48,9 +79,12 @@ describe("Pinyin Toggle Integration", () => {
 
   // T016: End-to-end toggle flow (click → hide → click → show)
   it("toggles Pinyin visibility end-to-end", async () => {
+    const user = userEvent.setup();
     const { container } = render(<App />);
 
-    // Wait for text to load (async)
+    await navigateToReading(user, container);
+
+    // Wait for ruby elements
     await waitFor(() => {
       expect(container.querySelectorAll("rt").length).toBeGreaterThan(0);
     });
@@ -96,10 +130,13 @@ describe("Pinyin Toggle Integration", () => {
 
   // T017: Preference persists after simulated page reload
   it("persists Pinyin visibility preference across app reloads", async () => {
+    const user = userEvent.setup();
     // First render: Default state (visible)
     let { container } = render(<App />);
 
-    // Wait for text to load
+    await navigateToReading(user, container);
+
+    // Wait for ruby elements
     await waitFor(() => {
       expect(container.querySelectorAll("rt").length).toBeGreaterThan(0);
     });
@@ -118,7 +155,10 @@ describe("Pinyin Toggle Integration", () => {
     cleanup();
     ({ container } = render(<App />));
 
-    // Wait for text to load after reload
+    // Navigate to reading again
+    await navigateToReading(user, container);
+
+    // Wait for ruby elements
     await waitFor(() => {
       expect(container.querySelectorAll("rt").length).toBeGreaterThan(0);
     });
@@ -138,9 +178,12 @@ describe("Pinyin Toggle Integration", () => {
 
   // T018: Multiple rapid toggles work correctly (no UI flicker)
   it("handles rapid toggles without UI flicker", async () => {
+    const user = userEvent.setup();
     const { container } = render(<App />);
 
-    // Wait for text to load
+    await navigateToReading(user, container);
+
+    // Wait for ruby elements
     await waitFor(() => {
       expect(container.querySelectorAll("rt").length).toBeGreaterThan(0);
     });
@@ -172,9 +215,12 @@ describe("Pinyin Toggle Integration", () => {
   });
 
   it("preserves Chinese characters in DOM during rapid toggles", async () => {
+    const user = userEvent.setup();
     const { container } = render(<App />);
 
-    // Wait for text to load
+    await navigateToReading(user, container);
+
+    // Wait for ruby elements
     await waitFor(() => {
       expect(container.querySelectorAll("rt").length).toBeGreaterThan(0);
     });

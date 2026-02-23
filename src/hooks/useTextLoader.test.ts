@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor, act } from "@testing-library/react";
-import type { Text } from "../types/domain";
+import type { Text, TextPreview } from "../types/domain";
 
 // Mock @tauri-apps/api/core
 const mockInvoke = vi.fn();
@@ -20,38 +20,45 @@ vi.mock("@tauri-apps/api/window", () => ({
 
 import { useTextLoader } from "./useTextLoader";
 
+const samplePreviews: TextPreview[] = [
+  { id: 1, title: "Test Title", createdAt: "2026-02-23T12:00:00" },
+];
+
+const sampleText: Text = {
+  id: 1,
+  title: "Test Title",
+  createdAt: "2026-02-23T12:00:00",
+  rawInput: "你好世界",
+  segments: [
+    { type: "word", word: { characters: "你好", pinyin: "nǐhǎo" } },
+    { type: "plain", text: "，" },
+    { type: "word", word: { characters: "世界", pinyin: "shìjiè" } },
+  ],
+};
+
 describe("useTextLoader", () => {
   beforeEach(() => {
     mockInvoke.mockReset();
   });
 
-  it("returns null initially with isLoading=true, then loaded text on success", async () => {
-    const loadedText: Text = {
-      rawInput: "測試文本",
-      segments: [
-        { type: "word", word: { characters: "測試", pinyin: "cèshì" } },
-        { type: "word", word: { characters: "文本", pinyin: "wénběn" } },
-      ],
-    };
-    mockInvoke.mockResolvedValue(loadedText);
+  it("loads previews on mount and starts in library view", async () => {
+    mockInvoke.mockResolvedValueOnce(samplePreviews);
 
     const { result } = renderHook(() => useTextLoader());
 
-    // Initially: null, isLoading=true
-    expect(result.current.text).toBeNull();
     expect(result.current.isLoading).toBe(true);
 
-    // After load completes
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.text).toEqual(loadedText);
-    expect(mockInvoke).toHaveBeenCalledWith("load_text");
+    expect(result.current.appView).toBe("library");
+    expect(result.current.previews).toEqual(samplePreviews);
+    expect(mockInvoke).toHaveBeenCalledWith("list_texts");
   });
 
-  it("returns null on null response (first launch)", async () => {
-    mockInvoke.mockResolvedValue(null);
+  it("starts in library view with empty previews", async () => {
+    mockInvoke.mockResolvedValueOnce([]);
 
     const { result } = renderHook(() => useTextLoader());
 
@@ -59,10 +66,11 @@ describe("useTextLoader", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.text).toBeNull();
+    expect(result.current.appView).toBe("library");
+    expect(result.current.previews).toEqual([]);
   });
 
-  it("returns null on invoke error (corrupted DB)", async () => {
+  it("handles error on load gracefully", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     mockInvoke.mockRejectedValue("Database error: corrupted");
 
@@ -72,107 +80,13 @@ describe("useTextLoader", () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.text).toBeNull();
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Failed to load text:",
-      "Database error: corrupted",
-    );
+    expect(result.current.appView).toBe("library");
+    expect(result.current.previews).toEqual([]);
     consoleSpy.mockRestore();
   });
 
-  // View state derivation tests
-  it("derives 'empty' view when load returns null", async () => {
-    mockInvoke.mockResolvedValue(null);
-
-    const { result } = renderHook(() => useTextLoader());
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(result.current.appView).toBe("empty");
-  });
-
-  it("derives 'processing' view when load returns text with empty segments", async () => {
-    const unprocessedText: Text = { rawInput: "一些文字", segments: [] };
-    mockInvoke.mockResolvedValue(unprocessedText);
-
-    const { result } = renderHook(() => useTextLoader());
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(result.current.appView).toBe("processing");
-  });
-
-  it("derives 'empty' view when load returns text with empty rawInput and empty segments", async () => {
-    const emptyText: Text = { rawInput: "", segments: [] };
-    mockInvoke.mockResolvedValue(emptyText);
-
-    const { result } = renderHook(() => useTextLoader());
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(result.current.appView).toBe("empty");
-  });
-
-  it("derives 'reading' view when load returns text with segments", async () => {
-    const readingText: Text = {
-      rawInput: "測試",
-      segments: [{ type: "word", word: { characters: "測試", pinyin: "cèshì" } }],
-    };
-    mockInvoke.mockResolvedValue(readingText);
-
-    const { result } = renderHook(() => useTextLoader());
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(result.current.appView).toBe("reading");
-  });
-
-  it("derives 'empty' view on error", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    mockInvoke.mockRejectedValue("Database error");
-
-    const { result } = renderHook(() => useTextLoader());
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(result.current.appView).toBe("empty");
-    consoleSpy.mockRestore();
-  });
-
-  // saveText tests
-  it("saveText invokes save_text with rawInput and empty segments", async () => {
-    mockInvoke.mockResolvedValue(null); // initial load
-    const { result } = renderHook(() => useTextLoader());
-
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    mockInvoke.mockResolvedValue(undefined); // save response
-
-    await act(async () => {
-      await result.current.saveText("新的文字");
-    });
-
-    expect(mockInvoke).toHaveBeenCalledWith("save_text", {
-      text: { rawInput: "新的文字", segments: [] },
-    });
-    expect(result.current.text).toEqual({ rawInput: "新的文字", segments: [] });
-  });
-
-  // setView tests
   it("setView changes appView", async () => {
-    mockInvoke.mockResolvedValue(null);
+    mockInvoke.mockResolvedValueOnce([]);
     const { result } = renderHook(() => useTextLoader());
 
     await waitFor(() => {
@@ -184,5 +98,65 @@ describe("useTextLoader", () => {
     });
 
     expect(result.current.appView).toBe("input");
+  });
+
+  it("createText calls create_text and transitions to reading", async () => {
+    mockInvoke.mockResolvedValueOnce([]); // list_texts
+    mockInvoke.mockResolvedValueOnce(sampleText); // create_text
+
+    const { result } = renderHook(() => useTextLoader());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.createText("Test Title", "你好世界");
+    });
+
+    expect(mockInvoke).toHaveBeenCalledWith("create_text", {
+      title: "Test Title",
+      rawInput: "你好世界",
+    });
+    expect(result.current.activeText).toEqual(sampleText);
+    expect(result.current.appView).toBe("reading");
+    expect(result.current.previews).toHaveLength(1);
+  });
+
+  it("openText calls load_text and transitions to reading", async () => {
+    mockInvoke.mockResolvedValueOnce(samplePreviews); // list_texts
+    mockInvoke.mockResolvedValueOnce(sampleText); // load_text
+
+    const { result } = renderHook(() => useTextLoader());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.openText(1);
+    });
+
+    expect(mockInvoke).toHaveBeenCalledWith("load_text", { textId: 1 });
+    expect(result.current.activeText).toEqual(sampleText);
+    expect(result.current.appView).toBe("reading");
+  });
+
+  it("deleteText removes preview from list", async () => {
+    mockInvoke.mockResolvedValueOnce(samplePreviews); // list_texts
+    mockInvoke.mockResolvedValueOnce(undefined); // delete_text
+
+    const { result } = renderHook(() => useTextLoader());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    await act(async () => {
+      await result.current.deleteText(1);
+    });
+
+    expect(mockInvoke).toHaveBeenCalledWith("delete_text", { textId: 1 });
+    expect(result.current.previews).toHaveLength(0);
   });
 });

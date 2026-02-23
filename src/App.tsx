@@ -1,7 +1,7 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useCallback } from "react";
 import { TextDisplay } from "./components/TextDisplay";
 import { TitleBar } from "./components/TitleBar";
-import { EmptyState } from "./components/EmptyState";
+import { LibraryScreen } from "./components/LibraryScreen";
 import { TextInputView } from "./components/TextInputView";
 import { ProcessingState } from "./components/ProcessingState";
 import { usePinyinVisibility } from "./hooks/usePinyinVisibility";
@@ -10,29 +10,29 @@ import { useTheme } from "./hooks/useTheme";
 import { useColorPalette } from "./hooks/useColorPalette";
 import { useTextLoader } from "./hooks/useTextLoader";
 import { useElapsedTime } from "./hooks/useElapsedTime";
-import type { AppView } from "./hooks/useTextLoader";
 
 function App() {
   const {
-    text,
+    previews,
+    activeText,
     isLoading,
     appView,
     setView,
-    saveText,
-    processText,
+    createText,
+    openText,
     updatePinyin,
+    deleteText,
+    refreshPreviews,
     isProcessing,
     processingError,
-    retryProcessing,
   } = useTextLoader();
   const [pinyinVisible, setPinyinVisible] = usePinyinVisibility();
   const { zoomLevel, zoomIn, zoomOut, isMinZoom, isMaxZoom } = useTextZoom();
   const [theme, setTheme] = useTheme();
   const { paletteId, setPalette, palettes } = useColorPalette();
   const { formatted: elapsedTime } = useElapsedTime(isProcessing);
-  const previousViewRef = useRef<AppView>(appView);
 
-  // Suppress Space key on all buttons — Enter is the only activation key (FR-028)
+  // Suppress Space key on all buttons — Enter is the only activation key
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === " " && e.target instanceof HTMLButtonElement) {
@@ -43,7 +43,7 @@ function App() {
     return () => document.removeEventListener("keydown", handler);
   }, []);
 
-  // Suppress default browser context menu on right-click (FR-001)
+  // Suppress default browser context menu on right-click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       e.preventDefault();
@@ -56,53 +56,46 @@ function App() {
     setTheme(theme === "dark" ? "light" : "dark");
   };
 
-  const handleEnterText = useCallback(() => {
-    previousViewRef.current = appView;
+  const handleAddText = useCallback(() => {
     setView("input");
-  }, [appView, setView]);
-
-  const handleSubmit = useCallback(async (rawInput: string) => {
-    await saveText(rawInput);
-    if (rawInput === "") {
-      setView("empty");
-    } else {
-      setView("processing");
-      processText(rawInput).catch(() => {
-        // Error is handled by processingError state in useTextLoader
-      });
-    }
-  }, [saveText, setView, processText]);
-
-  const handleCancel = useCallback(() => {
-    setView(previousViewRef.current);
   }, [setView]);
 
-  const handleEdit = useCallback(() => {
-    previousViewRef.current = appView;
-    setView("input");
-  }, [appView, setView]);
+  const handleSubmit = useCallback((title: string, rawInput: string) => {
+    createText(title, rawInput);
+  }, [createText]);
+
+  const handleCancel = useCallback(() => {
+    setView("library");
+  }, [setView]);
+
+  const handleBack = useCallback(() => {
+    refreshPreviews();
+    setView("library");
+  }, [setView, refreshPreviews]);
 
   const handleShowPinyin = useCallback(() => {
     setPinyinVisible(true);
   }, [setPinyinVisible]);
 
-  const showEdit = appView === "reading" || appView === "processing";
+  const showBack = appView === "reading";
 
   const renderContent = () => {
     if (isLoading) return null;
 
     switch (appView) {
-      case "empty":
+      case "library":
         return (
-          <div className="bg-surface text-content min-h-screen pt-24 pb-12">
-            <EmptyState onEnterText={handleEnterText} />
-          </div>
+          <LibraryScreen
+            previews={previews}
+            onAddText={handleAddText}
+            onOpenText={openText}
+            onDeleteText={deleteText}
+          />
         );
       case "input":
         return (
           <div className="bg-surface text-content h-screen pt-16 pb-4 flex flex-col">
             <TextInputView
-              initialValue={text?.rawInput ?? ""}
               onSubmit={handleSubmit}
               onCancel={handleCancel}
             />
@@ -115,9 +108,9 @@ function App() {
               isProcessing={isProcessing}
               error={processingError}
               elapsedTime={elapsedTime}
-              onProcess={retryProcessing}
-              onRetry={retryProcessing}
-              onEdit={handleEdit}
+              onProcess={handleCancel}
+              onRetry={handleCancel}
+              onEdit={handleCancel}
             />
           </div>
         );
@@ -125,7 +118,12 @@ function App() {
         return (
           <div className="bg-surface text-content min-h-screen px-8 pt-24 pb-12">
             <div className="max-w-5xl mx-auto">
-              <TextDisplay text={text!} showPinyin={pinyinVisible} zoomLevel={zoomLevel} onPinyinEdit={updatePinyin} onShowPinyin={handleShowPinyin} />
+              {activeText && (
+                <>
+                  <h2 className="text-2xl font-bold text-content mb-6 select-none cursor-default">{activeText.title}</h2>
+                  <TextDisplay text={activeText} showPinyin={pinyinVisible} zoomLevel={zoomLevel} onPinyinEdit={updatePinyin} onShowPinyin={handleShowPinyin} />
+                </>
+              )}
             </div>
           </div>
         );
@@ -147,9 +145,9 @@ function App() {
         onPaletteSelect={setPalette}
         theme={theme}
         onThemeToggle={toggleTheme}
-        onEdit={handleEdit}
-        showEdit={showEdit}
-        rawInput={text?.rawInput ?? ""}
+        onBack={handleBack}
+        showBack={showBack}
+        rawInput={activeText?.rawInput ?? ""}
       />
       {renderContent()}
     </>

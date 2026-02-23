@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import App from "./App";
+import type { TextPreview } from "./types/domain";
 
 // Mock Tauri window API
 vi.mock("@tauri-apps/api/window", () => ({
@@ -23,37 +24,31 @@ describe("App", () => {
     mockInvoke.mockReset();
   });
 
-  it("renders empty state when no text saved", async () => {
-    mockInvoke.mockResolvedValue(null);
+  it("renders library empty state when no texts exist", async () => {
+    mockInvoke.mockResolvedValue([]);
 
     render(<App />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/paste chinese text to read with pinyin annotations/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/no texts yet/i)).toBeInTheDocument();
     });
   });
 
-  it("renders TextDisplay with ruby elements when text has segments", async () => {
-    mockInvoke.mockResolvedValue({
-      rawInput: "你好世界",
-      segments: [
-        { type: "word", word: { characters: "你好", pinyin: "nǐhǎo" } },
-        { type: "word", word: { characters: "世界", pinyin: "shìjiè" } },
-      ],
-    });
+  it("renders library with text previews", async () => {
+    const previews: TextPreview[] = [
+      { id: 1, title: "My Text", createdAt: "2026-02-23T12:00:00" },
+    ];
+    mockInvoke.mockResolvedValue(previews);
 
-    const { container } = render(<App />);
+    render(<App />);
 
     await waitFor(() => {
-      const rubies = container.querySelectorAll("ruby");
-      expect(rubies.length).toBeGreaterThan(0);
+      expect(screen.getByText("My Text")).toBeInTheDocument();
     });
   });
 
   it("renders TitleBar with title", async () => {
-    mockInvoke.mockResolvedValue(null);
+    mockInvoke.mockResolvedValue([]);
 
     render(<App />);
 
@@ -63,7 +58,7 @@ describe("App", () => {
   });
 
   it("renders ThemeToggle button inside TitleBar", async () => {
-    mockInvoke.mockResolvedValue(null);
+    mockInvoke.mockResolvedValue([]);
 
     render(<App />);
 
@@ -72,6 +67,18 @@ describe("App", () => {
         name: /switch to (light|dark) mode/i,
       });
       expect(themeToggleButton).toBeInTheDocument();
+    });
+  });
+
+  it("renders add text button", async () => {
+    mockInvoke.mockResolvedValue([]);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /add text/i }),
+      ).toBeInTheDocument();
     });
   });
 });

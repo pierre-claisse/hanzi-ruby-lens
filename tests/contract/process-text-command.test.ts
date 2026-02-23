@@ -7,13 +7,16 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: (...args: unknown[]) => mockInvoke(...args),
 }));
 
-describe("Tauri Command Contract: process_text", () => {
+describe("Tauri Command Contract: create_text (atomic process + save)", () => {
   beforeEach(() => {
     mockInvoke.mockReset();
   });
 
-  it("invokes 'process_text' with rawInput parameter", async () => {
-    const processedText: Text = {
+  it("invokes 'create_text' with title and rawInput, returns full Text with segments", async () => {
+    const createdText: Text = {
+      id: 1,
+      title: "今天天氣",
+      createdAt: "2026-02-23T12:00:00",
       rawInput: "今天天氣很好",
       segments: [
         { type: "word", word: { characters: "今天", pinyin: "jīntiān" } },
@@ -21,19 +24,29 @@ describe("Tauri Command Contract: process_text", () => {
         { type: "word", word: { characters: "很好", pinyin: "hěnhǎo" } },
       ],
     };
-    mockInvoke.mockResolvedValue(processedText);
+    mockInvoke.mockResolvedValue(createdText);
 
     const { invoke } = await import("@tauri-apps/api/core");
-    const result = await invoke<Text>("process_text", { rawInput: "今天天氣很好" });
+    const result = await invoke<Text>("create_text", {
+      title: "今天天氣",
+      rawInput: "今天天氣很好",
+    });
 
-    expect(mockInvoke).toHaveBeenCalledWith("process_text", { rawInput: "今天天氣很好" });
-    expect(mockInvoke).toHaveBeenCalledTimes(1);
+    expect(mockInvoke).toHaveBeenCalledWith("create_text", {
+      title: "今天天氣",
+      rawInput: "今天天氣很好",
+    });
+    expect(result.id).toBe(1);
+    expect(result.title).toBe("今天天氣");
     expect(result.rawInput).toBe("今天天氣很好");
     expect(result.segments).toHaveLength(3);
   });
 
   it("returns Text with word and plain segments", async () => {
-    const processedText: Text = {
+    const createdText: Text = {
+      id: 2,
+      title: "Test",
+      createdAt: "2026-02-23T12:00:00",
       rawInput: "你好，世界",
       segments: [
         { type: "word", word: { characters: "你好", pinyin: "nǐhǎo" } },
@@ -41,10 +54,13 @@ describe("Tauri Command Contract: process_text", () => {
         { type: "word", word: { characters: "世界", pinyin: "shìjiè" } },
       ],
     };
-    mockInvoke.mockResolvedValue(processedText);
+    mockInvoke.mockResolvedValue(createdText);
 
     const { invoke } = await import("@tauri-apps/api/core");
-    const result = await invoke<Text>("process_text", { rawInput: "你好，世界" });
+    const result = await invoke<Text>("create_text", {
+      title: "Test",
+      rawInput: "你好，世界",
+    });
 
     expect(result.segments[0]).toEqual({
       type: "word",
@@ -57,33 +73,23 @@ describe("Tauri Command Contract: process_text", () => {
     });
   });
 
-  it("returns empty Text for empty input", async () => {
-    const emptyText: Text = { rawInput: "", segments: [] };
-    mockInvoke.mockResolvedValue(emptyText);
-
-    const { invoke } = await import("@tauri-apps/api/core");
-    const result = await invoke<Text>("process_text", { rawInput: "" });
-
-    expect(result).toEqual({ rawInput: "", segments: [] });
-  });
-
-  it("rejects with error string on processing failure", async () => {
-    mockInvoke.mockRejectedValue("Processing error: Text processing failed.");
+  it("rejects with error on processing failure", async () => {
+    mockInvoke.mockRejectedValue("Processing failed. Please try again.");
 
     const { invoke } = await import("@tauri-apps/api/core");
 
     await expect(
-      invoke("process_text", { rawInput: "test" }),
-    ).rejects.toContain("Processing error");
+      invoke("create_text", { title: "Test", rawInput: "你好" }),
+    ).rejects.toContain("Processing failed");
   });
 
-  it("rejects with error string on database failure", async () => {
+  it("rejects with error on database failure", async () => {
     mockInvoke.mockRejectedValue("Database error: Failed to save text.");
 
     const { invoke } = await import("@tauri-apps/api/core");
 
     await expect(
-      invoke("process_text", { rawInput: "test" }),
+      invoke("create_text", { title: "Test", rawInput: "你好" }),
     ).rejects.toContain("Database error");
   });
 });

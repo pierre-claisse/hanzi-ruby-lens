@@ -8,6 +8,15 @@ export type TextSegment =
   | { type: "plain"; text: string };
 
 export interface Text {
+  id: number;
+  title: string;
+  createdAt: string;
   rawInput: string;
   segments: TextSegment[];
+}
+
+export interface TextPreview {
+  id: number;
+  title: string;
+  createdAt: string;
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useTextLoader } from "../../src/hooks/useTextLoader";
-import type { Text } from "../../src/types/domain";
+import type { Text, TextPreview } from "../../src/types/domain";
 
 // Mock Tauri core invoke
 const mockInvoke = vi.fn();
@@ -10,6 +10,9 @@ vi.mock("@tauri-apps/api/core", () => ({
 }));
 
 const sampleText: Text = {
+  id: 1,
+  title: "Test Title",
+  createdAt: "2026-02-23T12:00:00",
   rawInput: "你好世界",
   segments: [
     { type: "word", word: { characters: "你好", pinyin: "nǐhǎo" } },
@@ -18,109 +21,179 @@ const sampleText: Text = {
   ],
 };
 
-describe("useTextLoader.updatePinyin", () => {
+const samplePreviews: TextPreview[] = [
+  { id: 1, title: "Test Title", createdAt: "2026-02-23T12:00:00" },
+];
+
+describe("useTextLoader", () => {
   beforeEach(() => {
     mockInvoke.mockReset();
   });
 
-  it("updates pinyin for the target segment and saves", async () => {
-    // Initial load returns sampleText
-    mockInvoke.mockResolvedValueOnce(sampleText);
+  it("loads previews on mount and starts in library view", async () => {
+    mockInvoke.mockResolvedValueOnce(samplePreviews);
 
     const { result } = renderHook(() => useTextLoader());
 
-    // Wait for initial load
-    await waitFor(() => {
-      expect(result.current.text).toEqual(sampleText);
-    });
-
-    // Mock save_text for the updatePinyin call
-    mockInvoke.mockResolvedValueOnce(undefined);
-
-    await act(async () => {
-      await result.current.updatePinyin(0, "nihao");
-    });
-
-    // Verify save_text was called with the updated text
-    expect(mockInvoke).toHaveBeenCalledWith("save_text", {
-      text: {
-        rawInput: "你好世界",
-        segments: [
-          { type: "word", word: { characters: "你好", pinyin: "nihao" } },
-          { type: "plain", text: "，" },
-          { type: "word", word: { characters: "世界", pinyin: "shìjiè" } },
-        ],
-      },
-    });
-
-    // Verify React state is updated
-    expect(result.current.text!.segments[0]).toEqual({
-      type: "word",
-      word: { characters: "你好", pinyin: "nihao" },
-    });
-
-    // Verify other segments are unchanged
-    expect(result.current.text!.segments[2]).toEqual({
-      type: "word",
-      word: { characters: "世界", pinyin: "shìjiè" },
-    });
-  });
-
-  it("does not mutate the original text object", async () => {
-    const originalText = structuredClone(sampleText);
-    mockInvoke.mockResolvedValueOnce(sampleText);
-
-    const { result } = renderHook(() => useTextLoader());
-    await waitFor(() => {
-      expect(result.current.text).toEqual(sampleText);
-    });
-
-    mockInvoke.mockResolvedValueOnce(undefined);
-
-    await act(async () => {
-      await result.current.updatePinyin(0, "nihao");
-    });
-
-    // Original sampleText should be unchanged
-    expect(sampleText).toEqual(originalText);
-  });
-
-  it("skips non-word segments gracefully", async () => {
-    mockInvoke.mockResolvedValueOnce(sampleText);
-
-    const { result } = renderHook(() => useTextLoader());
-    await waitFor(() => {
-      expect(result.current.text).toEqual(sampleText);
-    });
-
-    mockInvoke.mockResolvedValueOnce(undefined);
-
-    // Index 1 is a plain segment — should be left unchanged
-    await act(async () => {
-      await result.current.updatePinyin(1, "something");
-    });
-
-    // Plain segment should be untouched
-    expect(result.current.text!.segments[1]).toEqual({
-      type: "plain",
-      text: "，",
-    });
-  });
-
-  it("does nothing when text is null", async () => {
-    mockInvoke.mockResolvedValueOnce(null);
-
-    const { result } = renderHook(() => useTextLoader());
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    await act(async () => {
-      await result.current.updatePinyin(0, "nihao");
+    expect(result.current.appView).toBe("library");
+    expect(result.current.previews).toEqual(samplePreviews);
+    expect(mockInvoke).toHaveBeenCalledWith("list_texts");
+  });
+
+  it("starts in library view even with empty previews", async () => {
+    mockInvoke.mockResolvedValueOnce([]);
+
+    const { result } = renderHook(() => useTextLoader());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
     });
 
-    // save_text should NOT have been called (only load_text was called)
-    expect(mockInvoke).toHaveBeenCalledTimes(1);
-    expect(mockInvoke).toHaveBeenCalledWith("load_text");
+    expect(result.current.appView).toBe("library");
+    expect(result.current.previews).toEqual([]);
+  });
+
+  describe("createText", () => {
+    it("creates text and transitions to reading view", async () => {
+      mockInvoke.mockResolvedValueOnce([]); // initial list_texts
+      mockInvoke.mockResolvedValueOnce(sampleText); // create_text
+
+      const { result } = renderHook(() => useTextLoader());
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.createText("Test Title", "你好世界");
+      });
+
+      expect(mockInvoke).toHaveBeenCalledWith("create_text", {
+        title: "Test Title",
+        rawInput: "你好世界",
+      });
+      expect(result.current.activeText).toEqual(sampleText);
+      expect(result.current.appView).toBe("reading");
+      expect(result.current.previews).toHaveLength(1);
+    });
+
+    it("sets processing error and returns to library on failure", async () => {
+      mockInvoke.mockResolvedValueOnce([]); // initial list_texts
+      mockInvoke.mockRejectedValueOnce("Processing failed"); // create_text
+
+      const { result } = renderHook(() => useTextLoader());
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.createText("Test", "你好");
+      });
+
+      expect(result.current.processingError).toBe("Processing failed");
+      expect(result.current.appView).toBe("library");
+    });
+  });
+
+  describe("openText", () => {
+    it("loads text by id and transitions to reading view", async () => {
+      mockInvoke.mockResolvedValueOnce(samplePreviews); // initial list_texts
+      mockInvoke.mockResolvedValueOnce(sampleText); // load_text
+
+      const { result } = renderHook(() => useTextLoader());
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.openText(1);
+      });
+
+      expect(mockInvoke).toHaveBeenCalledWith("load_text", { textId: 1 });
+      expect(result.current.activeText).toEqual(sampleText);
+      expect(result.current.appView).toBe("reading");
+    });
+  });
+
+  describe("updatePinyin", () => {
+    it("updates pinyin via IPC and patches local state", async () => {
+      mockInvoke.mockResolvedValueOnce(samplePreviews); // initial list_texts
+      mockInvoke.mockResolvedValueOnce(sampleText); // load_text
+      mockInvoke.mockResolvedValueOnce(undefined); // update_pinyin
+
+      const { result } = renderHook(() => useTextLoader());
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.openText(1);
+      });
+
+      await act(async () => {
+        await result.current.updatePinyin(0, "nihao");
+      });
+
+      expect(mockInvoke).toHaveBeenCalledWith("update_pinyin", {
+        textId: 1,
+        segmentIndex: 0,
+        newPinyin: "nihao",
+      });
+
+      expect(result.current.activeText!.segments[0]).toEqual({
+        type: "word",
+        word: { characters: "你好", pinyin: "nihao" },
+      });
+
+      // Other segments unchanged
+      expect(result.current.activeText!.segments[2]).toEqual({
+        type: "word",
+        word: { characters: "世界", pinyin: "shìjiè" },
+      });
+    });
+
+    it("does nothing when no active text", async () => {
+      mockInvoke.mockResolvedValueOnce([]); // initial list_texts
+
+      const { result } = renderHook(() => useTextLoader());
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.updatePinyin(0, "nihao");
+      });
+
+      // Only list_texts was called
+      expect(mockInvoke).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("deleteText", () => {
+    it("removes text from previews", async () => {
+      mockInvoke.mockResolvedValueOnce(samplePreviews); // initial list_texts
+      mockInvoke.mockResolvedValueOnce(undefined); // delete_text
+
+      const { result } = renderHook(() => useTextLoader());
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      await act(async () => {
+        await result.current.deleteText(1);
+      });
+
+      expect(mockInvoke).toHaveBeenCalledWith("delete_text", { textId: 1 });
+      expect(result.current.previews).toHaveLength(0);
+    });
   });
 });

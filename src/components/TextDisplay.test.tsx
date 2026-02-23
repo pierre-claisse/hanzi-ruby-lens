@@ -4,6 +4,9 @@ import { TextDisplay } from "./TextDisplay";
 import type { Text } from "../types/domain";
 
 const sampleText: Text = {
+  id: 1,
+  title: "Test",
+  createdAt: "2026-02-23T12:00:00",
   rawInput: "你好，世界！",
   segments: [
     { type: "word", word: { characters: "你好", pinyin: "nǐhǎo" } },
@@ -34,6 +37,9 @@ describe("TextDisplay", () => {
 
   it("renders Chinese punctuation inline without annotation", () => {
     const punctuationText: Text = {
+      id: 2,
+      title: "Punct",
+      createdAt: "2026-02-23T12:00:00",
       rawInput: "好。，",
       segments: [
         { type: "word", word: { characters: "好", pinyin: "hǎo" } },
@@ -49,7 +55,7 @@ describe("TextDisplay", () => {
   });
 
   it("shows placeholder message when Text is empty", () => {
-    const emptyText: Text = { rawInput: "", segments: [] };
+    const emptyText: Text = { id: 3, title: "Empty", createdAt: "2026-02-23T12:00:00", rawInput: "", segments: [] };
     render(<TextDisplay text={emptyText} />);
     expect(screen.getByText(/no text/i)).toBeInTheDocument();
   });
@@ -68,6 +74,9 @@ describe("TextDisplay", () => {
 
   it("handles long-pinyin words without overflow or misalignment", () => {
     const longPinyinText: Text = {
+      id: 4,
+      title: "Long",
+      createdAt: "2026-02-23T12:00:00",
       rawInput: "乘風破浪，再接再厲",
       segments: [
         { type: "word", word: { characters: "乘風破浪", pinyin: "chéngfēngpòlàng" } },
