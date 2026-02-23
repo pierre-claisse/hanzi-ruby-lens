@@ -87,7 +87,6 @@ function App() {
         return (
           <LibraryScreen
             previews={previews}
-            onAddText={handleAddText}
             onOpenText={openText}
             onDeleteText={deleteText}
           />
@@ -119,10 +118,7 @@ function App() {
           <div className="bg-surface text-content min-h-screen px-8 pt-24 pb-12">
             <div className="max-w-5xl mx-auto">
               {activeText && (
-                <>
-                  <h2 className="text-2xl font-bold text-content mb-6 select-none cursor-default">{activeText.title}</h2>
-                  <TextDisplay text={activeText} showPinyin={pinyinVisible} zoomLevel={zoomLevel} onPinyinEdit={updatePinyin} onShowPinyin={handleShowPinyin} />
-                </>
+                <TextDisplay text={activeText} showPinyin={pinyinVisible} zoomLevel={zoomLevel} onPinyinEdit={updatePinyin} onShowPinyin={handleShowPinyin} />
               )}
             </div>
           </div>
@@ -148,6 +144,9 @@ function App() {
         onBack={handleBack}
         showBack={showBack}
         rawInput={activeText?.rawInput ?? ""}
+        onAddText={handleAddText}
+        showAddButton={appView === "library"}
+        textTitle={showBack ? activeText?.title : undefined}
       />
       {renderContent()}
     </>

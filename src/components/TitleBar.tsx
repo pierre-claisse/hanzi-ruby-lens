@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus } from 'lucide-react';
 import { PinyinToggle } from './PinyinToggle';
 import { TranslateButton } from './TranslateButton';
 import { ZoomInButton } from './ZoomInButton';
@@ -25,9 +25,12 @@ interface TitleBarProps {
   onBack?: () => void;
   showBack?: boolean;
   rawInput?: string;
+  onAddText?: () => void;
+  showAddButton?: boolean;
+  textTitle?: string;
 }
 
-export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, onZoomOut, isMinZoom, isMaxZoom, palettes, selectedPaletteId, onPaletteSelect, theme, onThemeToggle, onBack, showBack, rawInput }: TitleBarProps) {
+export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, onZoomOut, isMinZoom, isMaxZoom, palettes, selectedPaletteId, onPaletteSelect, theme, onThemeToggle, onBack, showBack, rawInput, onAddText, showAddButton, textTitle }: TitleBarProps) {
   return (
     <header
       data-tauri-drag-region
@@ -45,25 +48,47 @@ export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, o
             <ArrowLeft className="w-5 h-5" aria-hidden="true" />
           </button>
         )}
-        <h1 data-tauri-drag-region className="text-sm text-content font-medium">Hanzi Ruby Lens</h1>
-        <span
-          key={zoomLevel}
-          data-tauri-drag-region
-          className="text-xs text-content/40"
-          style={{ animation: 'zoom-indicator-fade 200ms ease-in-out' }}
-        >
-          ({zoomLevel}%)
-        </span>
+        <h1 data-tauri-drag-region className="text-base text-content font-medium">Hanzi Ruby Lens</h1>
+        {showBack && (
+          <span
+            key={zoomLevel}
+            data-tauri-drag-region
+            className="text-base text-content/40"
+            style={{ animation: 'zoom-indicator-fade 200ms ease-in-out' }}
+          >
+            ({zoomLevel}%)
+          </span>
+        )}
       </div>
+
+      {textTitle && (
+        <span
+          data-tauri-drag-region
+          className="absolute left-1/2 -translate-x-1/2 max-w-[40%] truncate text-lg text-content/60 font-bold select-none cursor-default"
+        >
+          {textTitle}
+        </span>
+      )}
 
       <div className="flex gap-1">
         {showBack && (
           <>
             <TranslateButton rawInput={rawInput ?? ""} />
             <PinyinToggle visible={pinyinVisible} onToggle={onPinyinToggle} />
-            <ZoomInButton onClick={onZoomIn} disabled={isMaxZoom} />
             <ZoomOutButton onClick={onZoomOut} disabled={isMinZoom} />
+            <ZoomInButton onClick={onZoomIn} disabled={isMaxZoom} />
           </>
+        )}
+        {showAddButton && onAddText && (
+          <button
+            type="button"
+            className="p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer"
+            onClick={onAddText}
+            onPointerDown={(e) => e.stopPropagation()}
+            aria-label="Add text"
+          >
+            <Plus className="w-5 h-5" aria-hidden="true" />
+          </button>
         )}
         <PaletteSelector palettes={palettes} selectedPaletteId={selectedPaletteId} onSelect={onPaletteSelect} theme={theme} />
         <ThemeToggle theme={theme} onToggle={onThemeToggle} />

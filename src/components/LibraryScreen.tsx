@@ -1,16 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import type { TextPreview } from "../types/domain";
 import { TextPreviewCard } from "./TextPreviewCard";
 
 interface LibraryScreenProps {
   previews: TextPreview[];
-  onAddText: () => void;
   onOpenText: (id: number) => void;
   onDeleteText: (id: number) => void;
 }
 
-export function LibraryScreen({ previews, onAddText, onOpenText, onDeleteText }: LibraryScreenProps) {
+export function LibraryScreen({ previews, onOpenText, onDeleteText }: LibraryScreenProps) {
   const [contextMenu, setContextMenu] = useState<{ id: number; x: number; y: number } | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
@@ -46,8 +45,8 @@ export function LibraryScreen({ previews, onAddText, onOpenText, onDeleteText }:
   }, [contextMenu]);
 
   return (
-    <div className="bg-surface text-content min-h-screen pt-16 pb-24 px-8">
-      <div className="max-w-3xl mx-auto">
+    <div className="bg-surface text-content min-h-screen pt-16 pb-12 px-8">
+      <div className="max-w-5xl mx-auto">
         {previews.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <p className="text-content/40 text-lg text-center">
@@ -55,7 +54,7 @@ export function LibraryScreen({ previews, onAddText, onOpenText, onDeleteText }:
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-2 mt-4">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4 mt-4">
             {previews.map((preview) => (
               <TextPreviewCard
                 key={preview.id}
@@ -67,16 +66,6 @@ export function LibraryScreen({ previews, onAddText, onOpenText, onDeleteText }:
           </div>
         )}
       </div>
-
-      {/* Fixed add button */}
-      <button
-        type="button"
-        className="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-accent text-white shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 cursor-pointer"
-        onClick={onAddText}
-        aria-label="Add text"
-      >
-        <Plus className="w-6 h-6" aria-hidden="true" />
-      </button>
 
       {/* Context menu */}
       {contextMenu && (

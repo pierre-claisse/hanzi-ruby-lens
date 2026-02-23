@@ -176,7 +176,7 @@ describe("Multi-Text Library Flow", () => {
   // ── US3: Read Text ──
 
   describe("US3: Read Text", () => {
-    it("clicking a preview opens the reading view with title header", async () => {
+    it("clicking a preview opens the reading view", async () => {
       const user = userEvent.setup();
       mockInvoke.mockImplementation((cmd: string) => {
         if (cmd === "list_texts") return Promise.resolve(samplePreviews);
