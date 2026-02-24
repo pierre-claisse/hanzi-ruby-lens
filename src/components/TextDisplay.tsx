@@ -9,6 +9,58 @@ import type { MenuAction, MenuEntry } from "./WordContextMenu";
 import { useWordNavigation } from "../hooks/useWordNavigation";
 import { diacriticalToNumbered, numberedToDiacritical } from "../utils/pinyinConversion";
 
+/** Fixed menu width matching Tailwind w-48 (12rem = 192px at 16px base). */
+export const MENU_WIDTH_PX = 192;
+/** Height per menu entry (px). */
+export const MENU_ITEM_HEIGHT_PX = 36;
+/** Vertical padding inside the menu (px). */
+const MENU_PADDING_PX = 8;
+/** Gap between the word edge and the menu (px). */
+const MENU_GAP_PX = 4;
+
+/**
+ * Pure function: compute context-menu position relative to its container
+ * based on which viewport quadrant the word occupies.
+ */
+export function computeMenuPosition(
+  wordRect: { top: number; bottom: number; left: number; right: number; width: number; height: number },
+  containerRect: { top: number; left: number },
+  menuEntryCount: number,
+  viewportWidth: number,
+  viewportHeight: number,
+): { top: number; left: number; direction: "above" | "below" } {
+  const menuHeight = menuEntryCount * MENU_ITEM_HEIGHT_PX + MENU_PADDING_PX;
+  const wordCenterY = wordRect.top + wordRect.height / 2;
+  const wordCenterX = wordRect.left + wordRect.width / 2;
+  const midY = viewportHeight / 2;
+  const midX = viewportWidth / 2;
+
+  // Vertical: bottom half → above, top half (or midpoint) → below
+  let top: number;
+  let direction: "above" | "below";
+  if (wordCenterY > midY) {
+    top = wordRect.top - containerRect.top - menuHeight - MENU_GAP_PX;
+    direction = "above";
+  } else {
+    top = wordRect.bottom - containerRect.top + MENU_GAP_PX;
+    direction = "below";
+  }
+
+  // Horizontal: right half → left of word, left half (or midpoint) → right of word
+  let left: number;
+  if (wordCenterX > midX) {
+    left = wordRect.left - containerRect.left - MENU_WIDTH_PX - MENU_GAP_PX;
+  } else {
+    left = wordRect.right - containerRect.left + MENU_GAP_PX;
+  }
+
+  // Clamp to keep menu within container bounds
+  if (left < 0) left = 0;
+  if (top < 0) top = 0;
+
+  return { top, left, direction };
+}
+
 interface TextDisplayProps {
   text: Text;
   showPinyin?: boolean;
@@ -272,33 +324,20 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen, closeMenu]);
 
-  // Compute menu position from tracked word element (adaptive: above or below)
+  // Compute menu position via pure function (quadrant-aware: both axes).
+  // Shared by both right-click and keyboard-triggered menu opening.
   const getMenuPosition = useCallback(() => {
     const wordEl = wordRefs.current.get(trackedIndex);
     const containerEl = containerRef.current;
     if (!wordEl || !containerEl) return { top: 0, left: 0, direction: "below" as const };
 
-    const wordRect = wordEl.getBoundingClientRect();
-    const containerRect = containerEl.getBoundingClientRect();
-    const wordCenter = wordRect.top + wordRect.height / 2;
-    const viewportMid = window.innerHeight / 2;
-
-    if (wordCenter > viewportMid) {
-      // Word is in the lower half → open menu above
-      const menuHeight = currentMenuEntries.length * 36 + 8;
-      return {
-        top: wordRect.top - containerRect.top - menuHeight - 4,
-        left: wordRect.left - containerRect.left,
-        direction: "above" as const,
-      };
-    }
-
-    // Word is in the upper half → open menu below (default)
-    return {
-      top: wordRect.bottom - containerRect.top + 4,
-      left: wordRect.left - containerRect.left,
-      direction: "below" as const,
-    };
+    return computeMenuPosition(
+      wordEl.getBoundingClientRect(),
+      containerEl.getBoundingClientRect(),
+      currentMenuEntries.length,
+      window.innerWidth,
+      window.innerHeight,
+    );
   }, [trackedIndex, currentMenuEntries.length]);
 
   // Tab-away detection: if focus moves outside container, close menu

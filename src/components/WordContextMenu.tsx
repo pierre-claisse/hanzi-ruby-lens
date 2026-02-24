@@ -43,7 +43,7 @@ export function WordContextMenu({ entries, focusedIndex, position, direction, on
           onMouseEnter={() => onEntryHover(index)}
           onClick={() => onAction(action)}
         >
-          <Icon size={16} />
+          <Icon size={16} strokeWidth={1.5} />
           {label}
         </div>
       ))}
