@@ -7,6 +7,7 @@ import { RubyWord } from "./RubyWord";
 import { WordContextMenu } from "./WordContextMenu";
 import type { MenuAction, MenuEntry } from "./WordContextMenu";
 import { useWordNavigation } from "../hooks/useWordNavigation";
+import { diacriticalToNumbered, numberedToDiacritical } from "../utils/pinyinConversion";
 
 interface TextDisplayProps {
   text: Text;
@@ -191,7 +192,7 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
       case "editPinyin":
         if (!showPinyin) onShowPinyin?.();
         setEditingWordIndex(currentTrackedIndex);
-        setEditValue(segment.word.pinyin);
+        setEditValue(diacriticalToNumbered(segment.word.pinyin));
         break;
       case "copy":
         writeText(segment.word.characters);
@@ -271,20 +272,34 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen, closeMenu]);
 
-  // Compute menu position from tracked word element
+  // Compute menu position from tracked word element (adaptive: above or below)
   const getMenuPosition = useCallback(() => {
     const wordEl = wordRefs.current.get(trackedIndex);
     const containerEl = containerRef.current;
-    if (!wordEl || !containerEl) return { top: 0, left: 0 };
+    if (!wordEl || !containerEl) return { top: 0, left: 0, direction: "below" as const };
 
     const wordRect = wordEl.getBoundingClientRect();
     const containerRect = containerEl.getBoundingClientRect();
+    const wordCenter = wordRect.top + wordRect.height / 2;
+    const viewportMid = window.innerHeight / 2;
 
+    if (wordCenter > viewportMid) {
+      // Word is in the lower half → open menu above
+      const menuHeight = currentMenuEntries.length * 36 + 8;
+      return {
+        top: wordRect.top - containerRect.top - menuHeight - 4,
+        left: wordRect.left - containerRect.left,
+        direction: "above" as const,
+      };
+    }
+
+    // Word is in the upper half → open menu below (default)
     return {
       top: wordRect.bottom - containerRect.top + 4,
       left: wordRect.left - containerRect.left,
+      direction: "below" as const,
     };
-  }, [trackedIndex]);
+  }, [trackedIndex, currentMenuEntries.length]);
 
   // Tab-away detection: if focus moves outside container, close menu
   const handleContainerBlur = useCallback((e: React.FocusEvent) => {
@@ -299,7 +314,7 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
     if (!trimmed) return; // FR-007: reject empty
     const segIndex = wordToSegmentIndex.get(editingWordIndex);
     if (segIndex !== undefined) {
-      onPinyinEdit?.(segIndex, trimmed);
+      onPinyinEdit?.(segIndex, numberedToDiacritical(trimmed));
     }
     setEditingWordIndex(null);
     setEditValue("");
@@ -374,15 +389,19 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
           })}
         </div>
       ))}
-      {menuOpen && isFocused && (
-        <WordContextMenu
-          entries={currentMenuEntries}
-          focusedIndex={menuFocusedIndex}
-          position={getMenuPosition()}
-          onEntryHover={handleMenuEntryHover}
-          onAction={handleMenuClick}
-        />
-      )}
+      {menuOpen && isFocused && (() => {
+        const menuPos = getMenuPosition();
+        return (
+          <WordContextMenu
+            entries={currentMenuEntries}
+            focusedIndex={menuFocusedIndex}
+            position={menuPos}
+            direction={menuPos.direction}
+            onEntryHover={handleMenuEntryHover}
+            onAction={handleMenuClick}
+          />
+        );
+      })()}
     </div>
   );
 }
