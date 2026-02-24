@@ -18,29 +18,29 @@ describe("useWordNavigation", () => {
   // --- Initialization ---
 
   it("initializes trackedIndex to 0", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
     expect(result.current.trackedIndex).toBe(0);
   });
 
   it("initializes isFocused to false", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
     expect(result.current.isFocused).toBe(false);
   });
 
   it("initializes menuOpen to false", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
     expect(result.current.menuOpen).toBe(false);
   });
 
   it("initializes menuFocusedIndex to 0", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
     expect(result.current.menuFocusedIndex).toBe(0);
   });
 
   // --- Focus / Blur ---
 
   it("sets isFocused to true on handleFocus", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.handleFocus(); });
 
@@ -48,7 +48,7 @@ describe("useWordNavigation", () => {
   });
 
   it("sets isFocused to false on handleBlur", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.handleFocus(); });
     act(() => { result.current.handleBlur(); });
@@ -57,7 +57,7 @@ describe("useWordNavigation", () => {
   });
 
   it("closes menu on handleBlur", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.handleFocus(); });
     act(() => { result.current.openMenuForWord(2); });
@@ -71,7 +71,7 @@ describe("useWordNavigation", () => {
   // --- ArrowRight ---
 
   it("increments trackedIndex on ArrowRight", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowRight")); });
 
@@ -79,7 +79,7 @@ describe("useWordNavigation", () => {
   });
 
   it("clamps trackedIndex at wordCount-1 on ArrowRight", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     for (let i = 0; i < WORD_COUNT + 2; i++) {
       act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowRight")); });
@@ -89,7 +89,7 @@ describe("useWordNavigation", () => {
   });
 
   it("calls preventDefault on ArrowRight", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
     const event = makeKeyEvent("ArrowRight");
 
     act(() => { result.current.handleKeyDown(event); });
@@ -100,7 +100,7 @@ describe("useWordNavigation", () => {
   // --- ArrowLeft ---
 
   it("decrements trackedIndex on ArrowLeft", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowRight")); });
     act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowRight")); });
@@ -110,7 +110,7 @@ describe("useWordNavigation", () => {
   });
 
   it("clamps trackedIndex at 0 on ArrowLeft", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowLeft")); });
 
@@ -118,7 +118,7 @@ describe("useWordNavigation", () => {
   });
 
   it("calls preventDefault on ArrowLeft", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
     const event = makeKeyEvent("ArrowLeft");
 
     act(() => { result.current.handleKeyDown(event); });
@@ -129,7 +129,7 @@ describe("useWordNavigation", () => {
   // --- Space ---
 
   it("calls preventDefault on Space (does nothing)", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
     const event = makeKeyEvent(" ");
 
     act(() => { result.current.handleKeyDown(event); });
@@ -141,7 +141,7 @@ describe("useWordNavigation", () => {
   // --- Mouse hover ---
 
   it("sets trackedIndex on handleWordHover", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.handleWordHover(3); });
 
@@ -149,7 +149,7 @@ describe("useWordNavigation", () => {
   });
 
   it("arrow navigation continues from mouse-set position", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.handleWordHover(2); });
     act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowRight")); });
@@ -160,7 +160,7 @@ describe("useWordNavigation", () => {
   // --- Enter opens menu ---
 
   it("opens menu on Enter in word-navigation mode", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.handleKeyDown(makeKeyEvent("Enter")); });
 
@@ -169,7 +169,7 @@ describe("useWordNavigation", () => {
   });
 
   it("calls preventDefault on Enter in word-navigation mode", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
     const event = makeKeyEvent("Enter");
 
     act(() => { result.current.handleKeyDown(event); });
@@ -180,7 +180,7 @@ describe("useWordNavigation", () => {
   // --- openMenuForWord ---
 
   it("sets trackedIndex and opens menu via openMenuForWord", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.openMenuForWord(3); });
 
@@ -192,7 +192,7 @@ describe("useWordNavigation", () => {
   // --- closeMenu ---
 
   it("resets menu state on closeMenu", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.openMenuForWord(2); });
     act(() => { result.current.closeMenu(); });
@@ -204,7 +204,7 @@ describe("useWordNavigation", () => {
   // --- Menu mode: ArrowDown/ArrowUp with wrapping ---
 
   it("increments menuFocusedIndex on ArrowDown in menu mode", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.openMenuForWord(0); });
     act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowDown")); });
@@ -213,7 +213,7 @@ describe("useWordNavigation", () => {
   });
 
   it("wraps menuFocusedIndex on ArrowDown past last entry", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.openMenuForWord(0); });
     act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowDown")); }); // 0 → 1
@@ -225,7 +225,7 @@ describe("useWordNavigation", () => {
   });
 
   it("decrements menuFocusedIndex on ArrowUp in menu mode", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.openMenuForWord(0); });
     act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowDown")); });
@@ -235,7 +235,7 @@ describe("useWordNavigation", () => {
   });
 
   it("wraps menuFocusedIndex on ArrowUp past first entry", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.openMenuForWord(0); });
     act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowUp")); });
@@ -247,7 +247,7 @@ describe("useWordNavigation", () => {
 
   it("calls onMenuAction with menuFocusedIndex on Enter in menu mode", () => {
     const onMenuAction = vi.fn();
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, onMenuAction }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4, onMenuAction }));
 
     act(() => { result.current.openMenuForWord(0); });
     act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowDown")); }); // focus index 1
@@ -258,7 +258,7 @@ describe("useWordNavigation", () => {
 
   it("closes menu after Enter in menu mode", () => {
     const onMenuAction = vi.fn();
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, onMenuAction }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4, onMenuAction }));
 
     act(() => { result.current.openMenuForWord(0); });
     act(() => { result.current.handleKeyDown(makeKeyEvent("Enter")); });
@@ -267,7 +267,7 @@ describe("useWordNavigation", () => {
   });
 
   it("closes menu on Enter in menu mode without onMenuAction", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.openMenuForWord(0); });
     act(() => { result.current.handleKeyDown(makeKeyEvent("Enter")); });
@@ -278,7 +278,7 @@ describe("useWordNavigation", () => {
   // --- Menu mode: Escape no-op ---
 
   it("does nothing on Escape in menu mode (menu stays open)", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.openMenuForWord(0); });
     act(() => { result.current.handleKeyDown(makeKeyEvent("Escape")); });
@@ -289,7 +289,7 @@ describe("useWordNavigation", () => {
   // --- Menu mode: ArrowLeft/ArrowRight close menu and navigate ---
 
   it("closes menu and decrements trackedIndex on ArrowLeft in menu mode", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.handleWordHover(2); });
     act(() => { result.current.openMenuForWord(2); });
@@ -300,7 +300,7 @@ describe("useWordNavigation", () => {
   });
 
   it("closes menu and increments trackedIndex on ArrowRight in menu mode", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.handleWordHover(2); });
     act(() => { result.current.openMenuForWord(2); });
@@ -311,7 +311,7 @@ describe("useWordNavigation", () => {
   });
 
   it("clamps at 0 when ArrowLeft closes menu at first word", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.openMenuForWord(0); });
     act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowLeft")); });
@@ -321,7 +321,7 @@ describe("useWordNavigation", () => {
   });
 
   it("clamps at last word when ArrowRight closes menu at last word", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.openMenuForWord(WORD_COUNT - 1); });
     act(() => { result.current.handleKeyDown(makeKeyEvent("ArrowRight")); });
@@ -333,7 +333,7 @@ describe("useWordNavigation", () => {
   // --- Menu mode: Space still does nothing ---
 
   it("calls preventDefault on Space in menu mode", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
     const event = makeKeyEvent(" ");
 
     act(() => { result.current.openMenuForWord(0); });
@@ -346,7 +346,7 @@ describe("useWordNavigation", () => {
   // --- Menu mode: mouse hover on entry (FR-020) ---
 
   it("sets menuFocusedIndex on handleMenuEntryHover", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.openMenuForWord(0); });
     expect(result.current.menuFocusedIndex).toBe(0);
@@ -359,7 +359,7 @@ describe("useWordNavigation", () => {
   // --- Menu mode: mouse hover suppressed while menu open (FR-019 / 014-ux-bugfixes) ---
 
   it("keeps menu open when mouse hovers a different word", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.openMenuForWord(1); });
     expect(result.current.menuOpen).toBe(true);
@@ -371,7 +371,7 @@ describe("useWordNavigation", () => {
   });
 
   it("keeps menu open when mouse hovers the same word", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
 
     act(() => { result.current.openMenuForWord(2); });
     expect(result.current.menuOpen).toBe(true);
@@ -385,7 +385,7 @@ describe("useWordNavigation", () => {
   // --- Unrelated keys ---
 
   it("ignores unrelated keys in word-navigation mode", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
     const event = makeKeyEvent("a");
 
     act(() => { result.current.handleKeyDown(event); });
@@ -395,7 +395,7 @@ describe("useWordNavigation", () => {
   });
 
   it("ignores unrelated keys in menu mode", () => {
-    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT }));
+    const { result } = renderHook(() => useWordNavigation({ wordCount: WORD_COUNT, menuEntryCount: 4 }));
     const event = makeKeyEvent("a");
 
     act(() => { result.current.openMenuForWord(0); });

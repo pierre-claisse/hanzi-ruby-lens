@@ -1,10 +1,167 @@
 use crate::domain::{TextSegment, Word};
+use crate::error::AppError;
 
+use std::collections::HashSet;
 use std::sync::LazyLock;
 use jieba_rs::Jieba;
 use pinyin::{ToPinyin, ToPinyinMulti};
 
 static JIEBA: LazyLock<Jieba> = LazyLock::new(Jieba::new);
+
+/// All valid pinyin syllables (without tone marks) for greedy longest-match tokenization.
+static PINYIN_SYLLABLES: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
+    let syllables = [
+        // Special standalone vowels
+        "a", "o", "e", "ai", "ei", "ao", "ou", "an", "en", "ang", "eng", "er",
+        // b-
+        "ba", "bo", "bai", "bei", "bao", "ban", "ben", "bang", "beng", "bi",
+        "bie", "biao", "bian", "bin", "bing", "bu",
+        // p-
+        "pa", "po", "pai", "pei", "pao", "pou", "pan", "pen", "pang", "peng",
+        "pi", "pie", "piao", "pian", "pin", "ping", "pu",
+        // m-
+        "ma", "mo", "me", "mai", "mei", "mao", "mou", "man", "men", "mang",
+        "meng", "mi", "mie", "miao", "miu", "mian", "min", "ming", "mu",
+        // f-
+        "fa", "fo", "fei", "fou", "fan", "fen", "fang", "feng", "fu",
+        // d-
+        "da", "de", "dai", "dei", "dao", "dou", "dan", "den", "dang", "deng",
+        "di", "die", "diao", "diu", "dian", "ding", "dong", "du", "duo",
+        "dui", "duan", "dun",
+        // t-
+        "ta", "te", "tai", "tei", "tao", "tou", "tan", "tang", "teng", "ti",
+        "tie", "tiao", "tian", "ting", "tong", "tu", "tuo", "tui", "tuan", "tun",
+        // n-
+        "na", "ne", "nai", "nei", "nao", "nou", "nan", "nen", "nang", "neng",
+        "ni", "nie", "niao", "niu", "nian", "nin", "niang", "ning", "nong",
+        "nu", "nuo", "nuan", "nun", "nv", "nve",
+        // l-
+        "la", "le", "lai", "lei", "lao", "lou", "lan", "lang", "leng", "li",
+        "lia", "lie", "liao", "liu", "lian", "lin", "liang", "ling", "long",
+        "lu", "luo", "luan", "lun", "lv", "lve",
+        // g-
+        "ga", "ge", "gai", "gei", "gao", "gou", "gan", "gen", "gang", "geng",
+        "gong", "gu", "gua", "guai", "guan", "guang", "gui", "gun", "guo",
+        // k-
+        "ka", "ke", "kai", "kei", "kao", "kou", "kan", "ken", "kang", "keng",
+        "kong", "ku", "kua", "kuai", "kuan", "kuang", "kui", "kun", "kuo",
+        // h-
+        "ha", "he", "hai", "hei", "hao", "hou", "han", "hen", "hang", "heng",
+        "hong", "hu", "hua", "huai", "huan", "huang", "hui", "hun", "huo",
+        // j-
+        "ji", "jia", "jie", "jiao", "jiu", "jian", "jin", "jiang", "jing",
+        "jiong", "ju", "jue", "juan", "jun",
+        // q-
+        "qi", "qia", "qie", "qiao", "qiu", "qian", "qin", "qiang", "qing",
+        "qiong", "qu", "que", "quan", "qun",
+        // x-
+        "xi", "xia", "xie", "xiao", "xiu", "xian", "xin", "xiang", "xing",
+        "xiong", "xu", "xue", "xuan", "xun",
+        // zh-
+        "zha", "zhe", "zhi", "zhai", "zhei", "zhao", "zhou", "zhan", "zhen",
+        "zhang", "zheng", "zhong", "zhu", "zhua", "zhuai", "zhuan", "zhuang",
+        "zhui", "zhun", "zhuo",
+        // ch-
+        "cha", "che", "chi", "chai", "chao", "chou", "chan", "chen", "chang",
+        "cheng", "chong", "chu", "chua", "chuai", "chuan", "chuang", "chui",
+        "chun", "chuo",
+        // sh-
+        "sha", "she", "shi", "shai", "shei", "shao", "shou", "shan", "shen",
+        "shang", "sheng", "shu", "shua", "shuai", "shuan", "shuang", "shui",
+        "shun", "shuo",
+        // r-
+        "ran", "rang", "rao", "re", "ren", "reng", "ri", "rong", "rou",
+        "ru", "rua", "ruan", "rui", "run", "ruo",
+        // z-
+        "za", "ze", "zi", "zai", "zei", "zao", "zou", "zan", "zen", "zang",
+        "zeng", "zong", "zu", "zuo", "zui", "zuan", "zun",
+        // c-
+        "ca", "ce", "ci", "cai", "cao", "cou", "can", "cen", "cang", "ceng",
+        "cong", "cu", "cuo", "cui", "cuan", "cun",
+        // s-
+        "sa", "se", "si", "sai", "sao", "sou", "san", "sen", "sang", "seng",
+        "song", "su", "suo", "sui", "suan", "sun",
+        // y-
+        "ya", "ye", "yi", "yao", "you", "yan", "yin", "yang", "ying", "yong",
+        "yu", "yue", "yuan", "yun",
+        // w-
+        "wa", "wo", "wai", "wei", "wan", "wen", "wang", "weng", "wu",
+    ];
+    syllables.into_iter().collect()
+});
+
+/// Strip tone marks from a pinyin string, replacing accented vowels with plain ASCII.
+fn strip_tone_marks(s: &str) -> String {
+    s.chars()
+        .map(|c| match c {
+            'ā' | 'á' | 'ǎ' | 'à' => 'a',
+            'ē' | 'é' | 'ě' | 'è' => 'e',
+            'ī' | 'í' | 'ǐ' | 'ì' => 'i',
+            'ō' | 'ó' | 'ǒ' | 'ò' => 'o',
+            'ū' | 'ú' | 'ǔ' | 'ù' => 'u',
+            'ǖ' | 'ǘ' | 'ǚ' | 'ǜ' => 'v',
+            _ => c,
+        })
+        .collect()
+}
+
+/// Tokenize a concatenated pinyin string into exactly `expected_count` syllables.
+///
+/// Uses greedy longest-match against the valid pinyin syllable table.
+/// Tone marks are stripped for matching but preserved in the output.
+///
+/// Returns error if the syllable count doesn't match `expected_count`.
+pub fn tokenize_pinyin(pinyin: &str, expected_count: usize) -> Result<Vec<String>, AppError> {
+    if pinyin.is_empty() {
+        return Err(AppError::Validation(format!(
+            "Cannot split pinyin '' into {} syllables",
+            expected_count
+        )));
+    }
+
+    let normalized = strip_tone_marks(pinyin);
+    let norm_bytes = normalized.as_bytes();
+    let pinyin_chars: Vec<char> = pinyin.chars().collect();
+    let norm_chars: Vec<char> = normalized.chars().collect();
+
+    // Build byte-offset to char-index mapping for the normalized string
+    let mut syllables = Vec::new();
+    let mut norm_pos = 0; // char position in normalized string
+
+    while norm_pos < norm_chars.len() {
+        // Try longest match first (max pinyin syllable is 6 chars: "zhuang", "chuang", "shuang")
+        let max_len = std::cmp::min(6, norm_chars.len() - norm_pos);
+        let mut matched = false;
+
+        for len in (1..=max_len).rev() {
+            let candidate: String = norm_chars[norm_pos..norm_pos + len].iter().collect();
+            if PINYIN_SYLLABLES.contains(candidate.as_str()) {
+                // Extract original chars (with tone marks) for this syllable
+                let original: String = pinyin_chars[norm_pos..norm_pos + len].iter().collect();
+                syllables.push(original);
+                norm_pos += len;
+                matched = true;
+                break;
+            }
+        }
+
+        if !matched {
+            return Err(AppError::Validation(format!(
+                "Cannot split pinyin '{}' into {} syllables",
+                pinyin, expected_count
+            )));
+        }
+    }
+
+    if syllables.len() != expected_count {
+        return Err(AppError::Validation(format!(
+            "Cannot split pinyin '{}' into {} syllables",
+            pinyin, expected_count
+        )));
+    }
+
+    Ok(syllables)
+}
 
 /// Detect whether a character is a CJK Unified Ideograph.
 pub fn is_chinese_char(c: char) -> bool {
@@ -632,5 +789,55 @@ mod tests {
             }
             _ => panic!("Expected Word segment for rare character"),
         }
+    }
+
+    // ── tokenize_pinyin tests (T002) ──
+
+    #[test]
+    fn test_tokenize_faguoren() {
+        let result = tokenize_pinyin("fǎguórén", 3).unwrap();
+        assert_eq!(result, vec!["fǎ", "guó", "rén"]);
+    }
+
+    #[test]
+    fn test_tokenize_nihao() {
+        let result = tokenize_pinyin("nǐhǎo", 2).unwrap();
+        assert_eq!(result, vec!["nǐ", "hǎo"]);
+    }
+
+    #[test]
+    fn test_tokenize_xianzai() {
+        let result = tokenize_pinyin("xiànzài", 2).unwrap();
+        assert_eq!(result, vec!["xiàn", "zài"]);
+    }
+
+    #[test]
+    fn test_tokenize_shuijiao() {
+        let result = tokenize_pinyin("shuìjiào", 2).unwrap();
+        assert_eq!(result, vec!["shuì", "jiào"]);
+    }
+
+    #[test]
+    fn test_tokenize_er() {
+        let result = tokenize_pinyin("ér", 1).unwrap();
+        assert_eq!(result, vec!["ér"]);
+    }
+
+    #[test]
+    fn test_tokenize_single_ren() {
+        let result = tokenize_pinyin("rén", 1).unwrap();
+        assert_eq!(result, vec!["rén"]);
+    }
+
+    #[test]
+    fn test_tokenize_wrong_expected_count() {
+        let result = tokenize_pinyin("nǐhǎo", 3);
+        assert!(result.is_err(), "Should error when expected_count doesn't match");
+    }
+
+    #[test]
+    fn test_tokenize_empty_string() {
+        let result = tokenize_pinyin("", 1);
+        assert!(result.is_err(), "Should error on empty string");
     }
 }

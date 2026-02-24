@@ -1,8 +1,9 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 
 interface UseWordNavigationProps {
   wordCount: number;
-  onMenuAction?: (index: number) => void;
+  menuEntryCount: number;
+  onMenuAction?: (entryIndex: number) => void;
 }
 
 interface UseWordNavigationReturn {
@@ -19,13 +20,19 @@ interface UseWordNavigationReturn {
   handleMenuEntryHover: (index: number) => void;
 }
 
-const MENU_ENTRY_COUNT = 4;
-
-export function useWordNavigation({ wordCount, onMenuAction }: UseWordNavigationProps): UseWordNavigationReturn {
+export function useWordNavigation({ wordCount, menuEntryCount, onMenuAction }: UseWordNavigationProps): UseWordNavigationReturn {
   const [trackedIndex, setTrackedIndex] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuFocusedIndex, setMenuFocusedIndex] = useState(0);
+
+  // Refs for values read inside handleKeyDown to avoid stale closures
+  const menuFocusedIndexRef = useRef(0);
+  menuFocusedIndexRef.current = menuFocusedIndex;
+  const menuEntryCountRef = useRef(menuEntryCount);
+  menuEntryCountRef.current = menuEntryCount;
+  const onMenuActionRef = useRef(onMenuAction);
+  onMenuActionRef.current = onMenuAction;
 
   const openMenuForWord = useCallback((index: number) => {
     setTrackedIndex(index);
@@ -44,15 +51,17 @@ export function useWordNavigation({ wordCount, onMenuAction }: UseWordNavigation
       return;
     }
 
+    const entryCount = menuEntryCountRef.current || 1;
+
     if (menuOpen) {
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault();
-          setMenuFocusedIndex(i => (i + 1) % MENU_ENTRY_COUNT);
+          setMenuFocusedIndex(i => (i + 1) % entryCount);
           break;
         case "ArrowUp":
           e.preventDefault();
-          setMenuFocusedIndex(i => (i - 1 + MENU_ENTRY_COUNT) % MENU_ENTRY_COUNT);
+          setMenuFocusedIndex(i => (i - 1 + entryCount) % entryCount);
           break;
         case "ArrowLeft":
           e.preventDefault();
@@ -66,7 +75,7 @@ export function useWordNavigation({ wordCount, onMenuAction }: UseWordNavigation
           break;
         case "Enter":
           e.preventDefault();
-          onMenuAction?.(menuFocusedIndex);
+          onMenuActionRef.current?.(menuFocusedIndexRef.current);
           closeMenu();
           break;
         case "Escape":
@@ -91,7 +100,7 @@ export function useWordNavigation({ wordCount, onMenuAction }: UseWordNavigation
         setMenuFocusedIndex(0);
         break;
     }
-  }, [menuOpen, wordCount, menuFocusedIndex, closeMenu, onMenuAction]);
+  }, [menuOpen, wordCount, closeMenu]);
 
   const handleFocus = useCallback(() => {
     setIsFocused(true);

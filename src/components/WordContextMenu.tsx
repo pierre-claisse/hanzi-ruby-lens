@@ -1,20 +1,29 @@
-import { BookSearch, Languages, Copy, Pencil } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+export type MenuAction =
+  | { type: "dictionary" }
+  | { type: "translate" }
+  | { type: "editPinyin" }
+  | { type: "copy" }
+  | { type: "split"; splitAfterIndex: number }
+  | { type: "mergeWithPrevious" }
+  | { type: "mergeWithNext" };
+
+export interface MenuEntry {
+  label: string;
+  icon: LucideIcon;
+  action: MenuAction;
+}
 
 interface WordContextMenuProps {
+  entries: MenuEntry[];
   focusedIndex: number;
   position: { top: number; left: number };
   onEntryHover: (index: number) => void;
-  onAction: (index: number) => void;
+  onAction: (action: MenuAction) => void;
 }
 
-const MENU_ENTRIES = [
-  { label: "MOE Dictionary", icon: BookSearch },
-  { label: "Google Translate", icon: Languages },
-  { label: "Edit Pinyin", icon: Pencil },
-  { label: "Copy", icon: Copy },
-];
-
-export function WordContextMenu({ focusedIndex, position, onEntryHover, onAction }: WordContextMenuProps) {
+export function WordContextMenu({ entries, focusedIndex, position, onEntryHover, onAction }: WordContextMenuProps) {
   return (
     <div
       role="menu"
@@ -23,15 +32,15 @@ export function WordContextMenu({ focusedIndex, position, onEntryHover, onAction
       onPointerDown={(e) => e.stopPropagation()}
       onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
     >
-      {MENU_ENTRIES.map(({ label, icon: Icon }, index) => (
+      {entries.map(({ label, icon: Icon, action }, index) => (
         <div
-          key={label}
+          key={`${action.type}-${label}`}
           role="menuitem"
           className={`px-3 py-2 text-sm text-content cursor-default transition-colors flex items-center gap-2 ${
             index === focusedIndex ? "bg-content/10" : ""
           }`}
           onMouseEnter={() => onEntryHover(index)}
-          onClick={() => onAction(index)}
+          onClick={() => onAction(action)}
         >
           <Icon size={16} />
           {label}

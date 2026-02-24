@@ -13,6 +13,8 @@ interface UseTextLoaderReturn {
   createText: (title: string, rawInput: string) => Promise<void>;
   openText: (id: number) => Promise<void>;
   updatePinyin: (segmentIndex: number, newPinyin: string) => Promise<void>;
+  splitSegment: (segmentIndex: number, splitAfterCharIndex: number) => Promise<void>;
+  mergeSegments: (segmentIndex: number) => Promise<void>;
   deleteText: (id: number) => Promise<void>;
   refreshPreviews: () => Promise<void>;
   isProcessing: boolean;
@@ -86,6 +88,27 @@ export function useTextLoader(): UseTextLoaderReturn {
     });
   }, [activeText]);
 
+  const splitSegment = useCallback(async (segmentIndex: number, splitAfterCharIndex: number) => {
+    if (!activeText) return;
+    await invoke("split_segment", {
+      textId: activeText.id,
+      segmentIndex,
+      splitAfterCharIndex,
+    });
+    const reloaded = await invoke<Text | null>("load_text", { textId: activeText.id });
+    if (reloaded) setActiveText(reloaded);
+  }, [activeText]);
+
+  const mergeSegments = useCallback(async (segmentIndex: number) => {
+    if (!activeText) return;
+    await invoke("merge_segments", {
+      textId: activeText.id,
+      segmentIndex,
+    });
+    const reloaded = await invoke<Text | null>("load_text", { textId: activeText.id });
+    if (reloaded) setActiveText(reloaded);
+  }, [activeText]);
+
   const deleteText = useCallback(async (id: number) => {
     await invoke("delete_text", { textId: id });
     setPreviews((prev) => prev.filter((p) => p.id !== id));
@@ -103,6 +126,8 @@ export function useTextLoader(): UseTextLoaderReturn {
     createText,
     openText,
     updatePinyin,
+    splitSegment,
+    mergeSegments,
     deleteText,
     refreshPreviews,
     isProcessing,

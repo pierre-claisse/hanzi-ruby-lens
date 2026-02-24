@@ -2,8 +2,10 @@ import { useMemo, useRef, useEffect, useCallback, useState } from "react";
 import type { Text, TextSegment } from "../types/domain";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { BookSearch, Languages, Copy, Pencil, Scissors, Combine } from "lucide-react";
 import { RubyWord } from "./RubyWord";
 import { WordContextMenu } from "./WordContextMenu";
+import type { MenuAction, MenuEntry } from "./WordContextMenu";
 import { useWordNavigation } from "../hooks/useWordNavigation";
 
 interface TextDisplayProps {
@@ -12,6 +14,8 @@ interface TextDisplayProps {
   zoomLevel?: number;
   onPinyinEdit?: (segmentIndex: number, newPinyin: string) => void;
   onShowPinyin?: () => void;
+  onSplitSegment?: (segmentIndex: number, splitAfterCharIndex: number) => void;
+  onMergeSegments?: (segmentIndex: number) => void;
 }
 
 type BlockItem =
@@ -72,7 +76,66 @@ function buildBlocks(segments: TextSegment[]): Block[] {
   return blocks;
 }
 
-export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyinEdit, onShowPinyin }: TextDisplayProps) {
+/** Build the dynamic menu entries for a word at the given segment index. */
+function buildMenuEntries(segIndex: number, segments: TextSegment[]): MenuEntry[] {
+  const entries: MenuEntry[] = [
+    { label: "MOE Dictionary", icon: BookSearch, action: { type: "dictionary" } },
+    { label: "Google Translate", icon: Languages, action: { type: "translate" } },
+    { label: "Edit Pinyin", icon: Pencil, action: { type: "editPinyin" } },
+    { label: "Copy", icon: Copy, action: { type: "copy" } },
+  ];
+
+  const seg = segments[segIndex];
+  if (seg.type !== "word") return entries;
+
+  const charCount = [...seg.word.characters].length;
+
+  // Split options: one per internal character boundary (only for multi-char words)
+  if (charCount >= 2) {
+    const chars = [...seg.word.characters];
+    for (let i = 0; i < charCount - 1; i++) {
+      entries.push({
+        label: `Split after ${chars[i]}`,
+        icon: Scissors,
+        action: { type: "split", splitAfterIndex: i },
+      });
+    }
+  }
+
+  // Merge with previous: only if the previous segment is a Word
+  if (segIndex > 0) {
+    const prev = segments[segIndex - 1];
+    if (prev.type === "word") {
+      const combinedLen = [...prev.word.characters].length + charCount;
+      if (combinedLen <= 12) {
+        entries.push({
+          label: "Merge with previous word",
+          icon: Combine,
+          action: { type: "mergeWithPrevious" },
+        });
+      }
+    }
+  }
+
+  // Merge with next: only if the next segment is a Word
+  if (segIndex < segments.length - 1) {
+    const next = segments[segIndex + 1];
+    if (next.type === "word") {
+      const combinedLen = charCount + [...next.word.characters].length;
+      if (combinedLen <= 12) {
+        entries.push({
+          label: "Merge with next word",
+          icon: Combine,
+          action: { type: "mergeWithNext" },
+        });
+      }
+    }
+  }
+
+  return entries;
+}
+
+export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyinEdit, onShowPinyin, onSplitSegment, onMergeSegments }: TextDisplayProps) {
   const fontSize = `${1.5 * zoomLevel / 100}rem`;
   const containerRef = useRef<HTMLDivElement>(null);
   const wordRefs = useRef<Map<number, HTMLElement>>(new Map());
@@ -107,36 +170,70 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
     return map;
   }, [wordIndexMap]);
 
-  const handleMenuAction = useCallback((entryIndex: number) => {
+  const handleMenuAction = useCallback((action: MenuAction) => {
     const currentTrackedIndex = trackedIndexRef.current;
     const segIndex = wordToSegmentIndex.get(currentTrackedIndex);
     if (segIndex === undefined) return;
     const segment = text.segments[segIndex];
     if (segment.type !== "word") return;
 
-    if (entryIndex === 0) {
-      const url = `https://dict.revised.moe.edu.tw/search.jsp?md=1&word=${encodeURIComponent(segment.word.characters)}&qMd=0&qCol=1&sound=1#radio_sound_1`;
-      openUrl(url);
-    } else if (entryIndex === 1) {
-      const url = `https://translate.google.com/?sl=zh-TW&tl=en&text=${encodeURIComponent(segment.word.characters)}`;
-      openUrl(url);
-    } else if (entryIndex === 2) {
-      if (!showPinyin) onShowPinyin?.();
-      setEditingWordIndex(currentTrackedIndex);
-      setEditValue(segment.word.pinyin);
-    } else if (entryIndex === 3) {
-      writeText(segment.word.characters);
+    switch (action.type) {
+      case "dictionary": {
+        const url = `https://dict.revised.moe.edu.tw/search.jsp?md=1&word=${encodeURIComponent(segment.word.characters)}&qMd=0&qCol=1&sound=1#radio_sound_1`;
+        openUrl(url);
+        break;
+      }
+      case "translate": {
+        const url = `https://translate.google.com/?sl=zh-TW&tl=en&text=${encodeURIComponent(segment.word.characters)}`;
+        openUrl(url);
+        break;
+      }
+      case "editPinyin":
+        if (!showPinyin) onShowPinyin?.();
+        setEditingWordIndex(currentTrackedIndex);
+        setEditValue(segment.word.pinyin);
+        break;
+      case "copy":
+        writeText(segment.word.characters);
+        break;
+      case "split":
+        onSplitSegment?.(segIndex, action.splitAfterIndex);
+        break;
+      case "mergeWithPrevious":
+        onMergeSegments?.(segIndex - 1);
+        break;
+      case "mergeWithNext":
+        onMergeSegments?.(segIndex);
+        break;
     }
-  }, [wordToSegmentIndex, text.segments, showPinyin, onShowPinyin]);
+  }, [wordToSegmentIndex, text.segments, showPinyin, onShowPinyin, onSplitSegment, onMergeSegments]);
+
+  // Bridge: hook dispatches by entry index → we resolve to MenuAction via ref
+  const menuEntriesRef = useRef<MenuEntry[]>([]);
+
+  const handleMenuActionByIndex = useCallback((entryIndex: number) => {
+    const entry = menuEntriesRef.current[entryIndex];
+    if (entry) handleMenuAction(entry.action);
+  }, [handleMenuAction]);
 
   const {
     trackedIndex, isFocused, menuOpen, menuFocusedIndex,
     handleFocus, handleBlur, handleWordHover, handleKeyDown,
     openMenuForWord, closeMenu, handleMenuEntryHover,
-  } = useWordNavigation({ wordCount, onMenuAction: handleMenuAction });
+  } = useWordNavigation({ wordCount, menuEntryCount: menuEntriesRef.current.length || 4, onMenuAction: handleMenuActionByIndex });
 
   // Keep ref in sync with hook state
   trackedIndexRef.current = trackedIndex;
+
+  // Build menu entries for the currently tracked word (depends on trackedIndex from hook)
+  const currentMenuEntries = useMemo(() => {
+    const segIndex = wordToSegmentIndex.get(trackedIndex);
+    if (segIndex === undefined) return [];
+    return buildMenuEntries(segIndex, text.segments);
+  }, [wordToSegmentIndex, text.segments, trackedIndex]);
+
+  // Sync ref so hook reads latest entries on next keypress
+  menuEntriesRef.current = currentMenuEntries;
 
   // Scroll tracked word into view when focused (accounts for fixed title bar).
   // Uses requestAnimationFrame to run after the browser's native focus scroll.
@@ -158,8 +255,8 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
   }, [trackedIndex, isFocused]);
 
   // Wrapper for mouse clicks: action + close menu (keyboard Enter already closes via hook)
-  const handleMenuClick = useCallback((entryIndex: number) => {
-    handleMenuAction(entryIndex);
+  const handleMenuClick = useCallback((action: MenuAction) => {
+    handleMenuAction(action);
     closeMenu();
   }, [handleMenuAction, closeMenu]);
 
@@ -279,6 +376,7 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
       ))}
       {menuOpen && isFocused && (
         <WordContextMenu
+          entries={currentMenuEntries}
           focusedIndex={menuFocusedIndex}
           position={getMenuPosition()}
           onEntryHover={handleMenuEntryHover}

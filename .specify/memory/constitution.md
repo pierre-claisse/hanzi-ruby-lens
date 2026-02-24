@@ -1,43 +1,30 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 2.0.0 → 3.0.0
-  Bump rationale: MAJOR — removal of constitutional LLM dependency.
-    The "LLM integration: Claude CLI with the latest Sonnet model"
-    technical constraint is removed entirely. All references to LLM
-    processing throughout the document are replaced with
-    technology-neutral language ("text processing libraries").
-    This is backward-incompatible: code that relied on Claude CLI
-    as a constitutional guarantee can no longer cite it.
+  Version change: 3.0.0 → 3.1.0
+  Bump rationale: MINOR — two new domain invariants added to existing
+    sections. No principles removed or redefined. Existing code remains
+    compliant; new rules constrain future behavior only.
 
   Changed sections:
-    - Preamble: "generated via LLM" → "generated via text processing
-        libraries".
-    - Core Principles > II. Offline-First Data: "without further LLM
-        calls" → "without further processing".
-    - Domain Language > Text: "reprocessed via LLM" → "reprocessed".
-    - Domain Language > Word: "produced by LLM analysis of the full
-        Text at creation time" → "produced by text processing of the
-        full Text at creation time".
-    - Technical Constraints > Technology Stack: removed bullet
-        "LLM integration: Claude CLI with the latest Sonnet model".
-      Added bullet "Text processing: native Rust libraries
-        (dictionary-based segmentation and pinyin annotation)".
+    - Domain Language > Text: "Only pinyin annotations on a Text's
+        Words" → "Pinyin annotations and word segmentation boundaries
+        on a Text's Words". Added bullet for segmentation correction
+        (split/merge) with explicit immutability of raw characters.
+    - Domain Language > Word: "one or more Chinese characters" →
+        "between one and twelve Chinese characters (inclusive)".
+        Added bullet: "A Word MUST NOT exceed 12 Chinese characters."
 
   Added sections: None.
   Removed sections: None.
 
   Template sync status:
     ✅ .specify/templates/plan-template.md — generic template; no
-       LLM or Claude references to update.
+       domain language references to update.
     ✅ .specify/templates/spec-template.md — generic template; no
-       LLM or Claude references to update.
+       domain language references to update.
     ✅ .specify/templates/tasks-template.md — generic template; no
-       LLM or Claude references to update.
-    ⚠ CLAUDE.md — contains "LLM: Claude CLI (Opus) for pinyin
-       segmentation" and "processing.rs # Claude CLI integration"
-       in project structure comments. These will be updated during
-       feature 023 implementation when the files themselves change.
+       domain language references to update.
 
   Deferred TODOs: None.
 -->
@@ -148,20 +135,25 @@ holds a collection of Texts; there is no limit on their number.
   character.
 - A Text is immutable once created: its raw Chinese content MUST NOT
   be replaced, edited, or reprocessed after initial processing.
-- Only pinyin annotations on a Text's Words MUST remain correctable by
-  the user.
+- Pinyin annotations and word segmentation boundaries on a Text's
+  Words MUST remain correctable by the user.
+- Segmentation correction MUST operate exclusively on Word boundaries
+  (split one Word into two, or merge two adjacent Words into one)
+  without altering the raw Chinese characters of the Text.
 - There is no autosave: persistence operations MUST be explicit user
-  actions (e.g., confirming a pinyin correction).
+  actions (e.g., confirming a pinyin correction or a segmentation
+  change).
 - A Text is the aggregate root of the domain model.
 
 ### Word
 
-An ordered segment of a Text, consisting of one or more Chinese
-characters and their pinyin as a single unit. Words are produced by
-text processing of the full Text at creation time.
+An ordered segment of a Text, consisting of between one and twelve
+Chinese characters (inclusive) and their pinyin as a single unit. Words
+are produced by text processing of the full Text at creation time.
 
-- A Word MUST contain one or more Chinese characters and exactly one
-  pinyin string representing the whole Word.
+- A Word MUST contain between 1 and 12 Chinese characters and exactly
+  one pinyin string representing the whole Word.
+- A Word MUST NOT exceed 12 Chinese characters.
 - Pinyin MUST be determined at the Word level, not the character level,
   because character pronunciation depends on word context
   (e.g., 覺 is "jué" in 覺得 but "jiào" in 睡覺).
@@ -235,4 +227,4 @@ comply.
   strong recommendations.
 - When a SHOULD rule is violated, justification MUST be documented.
 
-**Version**: 3.0.0 | **Ratified**: 2026-02-08 | **Last Amended**: 2026-02-22
+**Version**: 3.1.0 | **Ratified**: 2026-02-08 | **Last Amended**: 2026-02-24

@@ -22,6 +22,8 @@ pub fn run() {
             commands::list_texts,
             commands::load_text,
             commands::update_pinyin,
+            commands::split_segment,
+            commands::merge_segments,
             commands::delete_text,
         ])
         .setup(|app| {

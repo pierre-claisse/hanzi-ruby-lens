@@ -55,6 +55,29 @@ pub fn update_pinyin(
 }
 
 #[tauri::command]
+pub fn split_segment(
+    app_handle: AppHandle,
+    text_id: i64,
+    segment_index: usize,
+    split_after_char_index: usize,
+) -> Result<(), AppError> {
+    app_handle.db_mut(|conn| {
+        crate::database::split_segment_db(conn, text_id, segment_index, split_after_char_index)
+    })
+}
+
+#[tauri::command]
+pub fn merge_segments(
+    app_handle: AppHandle,
+    text_id: i64,
+    segment_index: usize,
+) -> Result<(), AppError> {
+    app_handle.db_mut(|conn| {
+        crate::database::merge_segments_db(conn, text_id, segment_index)
+    })
+}
+
+#[tauri::command]
 pub fn delete_text(app_handle: AppHandle, text_id: i64) -> Result<(), AppError> {
     app_handle.db(|conn| crate::database::delete_text(conn, text_id))
 }

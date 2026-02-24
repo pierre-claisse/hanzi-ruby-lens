@@ -21,6 +21,8 @@ function App() {
     createText,
     openText,
     updatePinyin,
+    splitSegment,
+    mergeSegments,
     deleteText,
     refreshPreviews,
     isProcessing,
@@ -118,7 +120,7 @@ function App() {
           <div className="bg-surface text-content min-h-screen px-8 pt-24 pb-12">
             <div className="max-w-5xl mx-auto">
               {activeText && (
-                <TextDisplay text={activeText} showPinyin={pinyinVisible} zoomLevel={zoomLevel} onPinyinEdit={updatePinyin} onShowPinyin={handleShowPinyin} />
+                <TextDisplay text={activeText} showPinyin={pinyinVisible} zoomLevel={zoomLevel} onPinyinEdit={updatePinyin} onShowPinyin={handleShowPinyin} onSplitSegment={splitSegment} onMergeSegments={mergeSegments} />
               )}
             </div>
           </div>
