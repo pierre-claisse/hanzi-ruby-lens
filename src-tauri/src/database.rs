@@ -2,12 +2,13 @@ use std::path::PathBuf;
 
 use rusqlite::Connection;
 
-use crate::domain::{Text, TextPreview, TextSegment};
+use crate::domain::{Tag, TagSummary, Text, TextPreviewWithTags, TextSegment};
 use crate::error::AppError;
 
 pub fn initialize(db_path: PathBuf) -> Result<Connection, AppError> {
     let conn = Connection::open(&db_path)?;
     conn.pragma_update(None, "journal_mode", "WAL")?;
+    conn.pragma_update(None, "foreign_keys", "ON")?;
     conn.execute_batch(
         "CREATE TABLE IF NOT EXISTS texts (
             id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -15,6 +16,18 @@ pub fn initialize(db_path: PathBuf) -> Result<Connection, AppError> {
             created_at TEXT    NOT NULL,
             raw_input  TEXT    NOT NULL,
             segments   TEXT    NOT NULL DEFAULT '[]'
+        );
+
+        CREATE TABLE IF NOT EXISTS tags (
+            id    INTEGER PRIMARY KEY AUTOINCREMENT,
+            label TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+            color TEXT    NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS text_tags (
+            text_id INTEGER NOT NULL REFERENCES texts(id) ON DELETE CASCADE,
+            tag_id  INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+            PRIMARY KEY (text_id, tag_id)
         );",
     )?;
     Ok(conn)
@@ -47,19 +60,64 @@ pub fn insert_text(
     })
 }
 
-pub fn list_all_texts(conn: &Connection) -> Result<Vec<TextPreview>, AppError> {
-    let mut stmt =
-        conn.prepare("SELECT id, title, created_at FROM texts ORDER BY created_at DESC")?;
-    let previews = stmt
-        .query_map([], |row| {
-            Ok(TextPreview {
-                id: row.get(0)?,
-                title: row.get(1)?,
-                created_at: row.get(2)?,
-            })
+pub fn list_all_texts(
+    conn: &Connection,
+    tag_ids: &[i64],
+    sort_asc: bool,
+) -> Result<Vec<TextPreviewWithTags>, AppError> {
+    let order = if sort_asc { "ASC" } else { "DESC" };
+
+    let text_rows: Vec<(i64, String, String)> = if tag_ids.is_empty() {
+        let sql = format!(
+            "SELECT id, title, created_at FROM texts ORDER BY created_at {}",
+            order
+        );
+        let mut stmt = conn.prepare(&sql)?;
+        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
+            .collect::<Result<Vec<_>, _>>()?;
+        rows
+    } else {
+        let placeholders: Vec<String> = tag_ids.iter().enumerate().map(|(i, _)| format!("?{}", i + 1)).collect();
+        let sql = format!(
+            "SELECT DISTINCT t.id, t.title, t.created_at FROM texts t \
+             INNER JOIN text_tags tt ON t.id = tt.text_id \
+             WHERE tt.tag_id IN ({}) \
+             ORDER BY t.created_at {}",
+            placeholders.join(", "),
+            order
+        );
+        let mut stmt = conn.prepare(&sql)?;
+        let params: Vec<&dyn rusqlite::types::ToSql> =
+            tag_ids.iter().map(|id| id as &dyn rusqlite::types::ToSql).collect();
+        let rows = stmt.query_map(params.as_slice(), |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
         })?
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(previews)
+        rows
+    };
+
+    let mut tag_stmt =
+        conn.prepare("SELECT tg.id, tg.label, tg.color FROM tags tg INNER JOIN text_tags tt ON tg.id = tt.tag_id WHERE tt.text_id = ?1")?;
+
+    let mut results = Vec::with_capacity(text_rows.len());
+    for (id, title, created_at) in text_rows {
+        let tags = tag_stmt
+            .query_map(rusqlite::params![id], |row| {
+                Ok(TagSummary {
+                    id: row.get(0)?,
+                    label: row.get(1)?,
+                    color: row.get(2)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        results.push(TextPreviewWithTags {
+            id,
+            title,
+            created_at,
+            tags,
+        });
+    }
+    Ok(results)
 }
 
 pub fn load_text_by_id(conn: &Connection, id: i64) -> Result<Option<Text>, AppError> {
@@ -309,6 +367,108 @@ pub fn merge_segments_db(
     Ok(())
 }
 
+// ── Tag operations ──
+
+pub fn list_tags(conn: &Connection) -> Result<Vec<Tag>, AppError> {
+    let mut stmt = conn.prepare("SELECT id, label, color FROM tags ORDER BY label")?;
+    let tags = stmt
+        .query_map([], |row| {
+            Ok(Tag {
+                id: row.get(0)?,
+                label: row.get(1)?,
+                color: row.get(2)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(tags)
+}
+
+pub fn create_tag(conn: &Connection, label: &str, color: &str) -> Result<Tag, AppError> {
+    let label = label.trim();
+    if label.is_empty() {
+        return Err(AppError::Validation("Tag label must not be empty".to_string()));
+    }
+
+    conn.execute(
+        "INSERT INTO tags (label, color) VALUES (?1, ?2)",
+        rusqlite::params![label, color],
+    )
+    .map_err(|e| match &e {
+        rusqlite::Error::SqliteFailure(err, _)
+            if err.code == rusqlite::ffi::ErrorCode::ConstraintViolation =>
+        {
+            AppError::Validation(format!("A tag with label \"{}\" already exists", label))
+        }
+        _ => AppError::Database(e),
+    })?;
+
+    let id = conn.last_insert_rowid();
+    Ok(Tag {
+        id,
+        label: label.to_string(),
+        color: color.to_string(),
+    })
+}
+
+pub fn update_tag(conn: &Connection, tag_id: i64, label: &str, color: &str) -> Result<Tag, AppError> {
+    let label = label.trim();
+    if label.is_empty() {
+        return Err(AppError::Validation("Tag label must not be empty".to_string()));
+    }
+
+    let affected = conn
+        .execute(
+            "UPDATE tags SET label = ?1, color = ?2 WHERE id = ?3",
+            rusqlite::params![label, color, tag_id],
+        )
+        .map_err(|e| match &e {
+            rusqlite::Error::SqliteFailure(err, _)
+                if err.code == rusqlite::ffi::ErrorCode::ConstraintViolation =>
+            {
+                AppError::Validation(format!("A tag with label \"{}\" already exists", label))
+            }
+            _ => AppError::Database(e),
+        })?;
+
+    if affected == 0 {
+        return Err(AppError::Validation(format!("Tag with id {} not found", tag_id)));
+    }
+
+    Ok(Tag {
+        id: tag_id,
+        label: label.to_string(),
+        color: color.to_string(),
+    })
+}
+
+pub fn delete_tag(conn: &Connection, tag_id: i64) -> Result<(), AppError> {
+    let affected = conn.execute("DELETE FROM tags WHERE id = ?1", rusqlite::params![tag_id])?;
+    if affected == 0 {
+        return Err(AppError::Validation(format!("Tag with id {} not found", tag_id)));
+    }
+    Ok(())
+}
+
+pub fn assign_tag(conn: &Connection, text_ids: &[i64], tag_id: i64) -> Result<(), AppError> {
+    for text_id in text_ids {
+        conn.execute(
+            "INSERT OR IGNORE INTO text_tags (text_id, tag_id) VALUES (?1, ?2)",
+            rusqlite::params![text_id, tag_id],
+        )?;
+    }
+    Ok(())
+}
+
+pub fn remove_tag(conn: &Connection, text_ids: &[i64], tag_id: i64) -> Result<(), AppError> {
+    for text_id in text_ids {
+        conn.execute(
+            "DELETE FROM text_tags WHERE text_id = ?1 AND tag_id = ?2",
+            rusqlite::params![text_id, tag_id],
+        )?;
+    }
+    Ok(())
+}
+
 pub fn delete_text(conn: &Connection, id: i64) -> Result<(), AppError> {
     let affected = conn.execute("DELETE FROM texts WHERE id = ?1", rusqlite::params![id])?;
     if affected == 0 {
@@ -327,6 +487,7 @@ mod tests {
 
     fn in_memory_db() -> Connection {
         let conn = Connection::open_in_memory().unwrap();
+        conn.pragma_update(None, "foreign_keys", "ON").unwrap();
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS texts (
                 id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -334,6 +495,18 @@ mod tests {
                 created_at TEXT    NOT NULL,
                 raw_input  TEXT    NOT NULL,
                 segments   TEXT    NOT NULL DEFAULT '[]'
+            );
+
+            CREATE TABLE IF NOT EXISTS tags (
+                id    INTEGER PRIMARY KEY AUTOINCREMENT,
+                label TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+                color TEXT    NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS text_tags (
+                text_id INTEGER NOT NULL REFERENCES texts(id) ON DELETE CASCADE,
+                tag_id  INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+                PRIMARY KEY (text_id, tag_id)
             );",
         )
         .unwrap();
@@ -393,7 +566,7 @@ mod tests {
         )
         .unwrap();
 
-        let previews = list_all_texts(&conn).unwrap();
+        let previews = list_all_texts(&conn, &[], false).unwrap();
         assert_eq!(previews.len(), 2);
         assert_eq!(previews[0].title, "Newer");
         assert_eq!(previews[1].title, "Older");

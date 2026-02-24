@@ -1,6 +1,6 @@
 use tauri::AppHandle;
 
-use crate::domain::{Text, TextPreview};
+use crate::domain::{Tag, Text, TextPreviewWithTags};
 use crate::error::AppError;
 use crate::processing;
 use crate::state::ServiceAccess;
@@ -27,8 +27,12 @@ pub fn create_text(
 }
 
 #[tauri::command]
-pub fn list_texts(app_handle: AppHandle) -> Result<Vec<TextPreview>, AppError> {
-    app_handle.db(|conn| crate::database::list_all_texts(conn))
+pub fn list_texts(
+    app_handle: AppHandle,
+    tag_ids: Vec<i64>,
+    sort_asc: bool,
+) -> Result<Vec<TextPreviewWithTags>, AppError> {
+    app_handle.db(|conn| crate::database::list_all_texts(conn, &tag_ids, sort_asc))
 }
 
 #[tauri::command]
@@ -80,4 +84,47 @@ pub fn merge_segments(
 #[tauri::command]
 pub fn delete_text(app_handle: AppHandle, text_id: i64) -> Result<(), AppError> {
     app_handle.db(|conn| crate::database::delete_text(conn, text_id))
+}
+
+#[tauri::command]
+pub fn list_all_tags(app_handle: AppHandle) -> Result<Vec<Tag>, AppError> {
+    app_handle.db(|conn| crate::database::list_tags(conn))
+}
+
+#[tauri::command]
+pub fn create_tag(app_handle: AppHandle, label: String, color: String) -> Result<Tag, AppError> {
+    app_handle.db(|conn| crate::database::create_tag(conn, &label, &color))
+}
+
+#[tauri::command]
+pub fn update_tag(
+    app_handle: AppHandle,
+    tag_id: i64,
+    label: String,
+    color: String,
+) -> Result<Tag, AppError> {
+    app_handle.db(|conn| crate::database::update_tag(conn, tag_id, &label, &color))
+}
+
+#[tauri::command]
+pub fn delete_tag(app_handle: AppHandle, tag_id: i64) -> Result<(), AppError> {
+    app_handle.db(|conn| crate::database::delete_tag(conn, tag_id))
+}
+
+#[tauri::command]
+pub fn assign_tag(
+    app_handle: AppHandle,
+    text_ids: Vec<i64>,
+    tag_id: i64,
+) -> Result<(), AppError> {
+    app_handle.db(|conn| crate::database::assign_tag(conn, &text_ids, tag_id))
+}
+
+#[tauri::command]
+pub fn remove_tag(
+    app_handle: AppHandle,
+    text_ids: Vec<i64>,
+    tag_id: i64,
+) -> Result<(), AppError> {
+    app_handle.db(|conn| crate::database::remove_tag(conn, &text_ids, tag_id))
 }

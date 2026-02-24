@@ -25,6 +25,12 @@ pub fn run() {
             commands::split_segment,
             commands::merge_segments,
             commands::delete_text,
+            commands::list_all_tags,
+            commands::create_tag,
+            commands::update_tag,
+            commands::delete_tag,
+            commands::assign_tag,
+            commands::remove_tag,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

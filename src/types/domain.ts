@@ -15,8 +15,15 @@ export interface Text {
   segments: TextSegment[];
 }
 
+export interface Tag {
+  id: number;
+  label: string;
+  color: string;
+}
+
 export interface TextPreview {
   id: number;
   title: string;
   createdAt: string;
+  tags: Tag[];
 }

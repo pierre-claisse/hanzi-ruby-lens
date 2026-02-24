@@ -1,4 +1,4 @@
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft, Plus, Tags, ArrowUp, ArrowDown } from 'lucide-react';
 import { PinyinToggle } from './PinyinToggle';
 import { TranslateButton } from './TranslateButton';
 import { ZoomInButton } from './ZoomInButton';
@@ -7,7 +7,9 @@ import { PaletteSelector } from './PaletteSelector';
 import { ThemeToggle } from './ThemeToggle';
 import { FullscreenToggle } from './FullscreenToggle';
 import { CloseButton } from './CloseButton';
+import { TagFilterDropdown } from './TagFilterDropdown';
 import type { ColorPalette } from '../data/palettes';
+import type { Tag } from '../types/domain';
 
 interface TitleBarProps {
   pinyinVisible: boolean;
@@ -28,9 +30,15 @@ interface TitleBarProps {
   onAddText?: () => void;
   showAddButton?: boolean;
   textTitle?: string;
+  onManageTags?: () => void;
+  tags?: Tag[];
+  filterTagIds?: number[];
+  onFilterTagIds?: (ids: number[]) => void;
+  sortAsc?: boolean;
+  onToggleSort?: () => void;
 }
 
-export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, onZoomOut, isMinZoom, isMaxZoom, palettes, selectedPaletteId, onPaletteSelect, theme, onThemeToggle, onBack, showBack, rawInput, onAddText, showAddButton, textTitle }: TitleBarProps) {
+export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, onZoomOut, isMinZoom, isMaxZoom, palettes, selectedPaletteId, onPaletteSelect, theme, onThemeToggle, onBack, showBack, rawInput, onAddText, showAddButton, textTitle, onManageTags, tags, filterTagIds, onFilterTagIds, sortAsc, onToggleSort }: TitleBarProps) {
   return (
     <header
       data-tauri-drag-region
@@ -70,6 +78,30 @@ export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, o
         </span>
       )}
 
+      {showAddButton && tags && filterTagIds && onFilterTagIds && onToggleSort !== undefined && (
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
+          <TagFilterDropdown
+            tags={tags}
+            selectedIds={filterTagIds}
+            onChange={onFilterTagIds}
+          />
+          <button
+            type="button"
+            className="p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer"
+            onClick={onToggleSort}
+            onPointerDown={(e) => e.stopPropagation()}
+            aria-label={sortAsc ? "Sort: oldest first" : "Sort: newest first"}
+            title={sortAsc ? "Sort: oldest first" : "Sort: newest first"}
+          >
+            {sortAsc ? (
+              <ArrowUp className="w-4 h-4" aria-hidden="true" />
+            ) : (
+              <ArrowDown className="w-4 h-4" aria-hidden="true" />
+            )}
+          </button>
+        </div>
+      )}
+
       <div className="flex gap-1">
         {showBack && (
           <>
@@ -88,6 +120,17 @@ export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, o
             aria-label="Add text"
           >
             <Plus className="w-5 h-5" aria-hidden="true" />
+          </button>
+        )}
+        {showAddButton && onManageTags && (
+          <button
+            type="button"
+            className="p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer"
+            onClick={onManageTags}
+            onPointerDown={(e) => e.stopPropagation()}
+            aria-label="Manage tags"
+          >
+            <Tags className="w-5 h-5" aria-hidden="true" />
           </button>
         )}
         <PaletteSelector palettes={palettes} selectedPaletteId={selectedPaletteId} onSelect={onPaletteSelect} theme={theme} />

@@ -1,26 +1,54 @@
 import { useState, useEffect, useCallback } from "react";
-import { Trash2 } from "lucide-react";
-import type { TextPreview } from "../types/domain";
+import { Trash2, ChevronRight, Check } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
+import { TAG_COLORS } from "../data/tagColors";
+import type { TextPreview, Tag } from "../types/domain";
 import { TextPreviewCard } from "./TextPreviewCard";
 
 interface LibraryScreenProps {
   previews: TextPreview[];
   onOpenText: (id: number) => void;
   onDeleteText: (id: number) => void;
+  tags: Tag[];
+  onTagsChanged: () => Promise<void>;
+  filterActive: boolean;
 }
 
-export function LibraryScreen({ previews, onOpenText, onDeleteText }: LibraryScreenProps) {
-  const [contextMenu, setContextMenu] = useState<{ id: number; x: number; y: number } | null>(null);
+export function LibraryScreen({ previews, onOpenText, onDeleteText, tags, onTagsChanged, filterActive }: LibraryScreenProps) {
+  const [contextMenu, setContextMenu] = useState<{ ids: number[]; x: number; y: number } | null>(null);
+  const [tagsSubmenu, setTagsSubmenu] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   const handleContextMenu = useCallback((e: React.MouseEvent, id: number) => {
     e.preventDefault();
-    setContextMenu({ id, x: e.clientX, y: e.clientY });
-  }, []);
+    // If the right-clicked card is in the selection, operate on all selected
+    const ids = selectedIds.has(id) ? Array.from(selectedIds) : [id];
+    setContextMenu({ ids, x: e.clientX, y: e.clientY });
+    setTagsSubmenu(false);
+  }, [selectedIds]);
+
+  const handleCardClick = useCallback((e: React.MouseEvent, id: number) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
+        return next;
+      });
+    } else {
+      setSelectedIds(new Set());
+      onOpenText(id);
+    }
+  }, [onOpenText]);
 
   const handleDelete = useCallback(() => {
     if (contextMenu) {
-      setConfirmDeleteId(contextMenu.id);
+      setConfirmDeleteId(contextMenu.ids[0]);
       setContextMenu(null);
     }
   }, [contextMenu]);
@@ -29,6 +57,11 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText }: LibraryScr
     if (confirmDeleteId !== null) {
       onDeleteText(confirmDeleteId);
       setConfirmDeleteId(null);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(confirmDeleteId);
+        return next;
+      });
     }
   }, [confirmDeleteId, onDeleteText]);
 
@@ -36,13 +69,45 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText }: LibraryScr
     setConfirmDeleteId(null);
   }, []);
 
+  const handleToggleTag = useCallback(async (tagId: number) => {
+    if (!contextMenu) return;
+    const textIds = contextMenu.ids;
+
+    // Check if all target texts have this tag
+    const allHaveTag = textIds.every((tid) => {
+      const preview = previews.find((p) => p.id === tid);
+      return preview?.tags.some((t) => t.id === tagId);
+    });
+
+    if (allHaveTag) {
+      await invoke("remove_tag", { textIds, tagId });
+    } else {
+      await invoke("assign_tag", { textIds, tagId });
+    }
+    await onTagsChanged();
+  }, [contextMenu, previews, onTagsChanged]);
+
   // Close context menu on click outside
   useEffect(() => {
     if (!contextMenu) return;
-    const handler = () => setContextMenu(null);
+    const handler = () => {
+      setContextMenu(null);
+      setTagsSubmenu(false);
+    };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [contextMenu]);
+
+  const getColorBg = (key: string) => TAG_COLORS.find((c) => c.key === key)?.bg ?? "#64748B";
+
+  // For the tags submenu: determine which tags are assigned to the context-menu targets
+  const contextTagState = (tagId: number): boolean => {
+    if (!contextMenu) return false;
+    return contextMenu.ids.every((tid) => {
+      const preview = previews.find((p) => p.id === tid);
+      return preview?.tags.some((t) => t.id === tagId);
+    });
+  };
 
   return (
     <div className="bg-surface text-content min-h-screen pt-16 pb-12 px-8">
@@ -50,7 +115,9 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText }: LibraryScr
         {previews.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <p className="text-content/40 text-lg text-center">
-              No texts yet. Click the + button to add your first text.
+              {filterActive
+                ? "No texts match the selected tags."
+                : "No texts yet. Click the + button to add your first text."}
             </p>
           </div>
         ) : (
@@ -59,7 +126,8 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText }: LibraryScr
               <TextPreviewCard
                 key={preview.id}
                 preview={preview}
-                onClick={() => onOpenText(preview.id)}
+                selected={selectedIds.has(preview.id)}
+                onClick={(e) => handleCardClick(e, preview.id)}
                 onContextMenu={(e) => handleContextMenu(e, preview.id)}
               />
             ))}
@@ -75,6 +143,19 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText }: LibraryScr
           style={{ top: contextMenu.y, left: contextMenu.x }}
           onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
         >
+          {/* Tags submenu trigger */}
+          {tags.length > 0 && (
+            <div
+              role="menuitem"
+              className="px-3 py-2 text-sm text-content cursor-default transition-colors hover:bg-content/10 flex items-center justify-between"
+              onClick={() => setTagsSubmenu(!tagsSubmenu)}
+              onMouseEnter={() => setTagsSubmenu(true)}
+            >
+              <span>Tags</span>
+              <ChevronRight size={14} className="text-content/40" />
+            </div>
+          )}
+
           <div
             role="menuitem"
             className="px-3 py-2 text-sm text-red-500 cursor-default transition-colors hover:bg-content/10 flex items-center gap-2"
@@ -83,6 +164,36 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText }: LibraryScr
             <Trash2 size={16} />
             Delete
           </div>
+
+          {/* Tags submenu */}
+          {tagsSubmenu && (
+            <div
+              className="absolute left-full top-0 ml-1 w-48 rounded-lg border border-content/20 bg-surface shadow-lg py-1"
+              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            >
+              {tags.map((tag) => {
+                const checked = contextTagState(tag.id);
+                return (
+                  <div
+                    key={tag.id}
+                    role="menuitemcheckbox"
+                    aria-checked={checked}
+                    className="px-3 py-1.5 text-sm text-content cursor-default transition-colors hover:bg-content/10 flex items-center gap-2"
+                    onClick={() => handleToggleTag(tag.id)}
+                  >
+                    <span className="w-4 h-4 flex items-center justify-center">
+                      {checked && <Check size={14} className="text-accent" />}
+                    </span>
+                    <span
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: getColorBg(tag.color) }}
+                    />
+                    <span className="truncate">{tag.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

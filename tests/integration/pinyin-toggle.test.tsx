@@ -26,7 +26,7 @@ const sampleText: Text = {
 };
 
 const samplePreviews: TextPreview[] = [
-  { id: 1, title: "Pinyin Test", createdAt: "2026-02-23T12:00:00" },
+  { id: 1, title: "Pinyin Test", createdAt: "2026-02-23T12:00:00", tags: [] },
 ];
 
 // Mock Tauri core invoke — route by command
@@ -54,6 +54,7 @@ describe("Pinyin Toggle Integration", () => {
     mockInvoke.mockReset();
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === "list_texts") return Promise.resolve(samplePreviews);
+      if (cmd === "list_all_tags") return Promise.resolve([]);
       if (cmd === "load_text") return Promise.resolve(sampleText);
       return Promise.resolve(null);
     });

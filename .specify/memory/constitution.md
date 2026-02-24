@@ -1,21 +1,20 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 3.0.0 → 3.1.0
-  Bump rationale: MINOR — two new domain invariants added to existing
-    sections. No principles removed or redefined. Existing code remains
-    compliant; new rules constrain future behavior only.
+  Version change: 3.1.0 → 3.2.0
+  Bump rationale: MINOR — new domain language term "Tag" added.
+    No principles removed or redefined. Existing code remains
+    compliant; new term constrains future feature implementation.
 
   Changed sections:
-    - Domain Language > Text: "Only pinyin annotations on a Text's
-        Words" → "Pinyin annotations and word segmentation boundaries
-        on a Text's Words". Added bullet for segmentation correction
-        (split/merge) with explicit immutability of raw characters.
-    - Domain Language > Word: "one or more Chinese characters" →
-        "between one and twelve Chinese characters (inclusive)".
-        Added bullet: "A Word MUST NOT exceed 12 Chinese characters."
+    - Domain Language > Text: Added bullet establishing many-to-many
+      relationship with Tags ("A Text MAY have zero or more Tags
+      assigned to it.").
 
-  Added sections: None.
+  Added sections:
+    - Domain Language > Tag: New subsection defining the Tag entity,
+      its many-to-many relationship with Text, and invariants.
+
   Removed sections: None.
 
   Template sync status:
@@ -143,6 +142,7 @@ holds a collection of Texts; there is no limit on their number.
 - There is no autosave: persistence operations MUST be explicit user
   actions (e.g., confirming a pinyin correction or a segmentation
   change).
+- A Text MAY have zero or more Tags assigned to it.
 - A Text is the aggregate root of the domain model.
 
 ### Word
@@ -164,6 +164,20 @@ are produced by text processing of the full Text at creation time.
   overwritten by any automatic process.
 - A Chinese character MUST NOT exist as an independent domain entity.
   Characters are the string content of a Word, nothing more.
+
+### Tag
+
+A label that can be assigned to Texts for organization and filtering.
+Tags and Texts have a many-to-many relationship: a Tag can be assigned
+to zero or more Texts, and a Text can have zero or more Tags.
+
+- A Tag MUST have a non-empty name.
+- A Tag name MUST be unique across the collection of Tags.
+- A Tag MAY be assigned to zero or more Texts.
+- A Tag MUST exist independently of any Text: removing all Texts
+  assigned to a Tag MUST NOT delete the Tag itself.
+- Assigning or removing a Tag from a Text MUST be an explicit user
+  action.
 
 ## Technical Constraints
 
@@ -227,4 +241,4 @@ comply.
   strong recommendations.
 - When a SHOULD rule is violated, justification MUST be documented.
 
-**Version**: 3.1.0 | **Ratified**: 2026-02-08 | **Last Amended**: 2026-02-24
+**Version**: 3.2.0 | **Ratified**: 2026-02-08 | **Last Amended**: 2026-02-24

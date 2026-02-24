@@ -21,7 +21,7 @@ vi.mock("@tauri-apps/api/window", () => ({
 import { useTextLoader } from "./useTextLoader";
 
 const samplePreviews: TextPreview[] = [
-  { id: 1, title: "Test Title", createdAt: "2026-02-23T12:00:00" },
+  { id: 1, title: "Test Title", createdAt: "2026-02-23T12:00:00", tags: [] },
 ];
 
 const sampleText: Text = {
@@ -42,7 +42,8 @@ describe("useTextLoader", () => {
   });
 
   it("loads previews on mount and starts in library view", async () => {
-    mockInvoke.mockResolvedValueOnce(samplePreviews);
+    mockInvoke.mockResolvedValueOnce(samplePreviews); // list_texts
+    mockInvoke.mockResolvedValueOnce([]); // list_all_tags
 
     const { result } = renderHook(() => useTextLoader());
 
@@ -54,11 +55,12 @@ describe("useTextLoader", () => {
 
     expect(result.current.appView).toBe("library");
     expect(result.current.previews).toEqual(samplePreviews);
-    expect(mockInvoke).toHaveBeenCalledWith("list_texts");
+    expect(mockInvoke).toHaveBeenCalledWith("list_texts", { tagIds: [], sortAsc: false });
   });
 
   it("starts in library view with empty previews", async () => {
-    mockInvoke.mockResolvedValueOnce([]);
+    mockInvoke.mockResolvedValueOnce([]); // list_texts
+    mockInvoke.mockResolvedValueOnce([]); // list_all_tags
 
     const { result } = renderHook(() => useTextLoader());
 
@@ -86,7 +88,8 @@ describe("useTextLoader", () => {
   });
 
   it("setView changes appView", async () => {
-    mockInvoke.mockResolvedValueOnce([]);
+    mockInvoke.mockResolvedValueOnce([]); // list_texts
+    mockInvoke.mockResolvedValueOnce([]); // list_all_tags
     const { result } = renderHook(() => useTextLoader());
 
     await waitFor(() => {
@@ -102,6 +105,7 @@ describe("useTextLoader", () => {
 
   it("createText calls create_text and transitions to reading", async () => {
     mockInvoke.mockResolvedValueOnce([]); // list_texts
+    mockInvoke.mockResolvedValueOnce([]); // list_all_tags
     mockInvoke.mockResolvedValueOnce(sampleText); // create_text
 
     const { result } = renderHook(() => useTextLoader());
@@ -125,6 +129,7 @@ describe("useTextLoader", () => {
 
   it("openText calls load_text and transitions to reading", async () => {
     mockInvoke.mockResolvedValueOnce(samplePreviews); // list_texts
+    mockInvoke.mockResolvedValueOnce([]); // list_all_tags
     mockInvoke.mockResolvedValueOnce(sampleText); // load_text
 
     const { result } = renderHook(() => useTextLoader());
@@ -144,6 +149,7 @@ describe("useTextLoader", () => {
 
   it("deleteText removes preview from list", async () => {
     mockInvoke.mockResolvedValueOnce(samplePreviews); // list_texts
+    mockInvoke.mockResolvedValueOnce([]); // list_all_tags
     mockInvoke.mockResolvedValueOnce(undefined); // delete_text
 
     const { result } = renderHook(() => useTextLoader());

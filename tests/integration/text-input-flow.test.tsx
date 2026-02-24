@@ -32,7 +32,7 @@ const sampleText: Text = {
 };
 
 const samplePreviews: TextPreview[] = [
-  { id: 1, title: "Test Title", createdAt: "2026-02-23T12:00:00" },
+  { id: 1, title: "Test Title", createdAt: "2026-02-23T12:00:00", tags: [] },
 ];
 
 describe("Multi-Text Library Flow", () => {
@@ -44,7 +44,11 @@ describe("Multi-Text Library Flow", () => {
 
   describe("US1: Library Screen", () => {
     it("shows library with text previews on launch", async () => {
-      mockInvoke.mockResolvedValue(samplePreviews);
+      mockInvoke.mockImplementation((cmd: string) => {
+        if (cmd === "list_texts") return Promise.resolve(samplePreviews);
+        if (cmd === "list_all_tags") return Promise.resolve([]);
+        return Promise.resolve(null);
+      });
 
       render(<App />);
 
@@ -58,7 +62,11 @@ describe("Multi-Text Library Flow", () => {
     });
 
     it("shows empty state with add button when no texts exist", async () => {
-      mockInvoke.mockResolvedValue([]);
+      mockInvoke.mockImplementation((cmd: string) => {
+        if (cmd === "list_texts") return Promise.resolve([]);
+        if (cmd === "list_all_tags") return Promise.resolve([]);
+        return Promise.resolve(null);
+      });
 
       render(<App />);
 
@@ -77,7 +85,11 @@ describe("Multi-Text Library Flow", () => {
   describe("US2: Add Text", () => {
     it("add button navigates to input view with title and content fields", async () => {
       const user = userEvent.setup();
-      mockInvoke.mockResolvedValue([]);
+      mockInvoke.mockImplementation((cmd: string) => {
+        if (cmd === "list_texts") return Promise.resolve([]);
+        if (cmd === "list_all_tags") return Promise.resolve([]);
+        return Promise.resolve(null);
+      });
 
       render(<App />);
 
@@ -100,6 +112,7 @@ describe("Multi-Text Library Flow", () => {
       const user = userEvent.setup();
       mockInvoke.mockImplementation((cmd: string) => {
         if (cmd === "list_texts") return Promise.resolve([]);
+        if (cmd === "list_all_tags") return Promise.resolve([]);
         if (cmd === "create_text") return Promise.resolve(sampleText);
         return Promise.resolve(null);
       });
@@ -132,7 +145,11 @@ describe("Multi-Text Library Flow", () => {
 
     it("submit button is disabled without title or Chinese content", async () => {
       const user = userEvent.setup();
-      mockInvoke.mockResolvedValue([]);
+      mockInvoke.mockImplementation((cmd: string) => {
+        if (cmd === "list_texts") return Promise.resolve([]);
+        if (cmd === "list_all_tags") return Promise.resolve([]);
+        return Promise.resolve(null);
+      });
 
       render(<App />);
 
@@ -154,7 +171,11 @@ describe("Multi-Text Library Flow", () => {
 
     it("cancel returns to library", async () => {
       const user = userEvent.setup();
-      mockInvoke.mockResolvedValue([]);
+      mockInvoke.mockImplementation((cmd: string) => {
+        if (cmd === "list_texts") return Promise.resolve([]);
+        if (cmd === "list_all_tags") return Promise.resolve([]);
+        return Promise.resolve(null);
+      });
 
       render(<App />);
 
@@ -180,6 +201,7 @@ describe("Multi-Text Library Flow", () => {
       const user = userEvent.setup();
       mockInvoke.mockImplementation((cmd: string) => {
         if (cmd === "list_texts") return Promise.resolve(samplePreviews);
+        if (cmd === "list_all_tags") return Promise.resolve([]);
         if (cmd === "load_text") return Promise.resolve(sampleText);
         return Promise.resolve(null);
       });
@@ -201,6 +223,7 @@ describe("Multi-Text Library Flow", () => {
       const user = userEvent.setup();
       mockInvoke.mockImplementation((cmd: string) => {
         if (cmd === "list_texts") return Promise.resolve(samplePreviews);
+        if (cmd === "list_all_tags") return Promise.resolve([]);
         if (cmd === "load_text") return Promise.resolve(sampleText);
         return Promise.resolve(null);
       });

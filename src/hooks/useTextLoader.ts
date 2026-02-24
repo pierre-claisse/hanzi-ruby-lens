@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { Text, TextPreview } from "../types/domain";
+import type { Text, TextPreview, Tag } from "../types/domain";
 
 export type AppView = "library" | "input" | "processing" | "reading";
 
@@ -19,6 +19,12 @@ interface UseTextLoaderReturn {
   refreshPreviews: () => Promise<void>;
   isProcessing: boolean;
   processingError: string | null;
+  tags: Tag[];
+  refreshTags: () => Promise<void>;
+  filterTagIds: number[];
+  setFilterTagIds: (ids: number[]) => void;
+  sortAsc: boolean;
+  toggleSort: () => void;
 }
 
 export function useTextLoader(): UseTextLoaderReturn {
@@ -28,19 +34,27 @@ export function useTextLoader(): UseTextLoaderReturn {
   const [appView, setAppView] = useState<AppView>("library");
   const [isProcessing, setIsProcessing] = useState(false);
   const [processingError, setProcessingError] = useState<string | null>(null);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [filterTagIds, setFilterTagIds] = useState<number[]>([]);
+  const [sortAsc, setSortAsc] = useState(false);
 
-  const refreshPreviews = useCallback(async () => {
-    const list = await invoke<TextPreview[]>("list_texts");
-    setPreviews(list);
+  const refreshTags = useCallback(async () => {
+    const list = await invoke<Tag[]>("list_all_tags");
+    setTags(list);
   }, []);
 
+  const refreshPreviews = useCallback(async () => {
+    const list = await invoke<TextPreview[]>("list_texts", { tagIds: filterTagIds, sortAsc });
+    setPreviews(list);
+  }, [filterTagIds, sortAsc]);
+
   useEffect(() => {
-    refreshPreviews()
+    Promise.all([refreshPreviews(), refreshTags()])
       .catch((err) => {
         console.error("Failed to load texts:", err);
       })
       .finally(() => setIsLoading(false));
-  }, [refreshPreviews]);
+  }, [refreshPreviews, refreshTags]);
 
   const createText = useCallback(async (title: string, rawInput: string) => {
     setProcessingError(null);
@@ -50,7 +64,7 @@ export function useTextLoader(): UseTextLoaderReturn {
       const result = await invoke<Text>("create_text", { title, rawInput });
       setActiveText(result);
       setPreviews((prev) => [
-        { id: result.id, title: result.title, createdAt: result.createdAt },
+        { id: result.id, title: result.title, createdAt: result.createdAt, tags: [] },
         ...prev,
       ]);
       setAppView("reading");
@@ -117,6 +131,10 @@ export function useTextLoader(): UseTextLoaderReturn {
     }
   }, [activeText]);
 
+  const toggleSort = useCallback(() => {
+    setSortAsc((prev) => !prev);
+  }, []);
+
   return {
     previews,
     activeText,
@@ -132,5 +150,11 @@ export function useTextLoader(): UseTextLoaderReturn {
     refreshPreviews,
     isProcessing,
     processingError,
+    tags,
+    refreshTags,
+    filterTagIds,
+    setFilterTagIds,
+    sortAsc,
+    toggleSort,
   };
 }

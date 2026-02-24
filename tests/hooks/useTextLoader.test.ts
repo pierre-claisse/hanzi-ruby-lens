@@ -22,7 +22,7 @@ const sampleText: Text = {
 };
 
 const samplePreviews: TextPreview[] = [
-  { id: 1, title: "Test Title", createdAt: "2026-02-23T12:00:00" },
+  { id: 1, title: "Test Title", createdAt: "2026-02-23T12:00:00", tags: [] },
 ];
 
 describe("useTextLoader", () => {
@@ -31,7 +31,8 @@ describe("useTextLoader", () => {
   });
 
   it("loads previews on mount and starts in library view", async () => {
-    mockInvoke.mockResolvedValueOnce(samplePreviews);
+    mockInvoke.mockResolvedValueOnce(samplePreviews); // list_texts
+    mockInvoke.mockResolvedValueOnce([]); // list_all_tags
 
     const { result } = renderHook(() => useTextLoader());
 
@@ -41,11 +42,12 @@ describe("useTextLoader", () => {
 
     expect(result.current.appView).toBe("library");
     expect(result.current.previews).toEqual(samplePreviews);
-    expect(mockInvoke).toHaveBeenCalledWith("list_texts");
+    expect(mockInvoke).toHaveBeenCalledWith("list_texts", { tagIds: [], sortAsc: false });
   });
 
   it("starts in library view even with empty previews", async () => {
-    mockInvoke.mockResolvedValueOnce([]);
+    mockInvoke.mockResolvedValueOnce([]); // list_texts
+    mockInvoke.mockResolvedValueOnce([]); // list_all_tags
 
     const { result } = renderHook(() => useTextLoader());
 
@@ -60,6 +62,7 @@ describe("useTextLoader", () => {
   describe("createText", () => {
     it("creates text and transitions to reading view", async () => {
       mockInvoke.mockResolvedValueOnce([]); // initial list_texts
+      mockInvoke.mockResolvedValueOnce([]); // list_all_tags
       mockInvoke.mockResolvedValueOnce(sampleText); // create_text
 
       const { result } = renderHook(() => useTextLoader());
@@ -83,6 +86,7 @@ describe("useTextLoader", () => {
 
     it("sets processing error and returns to library on failure", async () => {
       mockInvoke.mockResolvedValueOnce([]); // initial list_texts
+      mockInvoke.mockResolvedValueOnce([]); // list_all_tags
       mockInvoke.mockRejectedValueOnce("Processing failed"); // create_text
 
       const { result } = renderHook(() => useTextLoader());
@@ -103,6 +107,7 @@ describe("useTextLoader", () => {
   describe("openText", () => {
     it("loads text by id and transitions to reading view", async () => {
       mockInvoke.mockResolvedValueOnce(samplePreviews); // initial list_texts
+      mockInvoke.mockResolvedValueOnce([]); // list_all_tags
       mockInvoke.mockResolvedValueOnce(sampleText); // load_text
 
       const { result } = renderHook(() => useTextLoader());
@@ -124,6 +129,7 @@ describe("useTextLoader", () => {
   describe("updatePinyin", () => {
     it("updates pinyin via IPC and patches local state", async () => {
       mockInvoke.mockResolvedValueOnce(samplePreviews); // initial list_texts
+      mockInvoke.mockResolvedValueOnce([]); // list_all_tags
       mockInvoke.mockResolvedValueOnce(sampleText); // load_text
       mockInvoke.mockResolvedValueOnce(undefined); // update_pinyin
 
@@ -161,6 +167,7 @@ describe("useTextLoader", () => {
 
     it("does nothing when no active text", async () => {
       mockInvoke.mockResolvedValueOnce([]); // initial list_texts
+      mockInvoke.mockResolvedValueOnce([]); // list_all_tags
 
       const { result } = renderHook(() => useTextLoader());
 
@@ -172,14 +179,15 @@ describe("useTextLoader", () => {
         await result.current.updatePinyin(0, "nihao");
       });
 
-      // Only list_texts was called
-      expect(mockInvoke).toHaveBeenCalledTimes(1);
+      // Only list_texts + list_all_tags were called
+      expect(mockInvoke).toHaveBeenCalledTimes(2);
     });
   });
 
   describe("deleteText", () => {
     it("removes text from previews", async () => {
       mockInvoke.mockResolvedValueOnce(samplePreviews); // initial list_texts
+      mockInvoke.mockResolvedValueOnce([]); // list_all_tags
       mockInvoke.mockResolvedValueOnce(undefined); // delete_text
 
       const { result } = renderHook(() => useTextLoader());

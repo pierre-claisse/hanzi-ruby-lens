@@ -1,9 +1,10 @@
-import { useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { TextDisplay } from "./components/TextDisplay";
 import { TitleBar } from "./components/TitleBar";
 import { LibraryScreen } from "./components/LibraryScreen";
 import { TextInputView } from "./components/TextInputView";
 import { ProcessingState } from "./components/ProcessingState";
+import { ManageTagsDialog } from "./components/ManageTagsDialog";
 import { usePinyinVisibility } from "./hooks/usePinyinVisibility";
 import { useTextZoom } from "./hooks/useTextZoom";
 import { useTheme } from "./hooks/useTheme";
@@ -27,12 +28,19 @@ function App() {
     refreshPreviews,
     isProcessing,
     processingError,
+    tags,
+    refreshTags,
+    filterTagIds,
+    setFilterTagIds,
+    sortAsc,
+    toggleSort,
   } = useTextLoader();
   const [pinyinVisible, setPinyinVisible] = usePinyinVisibility();
   const { zoomLevel, zoomIn, zoomOut, isMinZoom, isMaxZoom } = useTextZoom();
   const [theme, setTheme] = useTheme();
   const { paletteId, setPalette, palettes } = useColorPalette();
   const { formatted: elapsedTime } = useElapsedTime(isProcessing);
+  const [showManageTags, setShowManageTags] = useState(false);
 
   // Suppress Space key on all buttons — Enter is the only activation key
   useEffect(() => {
@@ -79,6 +87,17 @@ function App() {
     setPinyinVisible(true);
   }, [setPinyinVisible]);
 
+  const handleTagsChanged = useCallback(async () => {
+    await refreshTags();
+    await refreshPreviews();
+  }, [refreshTags, refreshPreviews]);
+
+  const handleCloseManageTags = useCallback(() => {
+    setShowManageTags(false);
+    // Clean up filter if any selected tag was deleted
+    setFilterTagIds((prev) => prev.filter((id) => tags.some((t) => t.id === id)));
+  }, [tags, setFilterTagIds]);
+
   const showBack = appView === "reading";
 
   const renderContent = () => {
@@ -91,6 +110,9 @@ function App() {
             previews={previews}
             onOpenText={openText}
             onDeleteText={deleteText}
+            tags={tags}
+            onTagsChanged={handleTagsChanged}
+            filterActive={filterTagIds.length > 0}
           />
         );
       case "input":
@@ -149,8 +171,20 @@ function App() {
         onAddText={handleAddText}
         showAddButton={appView === "library"}
         textTitle={showBack ? activeText?.title : undefined}
+        onManageTags={() => setShowManageTags(true)}
+        tags={tags}
+        filterTagIds={filterTagIds}
+        onFilterTagIds={setFilterTagIds}
+        sortAsc={sortAsc}
+        onToggleSort={toggleSort}
       />
       {renderContent()}
+      <ManageTagsDialog
+        open={showManageTags}
+        onClose={handleCloseManageTags}
+        tags={tags}
+        onTagsChanged={handleTagsChanged}
+      />
     </>
   );
 }

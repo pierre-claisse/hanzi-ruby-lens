@@ -32,3 +32,28 @@ pub struct TextPreview {
     pub title: String,
     pub created_at: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Tag {
+    pub id: i64,
+    pub label: String,
+    pub color: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TagSummary {
+    pub id: i64,
+    pub label: String,
+    pub color: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TextPreviewWithTags {
+    pub id: i64,
+    pub title: String,
+    pub created_at: String,
+    pub tags: Vec<TagSummary>,
+}

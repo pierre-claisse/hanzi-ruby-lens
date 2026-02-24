@@ -65,17 +65,23 @@ describe("Tauri Command Contract: multi-text library", () => {
   });
 
   describe("list_texts", () => {
-    it("invokes 'list_texts' with no arguments and returns TextPreview[]", async () => {
+    it("invokes 'list_texts' with tagIds and sortAsc params and returns TextPreview[]", async () => {
       const previews: TextPreview[] = [
-        { id: 2, title: "Newer", createdAt: "2026-02-02T00:00:00" },
-        { id: 1, title: "Older", createdAt: "2026-01-01T00:00:00" },
+        { id: 2, title: "Newer", createdAt: "2026-02-02T00:00:00", tags: [] },
+        { id: 1, title: "Older", createdAt: "2026-01-01T00:00:00", tags: [] },
       ];
       mockInvoke.mockResolvedValue(previews);
 
       const { invoke } = await import("@tauri-apps/api/core");
-      const result = await invoke<TextPreview[]>("list_texts");
+      const result = await invoke<TextPreview[]>("list_texts", {
+        tagIds: [],
+        sortAsc: false,
+      });
 
-      expect(mockInvoke).toHaveBeenCalledWith("list_texts");
+      expect(mockInvoke).toHaveBeenCalledWith("list_texts", {
+        tagIds: [],
+        sortAsc: false,
+      });
       expect(result).toHaveLength(2);
       expect(result[0].title).toBe("Newer");
     });
@@ -84,7 +90,10 @@ describe("Tauri Command Contract: multi-text library", () => {
       mockInvoke.mockResolvedValue([]);
 
       const { invoke } = await import("@tauri-apps/api/core");
-      const result = await invoke<TextPreview[]>("list_texts");
+      const result = await invoke<TextPreview[]>("list_texts", {
+        tagIds: [],
+        sortAsc: false,
+      });
 
       expect(result).toEqual([]);
     });

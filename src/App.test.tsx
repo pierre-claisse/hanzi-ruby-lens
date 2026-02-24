@@ -36,9 +36,13 @@ describe("App", () => {
 
   it("renders library with text previews", async () => {
     const previews: TextPreview[] = [
-      { id: 1, title: "My Text", createdAt: "2026-02-23T12:00:00" },
+      { id: 1, title: "My Text", createdAt: "2026-02-23T12:00:00", tags: [] },
     ];
-    mockInvoke.mockResolvedValue(previews);
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "list_texts") return Promise.resolve(previews);
+      if (cmd === "list_all_tags") return Promise.resolve([]);
+      return Promise.resolve([]);
+    });
 
     render(<App />);
 

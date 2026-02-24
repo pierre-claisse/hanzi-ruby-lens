@@ -32,7 +32,7 @@ const sampleText: Text = {
 };
 
 const samplePreviews: TextPreview[] = [
-  { id: 1, title: "持久化測試", createdAt: "2026-02-23T12:00:00" },
+  { id: 1, title: "持久化測試", createdAt: "2026-02-23T12:00:00", tags: [] },
 ];
 
 describe("Text Persistence Integration", () => {
@@ -43,6 +43,7 @@ describe("Text Persistence Integration", () => {
   it("renders library with persisted text previews", async () => {
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === "list_texts") return Promise.resolve(samplePreviews);
+      if (cmd === "list_all_tags") return Promise.resolve([]);
       return Promise.resolve(null);
     });
 
@@ -57,6 +58,7 @@ describe("Text Persistence Integration", () => {
     const user = userEvent.setup();
     mockInvoke.mockImplementation((cmd: string) => {
       if (cmd === "list_texts") return Promise.resolve(samplePreviews);
+      if (cmd === "list_all_tags") return Promise.resolve([]);
       if (cmd === "load_text") return Promise.resolve(sampleText);
       return Promise.resolve(null);
     });
@@ -76,7 +78,11 @@ describe("Text Persistence Integration", () => {
   });
 
   it("shows library empty state when no texts exist (first launch)", async () => {
-    mockInvoke.mockResolvedValue([]);
+    mockInvoke.mockImplementation((cmd: string) => {
+      if (cmd === "list_texts") return Promise.resolve([]);
+      if (cmd === "list_all_tags") return Promise.resolve([]);
+      return Promise.resolve(null);
+    });
 
     render(<App />);
 
