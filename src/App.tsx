@@ -24,6 +24,7 @@ function App() {
     updatePinyin,
     splitSegment,
     mergeSegments,
+    toggleLock,
     deleteText,
     refreshPreviews,
     isProcessing,
@@ -107,6 +108,7 @@ function App() {
             previews={previews}
             onOpenText={openText}
             onDeleteText={deleteText}
+            onToggleLock={toggleLock}
             tags={tags}
             onTagsChanged={handleTagsChanged}
             filterActive={filterTagIds.length > 0}

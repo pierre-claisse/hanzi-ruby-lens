@@ -14,6 +14,7 @@ export interface Text {
   modifiedAt: string | null;
   rawInput: string;
   segments: TextSegment[];
+  locked: boolean;
 }
 
 export interface Tag {
@@ -28,4 +29,5 @@ export interface TextPreview {
   createdAt: string;
   modifiedAt: string | null;
   tags: Tag[];
+  locked: boolean;
 }

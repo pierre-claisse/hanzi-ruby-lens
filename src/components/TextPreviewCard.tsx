@@ -1,4 +1,4 @@
-import { Info } from "lucide-react";
+import { Info, Lock, Unlock } from "lucide-react";
 import { TAG_COLORS } from "../data/tagColors";
 import type { TextPreview } from "../types/domain";
 import { formatDateTime } from "../utils/formatDateTime";
@@ -8,13 +8,16 @@ interface TextPreviewCardProps {
   selected?: boolean;
   onClick: (e: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent) => void;
+  onToggleLock: () => void;
 }
 
 const MAX_VISIBLE_TAGS = 3;
 
-export function TextPreviewCard({ preview, selected, onClick, onContextMenu }: TextPreviewCardProps) {
+export function TextPreviewCard({ preview, selected, onClick, onContextMenu, onToggleLock }: TextPreviewCardProps) {
   const visibleTags = preview.tags.slice(0, MAX_VISIBLE_TAGS);
   const overflowCount = preview.tags.length - MAX_VISIBLE_TAGS;
+
+  const LockIcon = preview.locked ? Lock : Unlock;
 
   return (
     <button
@@ -27,13 +30,34 @@ export function TextPreviewCard({ preview, selected, onClick, onContextMenu }: T
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="text-content font-medium text-xl truncate">{preview.title}</h3>
-        <div className="relative group flex-shrink-0">
-          <Info className="w-4 h-4 text-content/30 group-hover:text-content/60 transition-colors mt-1" aria-label="Details" />
-          <div className="absolute right-0 top-full mt-1 z-10 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity bg-surface border border-content/10 rounded-md shadow-lg px-3 py-2 text-sm text-content/70 whitespace-nowrap">
-            <div>Created: {formatDateTime(preview.createdAt)}</div>
-            {preview.modifiedAt && (
-              <div>Modified: {formatDateTime(preview.modifiedAt)}</div>
-            )}
+        <div className="flex items-center gap-2 flex-shrink-0 mt-1">
+          <span
+            role="button"
+            tabIndex={0}
+            aria-label={preview.locked ? "Unlock text" : "Lock text"}
+            className="w-4 h-4 text-content/30 hover:text-content/60 transition-colors cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleLock();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.stopPropagation();
+                e.preventDefault();
+                onToggleLock();
+              }
+            }}
+          >
+            <LockIcon className="w-4 h-4" />
+          </span>
+          <div className="relative group">
+            <Info className="w-4 h-4 text-content/30 group-hover:text-content/60 transition-colors" aria-label="Details" />
+            <div className="absolute right-0 top-full mt-1 z-10 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity bg-surface border border-content/10 rounded-md shadow-lg px-3 py-2 text-sm text-content/70 whitespace-nowrap">
+              <div>Created: {formatDateTime(preview.createdAt)}</div>
+              {preview.modifiedAt && (
+                <div>Modified: {formatDateTime(preview.modifiedAt)}</div>
+              )}
+            </div>
           </div>
         </div>
       </div>

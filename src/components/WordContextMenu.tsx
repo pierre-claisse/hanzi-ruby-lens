@@ -13,6 +13,7 @@ export interface MenuEntry {
   label: string;
   icon: LucideIcon;
   action: MenuAction;
+  disabled?: boolean;
 }
 
 interface WordContextMenuProps {
@@ -28,20 +29,20 @@ export function WordContextMenu({ entries, focusedIndex, position, direction, on
   return (
     <div
       role="menu"
-      className="absolute z-50 w-48 rounded-lg border border-content/20 bg-surface shadow-lg py-1"
+      className="absolute z-50 w-56 rounded-lg border border-content/20 bg-surface shadow-lg py-1"
       style={{ top: position.top, left: position.left }}
       onPointerDown={(e) => e.stopPropagation()}
       onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
     >
-      {entries.map(({ label, icon: Icon, action }, index) => (
+      {entries.map(({ label, icon: Icon, action, disabled }, index) => (
         <div
           key={`${action.type}-${label}`}
           role="menuitem"
-          className={`px-3 py-2 text-sm text-content cursor-default transition-colors flex items-center gap-2 ${
-            index === focusedIndex ? "bg-content/10" : ""
-          }`}
+          className={`px-3 py-2 text-sm text-content transition-colors flex items-center gap-2 ${
+            disabled ? "opacity-40 cursor-not-allowed" : "cursor-default"
+          } ${!disabled && index === focusedIndex ? "bg-content/10" : ""}`}
           onMouseEnter={() => onEntryHover(index)}
-          onClick={() => onAction(action)}
+          onClick={disabled ? undefined : () => onAction(action)}
         >
           <Icon size={16} strokeWidth={1.5} />
           {label}

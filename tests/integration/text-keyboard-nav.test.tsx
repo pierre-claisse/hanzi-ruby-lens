@@ -26,6 +26,7 @@ const testText: Text = {
     { type: "word", word: { characters: "現在", pinyin: "xiànzài" } },
     { type: "word", word: { characters: "覺得", pinyin: "juéde" } },
   ],
+  locked: false,
 };
 
 function getRubyElements(container: HTMLElement) {
@@ -185,8 +186,8 @@ describe("Text Keyboard Navigation Integration", () => {
     expect(items).toHaveLength(4);
     expect(items[0]).toHaveTextContent("MOE Dictionary");
     expect(items[1]).toHaveTextContent("Google Translate");
-    expect(items[2]).toHaveTextContent("Edit Pinyin");
-    expect(items[3]).toHaveTextContent("Copy");
+    expect(items[2]).toHaveTextContent("Copy");
+    expect(items[3]).toHaveTextContent("Edit Pinyin");
   });
 
   it("renders icons in menu entries", () => {
@@ -544,7 +545,7 @@ describe("Text Keyboard Navigation Integration", () => {
     fireEvent.keyDown(textArea, { key: "Enter" }); // open menu on first word ("我", pinyin: "wǒ")
 
     const items = container.querySelectorAll("[role='menuitem']");
-    fireEvent.click(items[3]); // click "Copy" (fourth entry)
+    fireEvent.click(items[2]); // click "Copy" (third entry)
 
     expect(writeText).toHaveBeenCalledWith("我");
   });
@@ -556,7 +557,6 @@ describe("Text Keyboard Navigation Integration", () => {
     fireEvent.focus(textArea);
     fireEvent.keyDown(textArea, { key: "Enter" }); // open menu
     fireEvent.keyDown(textArea, { key: "ArrowDown" }); // focus "Google Translate"
-    fireEvent.keyDown(textArea, { key: "ArrowDown" }); // focus "Edit Pinyin"
     fireEvent.keyDown(textArea, { key: "ArrowDown" }); // focus "Copy"
     fireEvent.keyDown(textArea, { key: "Enter" }); // activate "Copy"
 
@@ -571,7 +571,6 @@ describe("Text Keyboard Navigation Integration", () => {
     fireEvent.keyDown(textArea, { key: "ArrowRight" }); // navigate to "現在"
     fireEvent.keyDown(textArea, { key: "Enter" }); // open menu
     fireEvent.keyDown(textArea, { key: "ArrowDown" }); // "Google Translate"
-    fireEvent.keyDown(textArea, { key: "ArrowDown" }); // "Edit Pinyin"
     fireEvent.keyDown(textArea, { key: "ArrowDown" }); // "Copy"
     fireEvent.keyDown(textArea, { key: "Enter" }); // activate "Copy"
 
@@ -586,7 +585,7 @@ describe("Text Keyboard Navigation Integration", () => {
     fireEvent.keyDown(textArea, { key: "Enter" });
 
     const items = container.querySelectorAll("[role='menuitem']");
-    fireEvent.click(items[3]); // click "Copy"
+    fireEvent.click(items[2]); // click "Copy"
 
     expect(container.querySelector("[role='menu']")).not.toBeInTheDocument();
   });

@@ -15,6 +15,7 @@ const sampleText: Text = {
     { type: "word", word: { characters: "世界", pinyin: "shìjiè" } },
     { type: "plain", text: "！" },
   ],
+  locked: false,
 };
 
 describe("TextDisplay", () => {
@@ -48,6 +49,7 @@ describe("TextDisplay", () => {
         { type: "plain", text: "。" },
         { type: "plain", text: "，" },
       ],
+      locked: false,
     };
     const { container } = render(<TextDisplay text={punctuationText} />);
     const rubies = container.querySelectorAll("ruby");
@@ -57,7 +59,7 @@ describe("TextDisplay", () => {
   });
 
   it("shows placeholder message when Text is empty", () => {
-    const emptyText: Text = { id: 3, title: "Empty", createdAt: "2026-02-23T12:00:00", modifiedAt: null, rawInput: "", segments: [] };
+    const emptyText: Text = { id: 3, title: "Empty", createdAt: "2026-02-23T12:00:00", modifiedAt: null, rawInput: "", segments: [], locked: false };
     render(<TextDisplay text={emptyText} />);
     expect(screen.getByText(/no text/i)).toBeInTheDocument();
   });
@@ -86,6 +88,7 @@ describe("TextDisplay", () => {
         { type: "plain", text: "，" },
         { type: "word", word: { characters: "再接再厲", pinyin: "zàijiēzàilì" } },
       ],
+      locked: false,
     };
     const { container } = render(<TextDisplay text={longPinyinText} />);
 

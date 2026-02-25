@@ -30,10 +30,11 @@ const sampleText: Text = {
     { type: "word", word: { characters: "你好", pinyin: "nǐhǎo" } },
     { type: "word", word: { characters: "世界", pinyin: "shìjiè" } },
   ],
+  locked: false,
 };
 
 const samplePreviews: TextPreview[] = [
-  { id: 1, title: "Test Title", createdAt: "2026-02-23T12:00:00", modifiedAt: null, tags: [] },
+  { id: 1, title: "Test Title", createdAt: "2026-02-23T12:00:00", modifiedAt: null, tags: [], locked: false },
 ];
 
 describe("Multi-Text Library Flow", () => {

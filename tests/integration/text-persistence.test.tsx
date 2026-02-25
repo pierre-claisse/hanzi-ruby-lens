@@ -30,10 +30,11 @@ const sampleText: Text = {
     { type: "word", word: { characters: "測試", pinyin: "cèshì" } },
     { type: "word", word: { characters: "持久化", pinyin: "chíjiǔhuà" } },
   ],
+  locked: false,
 };
 
 const samplePreviews: TextPreview[] = [
-  { id: 1, title: "持久化測試", createdAt: "2026-02-23T12:00:00", modifiedAt: null, tags: [] },
+  { id: 1, title: "持久化測試", createdAt: "2026-02-23T12:00:00", modifiedAt: null, tags: [], locked: false },
 ];
 
 describe("Text Persistence Integration", () => {

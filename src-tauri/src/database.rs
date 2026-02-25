@@ -34,6 +34,9 @@ pub fn initialize(db_path: PathBuf) -> Result<Connection, AppError> {
     // Migration: add modified_at column (idempotent — ignore if already exists)
     let _ = conn.execute_batch("ALTER TABLE texts ADD COLUMN modified_at TEXT");
 
+    // Migration: add locked column (idempotent — ignore if already exists)
+    let _ = conn.execute_batch("ALTER TABLE texts ADD COLUMN locked INTEGER NOT NULL DEFAULT 0");
+
     Ok(conn)
 }
 
@@ -62,6 +65,7 @@ pub fn insert_text(
         modified_at: None,
         raw_input: raw_input.to_string(),
         segments: segments.to_vec(),
+        locked: false,
     })
 }
 
@@ -72,19 +76,22 @@ pub fn list_all_texts(
 ) -> Result<Vec<TextPreviewWithTags>, AppError> {
     let order = if sort_asc { "ASC" } else { "DESC" };
 
-    let text_rows: Vec<(i64, String, String, Option<String>)> = if tag_ids.is_empty() {
+    let text_rows: Vec<(i64, String, String, Option<String>, bool)> = if tag_ids.is_empty() {
         let sql = format!(
-            "SELECT id, title, created_at, modified_at FROM texts ORDER BY created_at {}",
+            "SELECT id, title, created_at, modified_at, locked FROM texts ORDER BY created_at {}",
             order
         );
         let mut stmt = conn.prepare(&sql)?;
-        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)))?
+        let rows = stmt.query_map([], |row| {
+            let locked: i64 = row.get(4)?;
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, locked != 0))
+        })?
             .collect::<Result<Vec<_>, _>>()?;
         rows
     } else {
         let placeholders: Vec<String> = tag_ids.iter().enumerate().map(|(i, _)| format!("?{}", i + 1)).collect();
         let sql = format!(
-            "SELECT DISTINCT t.id, t.title, t.created_at, t.modified_at FROM texts t \
+            "SELECT DISTINCT t.id, t.title, t.created_at, t.modified_at, t.locked FROM texts t \
              INNER JOIN text_tags tt ON t.id = tt.text_id \
              WHERE tt.tag_id IN ({}) \
              ORDER BY t.created_at {}",
@@ -95,7 +102,8 @@ pub fn list_all_texts(
         let params: Vec<&dyn rusqlite::types::ToSql> =
             tag_ids.iter().map(|id| id as &dyn rusqlite::types::ToSql).collect();
         let rows = stmt.query_map(params.as_slice(), |row| {
-            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+            let locked: i64 = row.get(4)?;
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, locked != 0))
         })?
         .collect::<Result<Vec<_>, _>>()?;
         rows
@@ -105,7 +113,7 @@ pub fn list_all_texts(
         conn.prepare("SELECT tg.id, tg.label, tg.color FROM tags tg INNER JOIN text_tags tt ON tg.id = tt.tag_id WHERE tt.text_id = ?1")?;
 
     let mut results = Vec::with_capacity(text_rows.len());
-    for (id, title, created_at, modified_at) in text_rows {
+    for (id, title, created_at, modified_at, locked) in text_rows {
         let tags = tag_stmt
             .query_map(rusqlite::params![id], |row| {
                 Ok(TagSummary {
@@ -121,6 +129,7 @@ pub fn list_all_texts(
             created_at,
             modified_at,
             tags,
+            locked,
         });
     }
     Ok(results)
@@ -128,7 +137,7 @@ pub fn list_all_texts(
 
 pub fn load_text_by_id(conn: &Connection, id: i64) -> Result<Option<Text>, AppError> {
     let mut stmt = conn.prepare(
-        "SELECT id, title, created_at, modified_at, raw_input, segments FROM texts WHERE id = ?1",
+        "SELECT id, title, created_at, modified_at, raw_input, segments, locked FROM texts WHERE id = ?1",
     )?;
     let mut rows = stmt.query(rusqlite::params![id])?;
     match rows.next()? {
@@ -141,6 +150,7 @@ pub fn load_text_by_id(conn: &Connection, id: i64) -> Result<Option<Text>, AppEr
                     Box::new(e),
                 )
             })?;
+            let locked: i64 = row.get(6)?;
             Ok(Some(Text {
                 id: row.get(0)?,
                 title: row.get(1)?,
@@ -148,6 +158,7 @@ pub fn load_text_by_id(conn: &Connection, id: i64) -> Result<Option<Text>, AppEr
                 modified_at: row.get(3)?,
                 raw_input: row.get(4)?,
                 segments,
+                locked: locked != 0,
             }))
         }
         None => Ok(None),
@@ -479,6 +490,25 @@ pub fn remove_tag(conn: &Connection, text_ids: &[i64], tag_id: i64) -> Result<()
     Ok(())
 }
 
+pub fn toggle_lock_db(conn: &Connection, id: i64) -> Result<bool, AppError> {
+    let affected = conn.execute(
+        "UPDATE texts SET locked = NOT locked WHERE id = ?1",
+        rusqlite::params![id],
+    )?;
+    if affected == 0 {
+        return Err(AppError::Validation(format!(
+            "Text with id {} not found",
+            id
+        )));
+    }
+    let locked: i64 = conn.query_row(
+        "SELECT locked FROM texts WHERE id = ?1",
+        rusqlite::params![id],
+        |row| row.get(0),
+    )?;
+    Ok(locked != 0)
+}
+
 pub fn delete_text(conn: &Connection, id: i64) -> Result<(), AppError> {
     let affected = conn.execute("DELETE FROM texts WHERE id = ?1", rusqlite::params![id])?;
     if affected == 0 {
@@ -505,7 +535,8 @@ mod tests {
                 created_at  TEXT    NOT NULL,
                 raw_input   TEXT    NOT NULL,
                 segments    TEXT    NOT NULL DEFAULT '[]',
-                modified_at TEXT
+                modified_at TEXT,
+                locked      INTEGER NOT NULL DEFAULT 0
             );
 
             CREATE TABLE IF NOT EXISTS tags (

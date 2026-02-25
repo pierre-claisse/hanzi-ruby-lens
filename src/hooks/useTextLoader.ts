@@ -15,6 +15,7 @@ interface UseTextLoaderReturn {
   updatePinyin: (segmentIndex: number, newPinyin: string) => Promise<void>;
   splitSegment: (segmentIndex: number, splitAfterCharIndex: number) => Promise<void>;
   mergeSegments: (segmentIndex: number) => Promise<void>;
+  toggleLock: (id: number) => Promise<void>;
   deleteText: (id: number) => Promise<void>;
   refreshPreviews: () => Promise<void>;
   isProcessing: boolean;
@@ -78,7 +79,7 @@ export function useTextLoader(): UseTextLoaderReturn {
       const result = await invoke<Text>("create_text", { title, rawInput });
       setActiveText(result);
       setPreviews((prev) => [
-        { id: result.id, title: result.title, createdAt: result.createdAt, modifiedAt: null, tags: [] },
+        { id: result.id, title: result.title, createdAt: result.createdAt, modifiedAt: null, tags: [], locked: false },
         ...prev,
       ]);
       setAppView("reading");
@@ -137,6 +138,13 @@ export function useTextLoader(): UseTextLoaderReturn {
     if (reloaded) setActiveText(reloaded);
   }, [activeText]);
 
+  const toggleLock = useCallback(async (id: number) => {
+    const newLocked = await invoke<boolean>("toggle_lock", { textId: id });
+    setPreviews((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, locked: newLocked } : p)),
+    );
+  }, []);
+
   const deleteText = useCallback(async (id: number) => {
     await invoke("delete_text", { textId: id });
     setPreviews((prev) => prev.filter((p) => p.id !== id));
@@ -160,6 +168,7 @@ export function useTextLoader(): UseTextLoaderReturn {
     updatePinyin,
     splitSegment,
     mergeSegments,
+    toggleLock,
     deleteText,
     refreshPreviews,
     isProcessing,

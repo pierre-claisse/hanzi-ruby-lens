@@ -24,6 +24,7 @@ describe("Tauri Command Contract: multi-text library", () => {
           { type: "word", word: { characters: "你好", pinyin: "nǐhǎo" } },
           { type: "word", word: { characters: "世界", pinyin: "shìjiè" } },
         ],
+        locked: false,
       };
       mockInvoke.mockResolvedValue(createdText);
 
@@ -68,8 +69,8 @@ describe("Tauri Command Contract: multi-text library", () => {
   describe("list_texts", () => {
     it("invokes 'list_texts' with tagIds and sortAsc params and returns TextPreview[]", async () => {
       const previews: TextPreview[] = [
-        { id: 2, title: "Newer", createdAt: "2026-02-02T00:00:00", modifiedAt: null, tags: [] },
-        { id: 1, title: "Older", createdAt: "2026-01-01T00:00:00", modifiedAt: null, tags: [] },
+        { id: 2, title: "Newer", createdAt: "2026-02-02T00:00:00", modifiedAt: null, tags: [], locked: false },
+        { id: 1, title: "Older", createdAt: "2026-01-01T00:00:00", modifiedAt: null, tags: [], locked: false },
       ];
       mockInvoke.mockResolvedValue(previews);
 
@@ -111,6 +112,7 @@ describe("Tauri Command Contract: multi-text library", () => {
         segments: [
           { type: "word", word: { characters: "你好", pinyin: "nǐhǎo" } },
         ],
+        locked: false,
       };
       mockInvoke.mockResolvedValue(text);
 
@@ -161,6 +163,37 @@ describe("Tauri Command Contract: multi-text library", () => {
           newPinyin: "test",
         }),
       ).rejects.toContain("not a word");
+    });
+  });
+
+  describe("toggle_lock", () => {
+    it("invokes 'toggle_lock' with textId and returns new locked state", async () => {
+      mockInvoke.mockResolvedValue(true);
+
+      const { invoke } = await import("@tauri-apps/api/core");
+      const result = await invoke<boolean>("toggle_lock", { textId: 1 });
+
+      expect(mockInvoke).toHaveBeenCalledWith("toggle_lock", { textId: 1 });
+      expect(result).toBe(true);
+    });
+
+    it("returns false when toggling a locked text back to unlocked", async () => {
+      mockInvoke.mockResolvedValue(false);
+
+      const { invoke } = await import("@tauri-apps/api/core");
+      const result = await invoke<boolean>("toggle_lock", { textId: 1 });
+
+      expect(result).toBe(false);
+    });
+
+    it("rejects when text not found", async () => {
+      mockInvoke.mockRejectedValue("Text with id 999 not found");
+
+      const { invoke } = await import("@tauri-apps/api/core");
+
+      await expect(
+        invoke("toggle_lock", { textId: 999 }),
+      ).rejects.toContain("not found");
     });
   });
 

@@ -24,6 +24,7 @@ describe("Tauri Command Contract: create_text (atomic process + save)", () => {
         { type: "word", word: { characters: "天氣", pinyin: "tiānqì" } },
         { type: "word", word: { characters: "很好", pinyin: "hěnhǎo" } },
       ],
+      locked: false,
     };
     mockInvoke.mockResolvedValue(createdText);
 
@@ -55,6 +56,7 @@ describe("Tauri Command Contract: create_text (atomic process + save)", () => {
         { type: "plain", text: "，" },
         { type: "word", word: { characters: "世界", pinyin: "shìjiè" } },
       ],
+      locked: false,
     };
     mockInvoke.mockResolvedValue(createdText);
 

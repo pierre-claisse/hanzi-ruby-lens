@@ -2,15 +2,15 @@ import { useMemo, useRef, useEffect, useCallback, useState } from "react";
 import type { Text, TextSegment } from "../types/domain";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { BookSearch, Languages, Copy, Pencil, Scissors, Combine } from "lucide-react";
+import { BookSearch, Languages, Copy, Pencil, Scissors, Combine, Lock } from "lucide-react";
 import { RubyWord } from "./RubyWord";
 import { WordContextMenu } from "./WordContextMenu";
 import type { MenuAction, MenuEntry } from "./WordContextMenu";
 import { useWordNavigation } from "../hooks/useWordNavigation";
 import { diacriticalToNumbered, numberedToDiacritical } from "../utils/pinyinConversion";
 
-/** Fixed menu width matching Tailwind w-48 (12rem = 192px at 16px base). */
-export const MENU_WIDTH_PX = 192;
+/** Fixed menu width matching Tailwind w-56 (14rem = 224px at 16px base). */
+export const MENU_WIDTH_PX = 224;
 /** Height per menu entry (px). */
 export const MENU_ITEM_HEIGHT_PX = 36;
 /** Vertical padding inside the menu (px). */
@@ -130,12 +130,12 @@ function buildBlocks(segments: TextSegment[]): Block[] {
 }
 
 /** Build the dynamic menu entries for a word at the given segment index. */
-function buildMenuEntries(segIndex: number, segments: TextSegment[]): MenuEntry[] {
+function buildMenuEntries(segIndex: number, segments: TextSegment[], locked: boolean): MenuEntry[] {
   const entries: MenuEntry[] = [
     { label: "MOE Dictionary", icon: BookSearch, action: { type: "dictionary" } },
     { label: "Google Translate", icon: Languages, action: { type: "translate" } },
-    { label: "Edit Pinyin", icon: Pencil, action: { type: "editPinyin" } },
     { label: "Copy", icon: Copy, action: { type: "copy" } },
+    { label: "Edit Pinyin", icon: locked ? Lock : Pencil, action: { type: "editPinyin" }, disabled: locked },
   ];
 
   const seg = segments[segIndex];
@@ -149,8 +149,9 @@ function buildMenuEntries(segIndex: number, segments: TextSegment[]): MenuEntry[
     for (let i = 0; i < charCount - 1; i++) {
       entries.push({
         label: `Split after ${chars[i]}`,
-        icon: Scissors,
+        icon: locked ? Lock : Scissors,
         action: { type: "split", splitAfterIndex: i },
+        disabled: locked,
       });
     }
   }
@@ -163,8 +164,9 @@ function buildMenuEntries(segIndex: number, segments: TextSegment[]): MenuEntry[
       if (combinedLen <= 12) {
         entries.push({
           label: "Merge with previous word",
-          icon: Combine,
+          icon: locked ? Lock : Combine,
           action: { type: "mergeWithPrevious" },
+          disabled: locked,
         });
       }
     }
@@ -178,8 +180,9 @@ function buildMenuEntries(segIndex: number, segments: TextSegment[]): MenuEntry[
       if (combinedLen <= 12) {
         entries.push({
           label: "Merge with next word",
-          icon: Combine,
+          icon: locked ? Lock : Combine,
           action: { type: "mergeWithNext" },
+          disabled: locked,
         });
       }
     }
@@ -266,7 +269,7 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
 
   const handleMenuActionByIndex = useCallback((entryIndex: number) => {
     const entry = menuEntriesRef.current[entryIndex];
-    if (entry) handleMenuAction(entry.action);
+    if (entry && !entry.disabled) handleMenuAction(entry.action);
   }, [handleMenuAction]);
 
   const {
@@ -282,8 +285,8 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
   const currentMenuEntries = useMemo(() => {
     const segIndex = wordToSegmentIndex.get(trackedIndex);
     if (segIndex === undefined) return [];
-    return buildMenuEntries(segIndex, text.segments);
-  }, [wordToSegmentIndex, text.segments, trackedIndex]);
+    return buildMenuEntries(segIndex, text.segments, text.locked);
+  }, [wordToSegmentIndex, text.segments, text.locked, trackedIndex]);
 
   // Sync ref so hook reads latest entries on next keypress
   menuEntriesRef.current = currentMenuEntries;

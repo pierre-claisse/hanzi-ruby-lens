@@ -9,12 +9,13 @@ interface LibraryScreenProps {
   previews: TextPreview[];
   onOpenText: (id: number) => void;
   onDeleteText: (id: number) => void;
+  onToggleLock: (id: number) => void;
   tags: Tag[];
   onTagsChanged: () => Promise<void>;
   filterActive: boolean;
 }
 
-export function LibraryScreen({ previews, onOpenText, onDeleteText, tags, onTagsChanged, filterActive }: LibraryScreenProps) {
+export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock, tags, onTagsChanged, filterActive }: LibraryScreenProps) {
   const [contextMenu, setContextMenu] = useState<{ ids: number[]; x: number; y: number } | null>(null);
   const [tagsSubmenu, setTagsSubmenu] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
@@ -129,6 +130,7 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, tags, onTags
                 selected={selectedIds.has(preview.id)}
                 onClick={(e) => handleCardClick(e, preview.id)}
                 onContextMenu={(e) => handleContextMenu(e, preview.id)}
+                onToggleLock={() => onToggleLock(preview.id)}
               />
             ))}
           </div>

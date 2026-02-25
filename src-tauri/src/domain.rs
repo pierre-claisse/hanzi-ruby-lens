@@ -24,6 +24,7 @@ pub struct Text {
     pub modified_at: Option<String>,
     pub raw_input: String,
     pub segments: Vec<TextSegment>,
+    pub locked: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,4 +51,5 @@ pub struct TextPreviewWithTags {
     pub created_at: String,
     pub modified_at: Option<String>,
     pub tags: Vec<TagSummary>,
+    pub locked: bool,
 }
