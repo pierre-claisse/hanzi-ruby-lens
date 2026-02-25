@@ -15,6 +15,10 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
 
 const testText: Text = {
+  id: 1,
+  title: "Nav Test",
+  createdAt: "2026-02-23T12:00:00",
+  modifiedAt: null,
   rawInput: "我，現在覺得",
   segments: [
     { type: "word", word: { characters: "我", pinyin: "wǒ" } },

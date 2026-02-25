@@ -1,35 +1,34 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 type Theme = "light" | "dark";
 
-export function useTheme(): [Theme, (theme: Theme) => void] {
-  // Lazy initialization: read localStorage only once on mount
-  const [theme, setTheme] = useState<Theme>(() => {
-    try {
-      const stored = localStorage.getItem("theme");
-      if (stored === "light" || stored === "dark") {
-        return stored;
-      }
-    } catch (error) {
-      // Handle localStorage unavailable (private browsing, quota exceeded)
-      console.error("Failed to read theme preference:", error);
-    }
-    // Fallback to light mode (per FR-003)
+function getSystemTheme(): Theme {
+  try {
+    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  } catch {
     return "light";
-  });
+  }
+}
+
+export function useTheme(): [Theme, () => void] {
+  const [theme, setTheme] = useState<Theme>(getSystemTheme);
 
   useEffect(() => {
-    // Persist theme preference
-    try {
-      localStorage.setItem("theme", theme);
-    } catch (error) {
-      // Silent fallback (per FR-003)
-      console.error("Failed to persist theme preference:", error);
-    }
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (e: MediaQueryListEvent) => {
+      setTheme(e.matches ? "dark" : "light");
+    };
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
 
-    // Update document root class for Tailwind dark mode
+  useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
-  return [theme, setTheme];
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  }, []);
+
+  return [theme, toggleTheme];
 }

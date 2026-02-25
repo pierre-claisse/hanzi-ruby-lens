@@ -7,6 +7,7 @@ const sampleText: Text = {
   id: 1,
   title: "Test",
   createdAt: "2026-02-23T12:00:00",
+  modifiedAt: null,
   rawInput: "你好，世界！",
   segments: [
     { type: "word", word: { characters: "你好", pinyin: "nǐhǎo" } },
@@ -40,6 +41,7 @@ describe("TextDisplay", () => {
       id: 2,
       title: "Punct",
       createdAt: "2026-02-23T12:00:00",
+      modifiedAt: null,
       rawInput: "好。，",
       segments: [
         { type: "word", word: { characters: "好", pinyin: "hǎo" } },
@@ -55,7 +57,7 @@ describe("TextDisplay", () => {
   });
 
   it("shows placeholder message when Text is empty", () => {
-    const emptyText: Text = { id: 3, title: "Empty", createdAt: "2026-02-23T12:00:00", rawInput: "", segments: [] };
+    const emptyText: Text = { id: 3, title: "Empty", createdAt: "2026-02-23T12:00:00", modifiedAt: null, rawInput: "", segments: [] };
     render(<TextDisplay text={emptyText} />);
     expect(screen.getByText(/no text/i)).toBeInTheDocument();
   });
@@ -77,6 +79,7 @@ describe("TextDisplay", () => {
       id: 4,
       title: "Long",
       createdAt: "2026-02-23T12:00:00",
+      modifiedAt: null,
       rawInput: "乘風破浪，再接再厲",
       segments: [
         { type: "word", word: { characters: "乘風破浪", pinyin: "chéngfēngpòlàng" } },

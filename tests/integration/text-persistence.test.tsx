@@ -24,6 +24,7 @@ const sampleText: Text = {
   id: 1,
   title: "持久化測試",
   createdAt: "2026-02-23T12:00:00",
+  modifiedAt: null,
   rawInput: "測試持久化",
   segments: [
     { type: "word", word: { characters: "測試", pinyin: "cèshì" } },
@@ -32,7 +33,7 @@ const sampleText: Text = {
 };
 
 const samplePreviews: TextPreview[] = [
-  { id: 1, title: "持久化測試", createdAt: "2026-02-23T12:00:00", tags: [] },
+  { id: 1, title: "持久化測試", createdAt: "2026-02-23T12:00:00", modifiedAt: null, tags: [] },
 ];
 
 describe("Text Persistence Integration", () => {

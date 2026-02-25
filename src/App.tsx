@@ -37,7 +37,7 @@ function App() {
   } = useTextLoader();
   const [pinyinVisible, setPinyinVisible] = usePinyinVisibility();
   const { zoomLevel, zoomIn, zoomOut, isMinZoom, isMaxZoom } = useTextZoom();
-  const [theme, setTheme] = useTheme();
+  const [theme, toggleTheme] = useTheme();
   const { paletteId, setPalette, palettes } = useColorPalette();
   const { formatted: elapsedTime } = useElapsedTime(isProcessing);
   const [showManageTags, setShowManageTags] = useState(false);
@@ -62,9 +62,6 @@ function App() {
     return () => document.removeEventListener("contextmenu", handler);
   }, []);
 
-  const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  };
 
   const handleAddText = useCallback(() => {
     setView("input");

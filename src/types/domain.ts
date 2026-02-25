@@ -11,6 +11,7 @@ export interface Text {
   id: number;
   title: string;
   createdAt: string;
+  modifiedAt: string | null;
   rawInput: string;
   segments: TextSegment[];
 }
@@ -25,5 +26,6 @@ export interface TextPreview {
   id: number;
   title: string;
   createdAt: string;
+  modifiedAt: string | null;
   tags: Tag[];
 }

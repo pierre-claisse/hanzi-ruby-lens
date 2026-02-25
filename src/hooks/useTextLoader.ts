@@ -36,7 +36,21 @@ export function useTextLoader(): UseTextLoaderReturn {
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
   const [filterTagIds, setFilterTagIds] = useState<number[]>([]);
-  const [sortAsc, setSortAsc] = useState(false);
+  const [sortAsc, setSortAsc] = useState(() => {
+    try {
+      return localStorage.getItem("sortAsc") === "true";
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("sortAsc", String(sortAsc));
+    } catch {
+      // Silent fallback
+    }
+  }, [sortAsc]);
 
   const refreshTags = useCallback(async () => {
     const list = await invoke<Tag[]>("list_all_tags");
@@ -64,7 +78,7 @@ export function useTextLoader(): UseTextLoaderReturn {
       const result = await invoke<Text>("create_text", { title, rawInput });
       setActiveText(result);
       setPreviews((prev) => [
-        { id: result.id, title: result.title, createdAt: result.createdAt, tags: [] },
+        { id: result.id, title: result.title, createdAt: result.createdAt, modifiedAt: null, tags: [] },
         ...prev,
       ]);
       setAppView("reading");

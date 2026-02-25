@@ -30,6 +30,10 @@ pub fn initialize(db_path: PathBuf) -> Result<Connection, AppError> {
             PRIMARY KEY (text_id, tag_id)
         );",
     )?;
+
+    // Migration: add modified_at column (idempotent — ignore if already exists)
+    let _ = conn.execute_batch("ALTER TABLE texts ADD COLUMN modified_at TEXT");
+
     Ok(conn)
 }
 
@@ -55,6 +59,7 @@ pub fn insert_text(
         id,
         title: title.to_string(),
         created_at,
+        modified_at: None,
         raw_input: raw_input.to_string(),
         segments: segments.to_vec(),
     })
@@ -67,19 +72,19 @@ pub fn list_all_texts(
 ) -> Result<Vec<TextPreviewWithTags>, AppError> {
     let order = if sort_asc { "ASC" } else { "DESC" };
 
-    let text_rows: Vec<(i64, String, String)> = if tag_ids.is_empty() {
+    let text_rows: Vec<(i64, String, String, Option<String>)> = if tag_ids.is_empty() {
         let sql = format!(
-            "SELECT id, title, created_at FROM texts ORDER BY created_at {}",
+            "SELECT id, title, created_at, modified_at FROM texts ORDER BY created_at {}",
             order
         );
         let mut stmt = conn.prepare(&sql)?;
-        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))?
+        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)))?
             .collect::<Result<Vec<_>, _>>()?;
         rows
     } else {
         let placeholders: Vec<String> = tag_ids.iter().enumerate().map(|(i, _)| format!("?{}", i + 1)).collect();
         let sql = format!(
-            "SELECT DISTINCT t.id, t.title, t.created_at FROM texts t \
+            "SELECT DISTINCT t.id, t.title, t.created_at, t.modified_at FROM texts t \
              INNER JOIN text_tags tt ON t.id = tt.text_id \
              WHERE tt.tag_id IN ({}) \
              ORDER BY t.created_at {}",
@@ -90,7 +95,7 @@ pub fn list_all_texts(
         let params: Vec<&dyn rusqlite::types::ToSql> =
             tag_ids.iter().map(|id| id as &dyn rusqlite::types::ToSql).collect();
         let rows = stmt.query_map(params.as_slice(), |row| {
-            Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
         })?
         .collect::<Result<Vec<_>, _>>()?;
         rows
@@ -100,7 +105,7 @@ pub fn list_all_texts(
         conn.prepare("SELECT tg.id, tg.label, tg.color FROM tags tg INNER JOIN text_tags tt ON tg.id = tt.tag_id WHERE tt.text_id = ?1")?;
 
     let mut results = Vec::with_capacity(text_rows.len());
-    for (id, title, created_at) in text_rows {
+    for (id, title, created_at, modified_at) in text_rows {
         let tags = tag_stmt
             .query_map(rusqlite::params![id], |row| {
                 Ok(TagSummary {
@@ -114,6 +119,7 @@ pub fn list_all_texts(
             id,
             title,
             created_at,
+            modified_at,
             tags,
         });
     }
@@ -122,12 +128,12 @@ pub fn list_all_texts(
 
 pub fn load_text_by_id(conn: &Connection, id: i64) -> Result<Option<Text>, AppError> {
     let mut stmt = conn.prepare(
-        "SELECT id, title, created_at, raw_input, segments FROM texts WHERE id = ?1",
+        "SELECT id, title, created_at, modified_at, raw_input, segments FROM texts WHERE id = ?1",
     )?;
     let mut rows = stmt.query(rusqlite::params![id])?;
     match rows.next()? {
         Some(row) => {
-            let segments_json: String = row.get(4)?;
+            let segments_json: String = row.get(5)?;
             let segments = serde_json::from_str(&segments_json).map_err(|e| {
                 rusqlite::Error::FromSqlConversionFailure(
                     0,
@@ -139,7 +145,8 @@ pub fn load_text_by_id(conn: &Connection, id: i64) -> Result<Option<Text>, AppEr
                 id: row.get(0)?,
                 title: row.get(1)?,
                 created_at: row.get(2)?,
-                raw_input: row.get(3)?,
+                modified_at: row.get(3)?,
+                raw_input: row.get(4)?,
                 segments,
             }))
         }
@@ -189,9 +196,10 @@ pub fn update_segments(
 
     let updated_json = serde_json::to_string(&segments)
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+    let modified_at = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
     conn.execute(
-        "UPDATE texts SET segments = ?1 WHERE id = ?2",
-        rusqlite::params![updated_json, id],
+        "UPDATE texts SET segments = ?1, modified_at = ?2 WHERE id = ?3",
+        rusqlite::params![updated_json, modified_at, id],
     )?;
 
     Ok(())
@@ -273,9 +281,10 @@ pub fn split_segment_db(
 
     let updated_json = serde_json::to_string(&segments)
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+    let modified_at = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
     conn.execute(
-        "UPDATE texts SET segments = ?1 WHERE id = ?2",
-        rusqlite::params![updated_json, id],
+        "UPDATE texts SET segments = ?1, modified_at = ?2 WHERE id = ?3",
+        rusqlite::params![updated_json, modified_at, id],
     )?;
 
     Ok(())
@@ -359,9 +368,10 @@ pub fn merge_segments_db(
 
     let updated_json = serde_json::to_string(&segments)
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+    let modified_at = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
     conn.execute(
-        "UPDATE texts SET segments = ?1 WHERE id = ?2",
-        rusqlite::params![updated_json, id],
+        "UPDATE texts SET segments = ?1, modified_at = ?2 WHERE id = ?3",
+        rusqlite::params![updated_json, modified_at, id],
     )?;
 
     Ok(())
@@ -490,11 +500,12 @@ mod tests {
         conn.pragma_update(None, "foreign_keys", "ON").unwrap();
         conn.execute_batch(
             "CREATE TABLE IF NOT EXISTS texts (
-                id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                title      TEXT    NOT NULL,
-                created_at TEXT    NOT NULL,
-                raw_input  TEXT    NOT NULL,
-                segments   TEXT    NOT NULL DEFAULT '[]'
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                title       TEXT    NOT NULL,
+                created_at  TEXT    NOT NULL,
+                raw_input   TEXT    NOT NULL,
+                segments    TEXT    NOT NULL DEFAULT '[]',
+                modified_at TEXT
             );
 
             CREATE TABLE IF NOT EXISTS tags (

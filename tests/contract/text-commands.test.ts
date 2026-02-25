@@ -18,6 +18,7 @@ describe("Tauri Command Contract: multi-text library", () => {
         id: 1,
         title: "Test Title",
         createdAt: "2026-02-23T12:00:00",
+        modifiedAt: null,
         rawInput: "你好世界",
         segments: [
           { type: "word", word: { characters: "你好", pinyin: "nǐhǎo" } },
@@ -67,8 +68,8 @@ describe("Tauri Command Contract: multi-text library", () => {
   describe("list_texts", () => {
     it("invokes 'list_texts' with tagIds and sortAsc params and returns TextPreview[]", async () => {
       const previews: TextPreview[] = [
-        { id: 2, title: "Newer", createdAt: "2026-02-02T00:00:00", tags: [] },
-        { id: 1, title: "Older", createdAt: "2026-01-01T00:00:00", tags: [] },
+        { id: 2, title: "Newer", createdAt: "2026-02-02T00:00:00", modifiedAt: null, tags: [] },
+        { id: 1, title: "Older", createdAt: "2026-01-01T00:00:00", modifiedAt: null, tags: [] },
       ];
       mockInvoke.mockResolvedValue(previews);
 
@@ -105,6 +106,7 @@ describe("Tauri Command Contract: multi-text library", () => {
         id: 1,
         title: "Test",
         createdAt: "2026-02-23T12:00:00",
+        modifiedAt: null,
         rawInput: "你好",
         segments: [
           { type: "word", word: { characters: "你好", pinyin: "nǐhǎo" } },

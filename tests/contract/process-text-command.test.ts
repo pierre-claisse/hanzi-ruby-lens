@@ -17,6 +17,7 @@ describe("Tauri Command Contract: create_text (atomic process + save)", () => {
       id: 1,
       title: "今天天氣",
       createdAt: "2026-02-23T12:00:00",
+      modifiedAt: null,
       rawInput: "今天天氣很好",
       segments: [
         { type: "word", word: { characters: "今天", pinyin: "jīntiān" } },
@@ -47,6 +48,7 @@ describe("Tauri Command Contract: create_text (atomic process + save)", () => {
       id: 2,
       title: "Test",
       createdAt: "2026-02-23T12:00:00",
+      modifiedAt: null,
       rawInput: "你好，世界",
       segments: [
         { type: "word", word: { characters: "你好", pinyin: "nǐhǎo" } },
