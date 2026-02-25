@@ -29,7 +29,7 @@ interface TitleBarProps {
   rawInput?: string;
   onAddText?: () => void;
   showAddButton?: boolean;
-  textTitle?: string;
+  titleText?: string;
   onManageTags?: () => void;
   tags?: Tag[];
   filterTagIds?: number[];
@@ -38,7 +38,7 @@ interface TitleBarProps {
   onToggleSort?: () => void;
 }
 
-export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, onZoomOut, isMinZoom, isMaxZoom, palettes, selectedPaletteId, onPaletteSelect, theme, onThemeToggle, onBack, showBack, rawInput, onAddText, showAddButton, textTitle, onManageTags, tags, filterTagIds, onFilterTagIds, sortAsc, onToggleSort }: TitleBarProps) {
+export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, onZoomOut, isMinZoom, isMaxZoom, palettes, selectedPaletteId, onPaletteSelect, theme, onThemeToggle, onBack, showBack, rawInput, onAddText, showAddButton, titleText, onManageTags, tags, filterTagIds, onFilterTagIds, sortAsc, onToggleSort }: TitleBarProps) {
   return (
     <header
       data-tauri-drag-region
@@ -56,7 +56,7 @@ export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, o
             <ArrowLeft className="w-5 h-5" aria-hidden="true" />
           </button>
         )}
-        <h1 data-tauri-drag-region className="text-base text-content font-medium">Hanzi Ruby Lens</h1>
+        <h1 data-tauri-drag-region className="text-base text-content font-medium truncate max-w-[40vw]">{titleText ?? "Hanzi Ruby Lens"}</h1>
         {showBack && (
           <span
             key={zoomLevel}
@@ -68,15 +68,6 @@ export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, o
           </span>
         )}
       </div>
-
-      {textTitle && (
-        <span
-          data-tauri-drag-region
-          className="absolute left-1/2 -translate-x-1/2 max-w-[40%] truncate text-lg text-content/60 font-bold select-none cursor-default"
-        >
-          {textTitle}
-        </span>
-      )}
 
       {showAddButton && tags && filterTagIds && onFilterTagIds && onToggleSort !== undefined && (
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">

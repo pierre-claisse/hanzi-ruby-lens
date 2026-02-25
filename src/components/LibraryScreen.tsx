@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Trash2, ChevronRight, Check } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { TAG_COLORS } from "../data/tagColors";
 import type { TextPreview, Tag } from "../types/domain";
 import { TextPreviewCard } from "./TextPreviewCard";
+import { computeContextMenuPosition, computeSubmenuPosition } from "../utils/menuPositioning";
 
 interface LibraryScreenProps {
   previews: TextPreview[];
@@ -20,6 +21,7 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock
   const [tagsSubmenu, setTagsSubmenu] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const handleContextMenu = useCallback((e: React.MouseEvent, id: number) => {
     e.preventDefault();
@@ -138,66 +140,83 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock
       </div>
 
       {/* Context menu */}
-      {contextMenu && (
-        <div
-          role="menu"
-          className="fixed z-50 w-44 rounded-lg border border-content/20 bg-surface shadow-lg py-1"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-        >
-          {/* Tags submenu trigger */}
-          {tags.length > 0 && (
+      {contextMenu && (() => {
+        const menuEntryCount = (tags.length > 0 ? 1 : 0) + 1; // Tags trigger + Delete
+        const menuPos = computeContextMenuPosition(contextMenu.x, contextMenu.y, menuEntryCount, window.innerWidth, window.innerHeight);
+
+        // Compute submenu position from main menu's measured rect
+        const submenuItemHeight = 28; // ~py-1.5 + text-sm
+        const submenuPadding = 8;
+        const submenuWidth = 192; // w-48
+        const submenuHeight = tags.length * submenuItemHeight + submenuPadding;
+        const mainRect = menuRef.current?.getBoundingClientRect();
+        const submenuPos = mainRect
+          ? computeSubmenuPosition(mainRect, submenuWidth, submenuHeight, window.innerWidth, window.innerHeight)
+          : { top: menuPos.top, left: menuPos.left + 176 };
+
+        return (
+          <div
+            ref={menuRef}
+            role="menu"
+            className="fixed z-50 w-44 rounded-lg border border-content/20 bg-surface shadow-lg py-1"
+            style={{ top: menuPos.top, left: menuPos.left }}
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          >
+            {/* Tags submenu trigger */}
+            {tags.length > 0 && (
+              <div
+                role="menuitem"
+                className="px-3 py-2 text-sm text-content cursor-default transition-colors hover:bg-content/10 flex items-center justify-between"
+                onClick={() => setTagsSubmenu(!tagsSubmenu)}
+                onMouseEnter={() => setTagsSubmenu(true)}
+              >
+                <span>Tags</span>
+                <ChevronRight size={14} className="text-content/40" />
+              </div>
+            )}
+
             <div
               role="menuitem"
-              className="px-3 py-2 text-sm text-content cursor-default transition-colors hover:bg-content/10 flex items-center justify-between"
-              onClick={() => setTagsSubmenu(!tagsSubmenu)}
-              onMouseEnter={() => setTagsSubmenu(true)}
+              className="px-3 py-2 text-sm text-red-500 cursor-default transition-colors hover:bg-content/10 flex items-center gap-2"
+              onClick={handleDelete}
             >
-              <span>Tags</span>
-              <ChevronRight size={14} className="text-content/40" />
+              <Trash2 size={16} />
+              Delete
             </div>
-          )}
 
-          <div
-            role="menuitem"
-            className="px-3 py-2 text-sm text-red-500 cursor-default transition-colors hover:bg-content/10 flex items-center gap-2"
-            onClick={handleDelete}
-          >
-            <Trash2 size={16} />
-            Delete
+            {/* Tags submenu */}
+            {tagsSubmenu && (
+              <div
+                className="fixed z-50 w-48 rounded-lg border border-content/20 bg-surface shadow-lg py-1"
+                style={{ top: submenuPos.top, left: submenuPos.left }}
+                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              >
+                {tags.map((tag) => {
+                  const checked = contextTagState(tag.id);
+                  return (
+                    <div
+                      key={tag.id}
+                      role="menuitemcheckbox"
+                      aria-checked={checked}
+                      className="px-3 py-1.5 text-sm text-content cursor-default transition-colors hover:bg-content/10 flex items-center gap-2"
+                      onClick={() => handleToggleTag(tag.id)}
+                    >
+                      <span className="w-4 h-4 flex items-center justify-center">
+                        {checked && <Check size={14} className="text-accent" />}
+                      </span>
+                      <span
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: getColorBg(tag.color) }}
+                      />
+                      <span className="truncate">{tag.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-
-          {/* Tags submenu */}
-          {tagsSubmenu && (
-            <div
-              className="absolute left-full top-0 ml-1 w-48 rounded-lg border border-content/20 bg-surface shadow-lg py-1"
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-            >
-              {tags.map((tag) => {
-                const checked = contextTagState(tag.id);
-                return (
-                  <div
-                    key={tag.id}
-                    role="menuitemcheckbox"
-                    aria-checked={checked}
-                    className="px-3 py-1.5 text-sm text-content cursor-default transition-colors hover:bg-content/10 flex items-center gap-2"
-                    onClick={() => handleToggleTag(tag.id)}
-                  >
-                    <span className="w-4 h-4 flex items-center justify-center">
-                      {checked && <Check size={14} className="text-accent" />}
-                    </span>
-                    <span
-                      className="w-3 h-3 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: getColorBg(tag.color) }}
-                    />
-                    <span className="truncate">{tag.label}</span>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+        );
+      })()}
 
       {/* Confirmation dialog */}
       {confirmDeleteId !== null && (
