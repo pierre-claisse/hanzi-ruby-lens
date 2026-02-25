@@ -169,7 +169,7 @@ function App() {
         rawInput={activeText?.rawInput ?? ""}
         onAddText={handleAddText}
         showAddButton={appView === "library"}
-        textTitle={showBack ? activeText?.title : undefined}
+        titleText={appView === "reading" ? (activeText?.title ?? "") : "Library"}
         onManageTags={() => setShowManageTags(true)}
         tags={tags}
         filterTagIds={filterTagIds}

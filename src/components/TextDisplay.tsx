@@ -8,58 +8,7 @@ import { WordContextMenu } from "./WordContextMenu";
 import type { MenuAction, MenuEntry } from "./WordContextMenu";
 import { useWordNavigation } from "../hooks/useWordNavigation";
 import { diacriticalToNumbered, numberedToDiacritical } from "../utils/pinyinConversion";
-
-/** Fixed menu width matching Tailwind w-56 (14rem = 224px at 16px base). */
-export const MENU_WIDTH_PX = 224;
-/** Height per menu entry (px). */
-export const MENU_ITEM_HEIGHT_PX = 36;
-/** Vertical padding inside the menu (px). */
-const MENU_PADDING_PX = 8;
-/** Gap between the word edge and the menu (px). */
-const MENU_GAP_PX = 4;
-
-/**
- * Pure function: compute context-menu position relative to its container
- * based on which viewport quadrant the word occupies.
- */
-export function computeMenuPosition(
-  wordRect: { top: number; bottom: number; left: number; right: number; width: number; height: number },
-  containerRect: { top: number; left: number },
-  menuEntryCount: number,
-  viewportWidth: number,
-  viewportHeight: number,
-): { top: number; left: number; direction: "above" | "below" } {
-  const menuHeight = menuEntryCount * MENU_ITEM_HEIGHT_PX + MENU_PADDING_PX;
-  const wordCenterY = wordRect.top + wordRect.height / 2;
-  const wordCenterX = wordRect.left + wordRect.width / 2;
-  const midY = viewportHeight / 2;
-  const midX = viewportWidth / 2;
-
-  // Vertical: bottom half → above, top half (or midpoint) → below
-  let top: number;
-  let direction: "above" | "below";
-  if (wordCenterY > midY) {
-    top = wordRect.top - containerRect.top - menuHeight - MENU_GAP_PX;
-    direction = "above";
-  } else {
-    top = wordRect.bottom - containerRect.top + MENU_GAP_PX;
-    direction = "below";
-  }
-
-  // Horizontal: right half → left of word, left half (or midpoint) → right of word
-  let left: number;
-  if (wordCenterX > midX) {
-    left = wordRect.left - containerRect.left - MENU_WIDTH_PX - MENU_GAP_PX;
-  } else {
-    left = wordRect.right - containerRect.left + MENU_GAP_PX;
-  }
-
-  // Clamp to keep menu within container bounds
-  if (left < 0) left = 0;
-  if (top < 0) top = 0;
-
-  return { top, left, direction };
-}
+import { computeMenuPosition } from "../utils/menuPositioning";
 
 interface TextDisplayProps {
   text: Text;

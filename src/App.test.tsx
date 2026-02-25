@@ -57,7 +57,7 @@ describe("App", () => {
     render(<App />);
 
     await waitFor(() => {
-      expect(screen.getByText("Hanzi Ruby Lens")).toBeInTheDocument();
+      expect(screen.getByText("Library")).toBeInTheDocument();
     });
   });
 

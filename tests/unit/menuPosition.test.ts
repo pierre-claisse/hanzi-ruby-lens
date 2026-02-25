@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeMenuPosition, MENU_WIDTH_PX, MENU_ITEM_HEIGHT_PX } from "../../src/components/TextDisplay";
+import { computeMenuPosition, computeContextMenuPosition, computeSubmenuPosition, MENU_WIDTH_PX, MENU_ITEM_HEIGHT_PX, MENU_GAP_PX } from "../../src/utils/menuPositioning";
 
 // Helper: build a mock word rect at a given viewport position
 function makeWordRect(x: number, y: number, w = 40, h = 30) {
@@ -102,6 +102,73 @@ describe("computeMenuPosition — viewport clamping", () => {
     const result = computeMenuPosition(word, containerOffset, ENTRY_COUNT, VP_W, VP_H);
 
     // Without clamping: 360 - 300 - 152 - 4 = -96 → should be clamped to 0
+    expect(result.top).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("computeContextMenuPosition — click-point quadrant positioning", () => {
+  it("bottom-right click → menu above and to the left", () => {
+    const result = computeContextMenuPosition(600, 450, ENTRY_COUNT, VP_W, VP_H);
+
+    expect(result.direction).toBe("above");
+    // Menu should be positioned left of click (click X > midX)
+    expect(result.left).toBe(600 - MENU_WIDTH_PX - GAP);
+  });
+
+  it("top-left click → menu below and to the right", () => {
+    const result = computeContextMenuPosition(100, 100, ENTRY_COUNT, VP_W, VP_H);
+
+    expect(result.direction).toBe("below");
+    // Menu should be positioned right of click (click X < midX)
+    expect(result.left).toBe(100 + GAP);
+    expect(result.top).toBe(100 + GAP);
+  });
+
+  it("clamps menu within viewport bounds", () => {
+    // Click near top-right corner — menu goes left, and should stay >= 0
+    const result = computeContextMenuPosition(10, 10, ENTRY_COUNT, VP_W, VP_H);
+
+    expect(result.top).toBeGreaterThanOrEqual(0);
+    expect(result.left).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe("computeSubmenuPosition — directional opening", () => {
+  const SUBMENU_W = 192;
+  const SUBMENU_H = 200;
+
+  it("main menu in left half → submenu opens to the right", () => {
+    const mainRect = { top: 100, left: 50, width: 176, height: 80 };
+    const result = computeSubmenuPosition(mainRect, SUBMENU_W, SUBMENU_H, VP_W, VP_H);
+
+    // Submenu left = main right edge + gap
+    expect(result.left).toBe(mainRect.left + mainRect.width + GAP);
+    expect(result.top).toBe(mainRect.top);
+  });
+
+  it("main menu in right half → submenu opens to the left", () => {
+    const mainRect = { top: 100, left: 500, width: 176, height: 80 };
+    const result = computeSubmenuPosition(mainRect, SUBMENU_W, SUBMENU_H, VP_W, VP_H);
+
+    // Submenu left = main left edge - submenu width - gap
+    expect(result.left).toBe(mainRect.left - SUBMENU_W - GAP);
+    expect(result.top).toBe(mainRect.top);
+  });
+
+  it("clamps submenu vertically when it would overflow below viewport", () => {
+    const mainRect = { top: 500, left: 50, width: 176, height: 80 };
+    const result = computeSubmenuPosition(mainRect, SUBMENU_W, SUBMENU_H, VP_W, VP_H);
+
+    // Submenu bottom should not exceed viewport height
+    expect(result.top + SUBMENU_H).toBeLessThanOrEqual(VP_H);
+  });
+
+  it("clamps submenu top to 0 when shifted above viewport", () => {
+    // Very tall submenu near the bottom — shift could produce negative top
+    const mainRect = { top: 550, left: 50, width: 176, height: 80 };
+    const tallSubmenu = 700;
+    const result = computeSubmenuPosition(mainRect, SUBMENU_W, tallSubmenu, VP_W, VP_H);
+
     expect(result.top).toBeGreaterThanOrEqual(0);
   });
 });
