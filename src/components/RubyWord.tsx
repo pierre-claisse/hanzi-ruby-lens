@@ -44,7 +44,7 @@ export function RubyWord({ word, ref, showPinyin = true, isHighlighted, isEditin
   return (
     <ruby
       ref={ref}
-      className={`rounded pt-6 pb-1.5 transition-colors duration-200 ease-in-out ${highlightClass} focus-visible:ring-2 focus-visible:ring-accent`}
+      className={`relative rounded pt-6 pb-1.5 transition-colors duration-200 ease-in-out ${highlightClass} focus-visible:ring-2 focus-visible:ring-accent`}
       onMouseEnter={onMouseEnter}
       onContextMenu={onContextMenu}
     >
@@ -67,6 +67,9 @@ export function RubyWord({ word, ref, showPinyin = true, isHighlighted, isEditin
         )}
       </rt>
       <rp>)</rp>
+      {word.comment && (
+        <span className="absolute left-1/2 -translate-x-1/2 bottom-0 w-1.5 h-1.5 rounded-full bg-accent" aria-label="Has comment" />
+      )}
     </ruby>
   );
 }

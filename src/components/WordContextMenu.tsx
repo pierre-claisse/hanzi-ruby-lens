@@ -5,6 +5,7 @@ export type MenuAction =
   | { type: "translate" }
   | { type: "editPinyin" }
   | { type: "copy" }
+  | { type: "comment" }
   | { type: "split"; splitAfterIndex: number }
   | { type: "mergeWithPrevious" }
   | { type: "mergeWithNext" };

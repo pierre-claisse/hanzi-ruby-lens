@@ -183,11 +183,12 @@ describe("Text Keyboard Navigation Integration", () => {
     expect(menu).toBeInTheDocument();
 
     const items = container.querySelectorAll("[role='menuitem']");
-    expect(items).toHaveLength(4);
+    expect(items).toHaveLength(5);
     expect(items[0]).toHaveTextContent("MOE Dictionary");
     expect(items[1]).toHaveTextContent("Google Translate");
     expect(items[2]).toHaveTextContent("Copy");
-    expect(items[3]).toHaveTextContent("Edit Pinyin");
+    expect(items[3]).toHaveTextContent("Comment");
+    expect(items[4]).toHaveTextContent("Edit Pinyin");
   });
 
   it("renders icons in menu entries", () => {
@@ -218,7 +219,7 @@ describe("Text Keyboard Navigation Integration", () => {
     expect(hasHighlight(rubies[1])).toBe(true);
   });
 
-  it("navigates menu entries with ArrowDown (wrapping over 4 entries)", () => {
+  it("navigates menu entries with ArrowDown (wrapping over 5 entries)", () => {
     const { container } = render(<TextDisplay text={testText} />);
     const textArea = container.firstElementChild as HTMLElement;
 
@@ -245,12 +246,17 @@ describe("Text Keyboard Navigation Integration", () => {
     expect(items[3].className).toContain("bg-content/10");
     expect(items[2].className).not.toContain("bg-content/10");
 
+    // ArrowDown → fifth entry
+    fireEvent.keyDown(textArea, { key: "ArrowDown" });
+    expect(items[4].className).toContain("bg-content/10");
+    expect(items[3].className).not.toContain("bg-content/10");
+
     // ArrowDown again → wraps to first
     fireEvent.keyDown(textArea, { key: "ArrowDown" });
     expect(items[0].className).toContain("bg-content/10");
   });
 
-  it("navigates menu entries with ArrowUp (wrapping over 4 entries)", () => {
+  it("navigates menu entries with ArrowUp (wrapping over 5 entries)", () => {
     const { container } = render(<TextDisplay text={testText} />);
     const textArea = container.firstElementChild as HTMLElement;
 
@@ -259,9 +265,9 @@ describe("Text Keyboard Navigation Integration", () => {
 
     const items = container.querySelectorAll("[role='menuitem']");
 
-    // ArrowUp from first → wraps to last (fourth entry)
+    // ArrowUp from first → wraps to last (fifth entry)
     fireEvent.keyDown(textArea, { key: "ArrowUp" });
-    expect(items[3].className).toContain("bg-content/10");
+    expect(items[4].className).toContain("bg-content/10");
   });
 
   it("Enter on MOE Dictionary triggers openUrl and closes menu", () => {

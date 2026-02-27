@@ -53,6 +53,8 @@ pub struct ImportResult {
 pub struct Word {
     pub characters: String,
     pub pinyin: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub comment: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

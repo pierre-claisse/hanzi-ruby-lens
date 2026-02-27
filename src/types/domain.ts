@@ -1,6 +1,7 @@
 export interface Word {
   characters: string;
   pinyin: string;
+  comment?: string;
 }
 
 export type TextSegment =

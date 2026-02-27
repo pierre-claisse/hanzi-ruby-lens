@@ -82,6 +82,18 @@ pub fn merge_segments(
 }
 
 #[tauri::command]
+pub fn update_word_comment(
+    app_handle: AppHandle,
+    text_id: i64,
+    segment_index: usize,
+    comment: Option<String>,
+) -> Result<(), AppError> {
+    app_handle.db_mut(|conn| {
+        crate::database::update_word_comment_db(conn, text_id, segment_index, comment)
+    })
+}
+
+#[tauri::command]
 pub fn toggle_lock(app_handle: AppHandle, text_id: i64) -> Result<bool, AppError> {
     app_handle.db(|conn| crate::database::toggle_lock_db(conn, text_id))
 }

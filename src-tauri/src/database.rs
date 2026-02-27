@@ -250,7 +250,14 @@ pub fn split_segment_db(
     }
 
     let (characters, pinyin) = match &segments[segment_index] {
-        TextSegment::Word { word } => (word.characters.clone(), word.pinyin.clone()),
+        TextSegment::Word { word } => {
+            if word.comment.is_some() {
+                return Err(AppError::Validation(
+                    "Cannot split a word that has a comment. Delete the comment first.".to_string(),
+                ));
+            }
+            (word.characters.clone(), word.pinyin.clone())
+        }
         TextSegment::Plain { .. } => {
             return Err(AppError::Validation(format!(
                 "Segment at index {} is not a word",
@@ -281,12 +288,14 @@ pub fn split_segment_db(
         word: crate::domain::Word {
             characters: left_chars,
             pinyin: left_pinyin,
+            comment: None,
         },
     };
     let right_word = TextSegment::Word {
         word: crate::domain::Word {
             characters: right_chars,
             pinyin: right_pinyin,
+            comment: None,
         },
     };
 
@@ -334,7 +343,15 @@ pub fn merge_segments_db(
     }
 
     let (left_chars, left_pinyin) = match &segments[segment_index] {
-        TextSegment::Word { word } => (word.characters.clone(), word.pinyin.clone()),
+        TextSegment::Word { word } => {
+            if word.comment.is_some() {
+                return Err(AppError::Validation(
+                    "Cannot merge words that have comments. Delete the comment(s) first."
+                        .to_string(),
+                ));
+            }
+            (word.characters.clone(), word.pinyin.clone())
+        }
         TextSegment::Plain { .. } => {
             return Err(AppError::Validation(format!(
                 "Segment at index {} is not a word",
@@ -351,7 +368,15 @@ pub fn merge_segments_db(
     }
 
     let (right_chars, right_pinyin) = match &segments[segment_index + 1] {
-        TextSegment::Word { word } => (word.characters.clone(), word.pinyin.clone()),
+        TextSegment::Word { word } => {
+            if word.comment.is_some() {
+                return Err(AppError::Validation(
+                    "Cannot merge words that have comments. Delete the comment(s) first."
+                        .to_string(),
+                ));
+            }
+            (word.characters.clone(), word.pinyin.clone())
+        }
         TextSegment::Plain { .. } => {
             return Err(AppError::Validation(format!(
                 "Segment at index {} is not a word",
@@ -374,11 +399,85 @@ pub fn merge_segments_db(
         word: crate::domain::Word {
             characters: merged_chars,
             pinyin: merged_pinyin,
+            comment: None,
         },
     };
 
     // Replace two segments with one
     segments.splice(segment_index..=segment_index + 1, [merged_word]);
+
+    let updated_json = serde_json::to_string(&segments)
+        .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
+    let modified_at = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
+    conn.execute(
+        "UPDATE texts SET segments = ?1, modified_at = ?2 WHERE id = ?3",
+        rusqlite::params![updated_json, modified_at, id],
+    )?;
+
+    Ok(())
+}
+
+pub fn update_word_comment_db(
+    conn: &mut Connection,
+    id: i64,
+    segment_index: usize,
+    comment: Option<String>,
+) -> Result<(), AppError> {
+    // Load the text row (locked check + segments)
+    let (locked, segments_json): (i64, String) = conn
+        .query_row(
+            "SELECT locked, segments FROM texts WHERE id = ?1",
+            rusqlite::params![id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => {
+                AppError::Validation(format!("Text with id {} not found", id))
+            }
+            other => AppError::Database(other),
+        })?;
+
+    if locked != 0 {
+        return Err(AppError::Validation(
+            "Cannot modify comments on a locked text".to_string(),
+        ));
+    }
+
+    let mut segments: Vec<TextSegment> = serde_json::from_str(&segments_json).map_err(|e| {
+        rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e))
+    })?;
+
+    if segment_index >= segments.len() {
+        return Err(AppError::Validation(format!(
+            "Segment index {} out of bounds (length {})",
+            segment_index,
+            segments.len()
+        )));
+    }
+
+    match &mut segments[segment_index] {
+        TextSegment::Word { word } => {
+            match &comment {
+                Some(text) if !text.is_empty() => {
+                    if text.len() > 5000 {
+                        return Err(AppError::Validation(
+                            "Comment must not exceed 5000 characters".to_string(),
+                        ));
+                    }
+                    word.comment = Some(text.clone());
+                }
+                _ => {
+                    word.comment = None;
+                }
+            }
+        }
+        TextSegment::Plain { .. } => {
+            return Err(AppError::Validation(format!(
+                "Segment at index {} is not a word",
+                segment_index
+            )));
+        }
+    }
 
     let updated_json = serde_json::to_string(&segments)
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
@@ -697,6 +796,7 @@ mod tests {
                 word: Word {
                     characters: "你好".to_string(),
                     pinyin: "nǐhǎo".to_string(),
+                    comment: None,
                 },
             },
             TextSegment::Plain {
@@ -706,6 +806,7 @@ mod tests {
                 word: Word {
                     characters: "世界".to_string(),
                     pinyin: "shìjiè".to_string(),
+                    comment: None,
                 },
             },
         ]
@@ -839,6 +940,7 @@ mod tests {
                 word: Word {
                     characters: "你好嗎".to_string(),
                     pinyin: "nǐhǎoma".to_string(),
+                    comment: None,
                 },
             },
         ]
@@ -851,6 +953,7 @@ mod tests {
             word: Word {
                 characters: "你好".to_string(),
                 pinyin: "nǐhǎo".to_string(),
+                comment: None,
             },
         }];
         let text = insert_text(&mut conn, "Test", "你好", &segments).unwrap();
@@ -937,6 +1040,7 @@ mod tests {
             word: Word {
                 characters: "你好".to_string(),
                 pinyin: "nǐhǎo".to_string(),
+                comment: None,
             },
         }];
         let text = insert_text(&mut conn, "Test", "你好", &segments).unwrap();
@@ -973,10 +1077,10 @@ mod tests {
         let mut conn = in_memory_db();
         let segments = vec![
             TextSegment::Word {
-                word: Word { characters: "你".to_string(), pinyin: "nǐ".to_string() },
+                word: Word { characters: "你".to_string(), pinyin: "nǐ".to_string(), comment: None },
             },
             TextSegment::Word {
-                word: Word { characters: "好".to_string(), pinyin: "hǎo".to_string() },
+                word: Word { characters: "好".to_string(), pinyin: "hǎo".to_string(), comment: None },
             },
         ];
         let text = insert_text(&mut conn, "Test", "你好", &segments).unwrap();
@@ -1001,10 +1105,10 @@ mod tests {
         let short_chars = "甲乙丙";  // 3 chars = total 13
         let segments = vec![
             TextSegment::Word {
-                word: Word { characters: long_chars.to_string(), pinyin: "test".to_string() },
+                word: Word { characters: long_chars.to_string(), pinyin: "test".to_string(), comment: None },
             },
             TextSegment::Word {
-                word: Word { characters: short_chars.to_string(), pinyin: "test2".to_string() },
+                word: Word { characters: short_chars.to_string(), pinyin: "test2".to_string(), comment: None },
             },
         ];
         let raw = format!("{}{}", long_chars, short_chars);
@@ -1020,7 +1124,7 @@ mod tests {
         let segments = vec![
             TextSegment::Plain { text: "，".to_string() },
             TextSegment::Word {
-                word: Word { characters: "好".to_string(), pinyin: "hǎo".to_string() },
+                word: Word { characters: "好".to_string(), pinyin: "hǎo".to_string(), comment: None },
             },
         ];
         let text = insert_text(&mut conn, "Test", "，好", &segments).unwrap();
@@ -1034,7 +1138,7 @@ mod tests {
         let mut conn = in_memory_db();
         let segments = vec![
             TextSegment::Word {
-                word: Word { characters: "好".to_string(), pinyin: "hǎo".to_string() },
+                word: Word { characters: "好".to_string(), pinyin: "hǎo".to_string(), comment: None },
             },
             TextSegment::Plain { text: "，".to_string() },
         ];
@@ -1049,7 +1153,7 @@ mod tests {
         let mut conn = in_memory_db();
         let segments = vec![
             TextSegment::Word {
-                word: Word { characters: "好".to_string(), pinyin: "hǎo".to_string() },
+                word: Word { characters: "好".to_string(), pinyin: "hǎo".to_string(), comment: None },
             },
         ];
         let text = insert_text(&mut conn, "Test", "好", &segments).unwrap();
