@@ -18,6 +18,7 @@
     "@fontsource/lxgw-wenkai-tc": "^5.2.8",
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-clipboard-manager": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0",
     "@tauri-apps/plugin-opener": "^2.0.0",
     "chiron-sung-hk-webfont": "^1.0.24",
     "lucide-react": "^0.563.0",

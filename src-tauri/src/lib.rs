@@ -14,6 +14,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(AppState {
             db: Mutex::new(None),
         })
@@ -32,6 +33,9 @@ pub fn run() {
             commands::delete_tag,
             commands::assign_tag,
             commands::remove_tag,
+            commands::export_database,
+            commands::import_database,
+            commands::reset_database,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

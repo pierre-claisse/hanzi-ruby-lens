@@ -2,7 +2,10 @@ use std::path::PathBuf;
 
 use rusqlite::Connection;
 
-use crate::domain::{Tag, TagSummary, Text, TextPreviewWithTags, TextSegment};
+use crate::domain::{
+    ExportPayload, ExportResult, ExportTag, ExportText, ExportTextTag, ImportResult, Tag,
+    TagSummary, Text, TextPreviewWithTags, TextSegment,
+};
 use crate::error::AppError;
 
 pub fn initialize(db_path: PathBuf) -> Result<Connection, AppError> {
@@ -517,6 +520,139 @@ pub fn delete_text(conn: &Connection, id: i64) -> Result<(), AppError> {
             id
         )));
     }
+    Ok(())
+}
+
+// ── Export / Import / Reset operations ──
+
+pub fn export_all(conn: &Connection) -> Result<ExportPayload, AppError> {
+    let mut stmt = conn.prepare(
+        "SELECT id, title, created_at, modified_at, raw_input, segments, locked FROM texts",
+    )?;
+    let texts = stmt
+        .query_map([], |row| {
+            Ok(ExportText {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                created_at: row.get(2)?,
+                modified_at: row.get(3)?,
+                raw_input: row.get(4)?,
+                segments: row.get(5)?,
+                locked: row.get(6)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let mut stmt = conn.prepare("SELECT id, label, color FROM tags")?;
+    let tags = stmt
+        .query_map([], |row| {
+            Ok(ExportTag {
+                id: row.get(0)?,
+                label: row.get(1)?,
+                color: row.get(2)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let mut stmt = conn.prepare("SELECT text_id, tag_id FROM text_tags")?;
+    let text_tags = stmt
+        .query_map([], |row| {
+            Ok(ExportTextTag {
+                text_id: row.get(0)?,
+                tag_id: row.get(1)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    drop(stmt);
+
+    let exported_at = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
+
+    Ok(ExportPayload {
+        version: 1,
+        exported_at,
+        texts,
+        tags,
+        text_tags,
+    })
+}
+
+pub fn validate_export_payload(payload: &ExportPayload) -> Result<(), AppError> {
+    if payload.version != 1 {
+        return Err(AppError::Validation(format!(
+            "Unsupported export version: {}. Expected version 1.",
+            payload.version
+        )));
+    }
+
+    let text_ids: std::collections::HashSet<i64> = payload.texts.iter().map(|t| t.id).collect();
+    if text_ids.len() != payload.texts.len() {
+        return Err(AppError::Validation("Duplicate text IDs in export file".to_string()));
+    }
+
+    let tag_ids: std::collections::HashSet<i64> = payload.tags.iter().map(|t| t.id).collect();
+    if tag_ids.len() != payload.tags.len() {
+        return Err(AppError::Validation("Duplicate tag IDs in export file".to_string()));
+    }
+
+    for tt in &payload.text_tags {
+        if !text_ids.contains(&tt.text_id) {
+            return Err(AppError::Validation(format!(
+                "text_tags references non-existent text_id: {}",
+                tt.text_id
+            )));
+        }
+        if !tag_ids.contains(&tt.tag_id) {
+            return Err(AppError::Validation(format!(
+                "text_tags references non-existent tag_id: {}",
+                tt.tag_id
+            )));
+        }
+    }
+
+    Ok(())
+}
+
+pub fn import_all(conn: &mut Connection, payload: ExportPayload) -> Result<ImportResult, AppError> {
+    let text_count = payload.texts.len();
+    let tag_count = payload.tags.len();
+
+    let tx = conn.transaction()?;
+
+    tx.execute_batch("DELETE FROM text_tags; DELETE FROM tags; DELETE FROM texts;")?;
+
+    for text in &payload.texts {
+        tx.execute(
+            "INSERT INTO texts (id, title, created_at, modified_at, raw_input, segments, locked) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            rusqlite::params![text.id, text.title, text.created_at, text.modified_at, text.raw_input, text.segments, text.locked],
+        )?;
+    }
+
+    for tag in &payload.tags {
+        tx.execute(
+            "INSERT INTO tags (id, label, color) VALUES (?1, ?2, ?3)",
+            rusqlite::params![tag.id, tag.label, tag.color],
+        )?;
+    }
+
+    for tt in &payload.text_tags {
+        tx.execute(
+            "INSERT INTO text_tags (text_id, tag_id) VALUES (?1, ?2)",
+            rusqlite::params![tt.text_id, tt.tag_id],
+        )?;
+    }
+
+    tx.commit()?;
+
+    Ok(ImportResult {
+        text_count,
+        tag_count,
+    })
+}
+
+pub fn reset_all(conn: &mut Connection) -> Result<(), AppError> {
+    let tx = conn.transaction()?;
+    tx.execute_batch("DELETE FROM text_tags; DELETE FROM tags; DELETE FROM texts;")?;
+    tx.commit()?;
     Ok(())
 }
 

@@ -8,6 +8,7 @@ import { ThemeToggle } from './ThemeToggle';
 import { FullscreenToggle } from './FullscreenToggle';
 import { CloseButton } from './CloseButton';
 import { TagFilterDropdown } from './TagFilterDropdown';
+import { DataManagementDropdown } from './DataManagementDropdown';
 import type { ColorPalette } from '../data/palettes';
 import type { Tag } from '../types/domain';
 
@@ -36,9 +37,11 @@ interface TitleBarProps {
   onFilterTagIds?: (ids: number[]) => void;
   sortAsc?: boolean;
   onToggleSort?: () => void;
+  onDataImportComplete?: () => void;
+  onDataResetComplete?: () => void;
 }
 
-export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, onZoomOut, isMinZoom, isMaxZoom, palettes, selectedPaletteId, onPaletteSelect, theme, onThemeToggle, onBack, showBack, rawInput, onAddText, showAddButton, titleText, onManageTags, tags, filterTagIds, onFilterTagIds, sortAsc, onToggleSort }: TitleBarProps) {
+export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, onZoomOut, isMinZoom, isMaxZoom, palettes, selectedPaletteId, onPaletteSelect, theme, onThemeToggle, onBack, showBack, rawInput, onAddText, showAddButton, titleText, onManageTags, tags, filterTagIds, onFilterTagIds, sortAsc, onToggleSort, onDataImportComplete, onDataResetComplete }: TitleBarProps) {
   return (
     <header
       data-tauri-drag-region
@@ -123,6 +126,12 @@ export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, o
           >
             <Tags className="w-5 h-5" aria-hidden="true" />
           </button>
+        )}
+        {showAddButton && onDataImportComplete && onDataResetComplete && (
+          <DataManagementDropdown
+            onImportComplete={onDataImportComplete}
+            onResetComplete={onDataResetComplete}
+          />
         )}
         <PaletteSelector palettes={palettes} selectedPaletteId={selectedPaletteId} onSelect={onPaletteSelect} theme={theme} />
         <ThemeToggle theme={theme} onToggle={onThemeToggle} />

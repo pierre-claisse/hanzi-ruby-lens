@@ -96,6 +96,18 @@ function App() {
     setFilterTagIds((prev) => prev.filter((id) => tags.some((t) => t.id === id)));
   }, [tags, setFilterTagIds]);
 
+  const handleDataImportComplete = useCallback(async () => {
+    await refreshTags();
+    await refreshPreviews();
+    setFilterTagIds([]);
+  }, [refreshTags, refreshPreviews, setFilterTagIds]);
+
+  const handleDataResetComplete = useCallback(async () => {
+    await refreshTags();
+    await refreshPreviews();
+    setFilterTagIds([]);
+  }, [refreshTags, refreshPreviews, setFilterTagIds]);
+
   const showBack = appView === "reading";
 
   const renderContent = () => {
@@ -176,6 +188,8 @@ function App() {
         onFilterTagIds={setFilterTagIds}
         sortAsc={sortAsc}
         onToggleSort={toggleSort}
+        onDataImportComplete={handleDataImportComplete}
+        onDataResetComplete={handleDataResetComplete}
       />
       {renderContent()}
       <ManageTagsDialog

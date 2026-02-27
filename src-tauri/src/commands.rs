@@ -1,6 +1,6 @@
 use tauri::AppHandle;
 
-use crate::domain::{Tag, Text, TextPreviewWithTags};
+use crate::domain::{ExportPayload, ExportResult, ImportResult, Tag, Text, TextPreviewWithTags};
 use crate::error::AppError;
 use crate::processing;
 use crate::state::ServiceAccess;
@@ -132,4 +132,37 @@ pub fn remove_tag(
     tag_id: i64,
 ) -> Result<(), AppError> {
     app_handle.db(|conn| crate::database::remove_tag(conn, &text_ids, tag_id))
+}
+
+// ── Data management commands ──
+
+#[tauri::command]
+pub fn export_database(app_handle: AppHandle, file_path: String) -> Result<ExportResult, AppError> {
+    let payload = app_handle.db(|conn| crate::database::export_all(conn))?;
+    let text_count = payload.texts.len();
+    let tag_count = payload.tags.len();
+    let json = serde_json::to_string_pretty(&payload)
+        .map_err(|e| AppError::Validation(format!("Failed to serialize export data: {}", e)))?;
+    std::fs::write(&file_path, json)?;
+    Ok(ExportResult {
+        text_count,
+        tag_count,
+    })
+}
+
+#[tauri::command]
+pub fn import_database(
+    app_handle: AppHandle,
+    file_path: String,
+) -> Result<ImportResult, AppError> {
+    let contents = std::fs::read_to_string(&file_path)?;
+    let payload: ExportPayload = serde_json::from_str(&contents)
+        .map_err(|e| AppError::Validation(format!("Invalid export file format: {}", e)))?;
+    crate::database::validate_export_payload(&payload)?;
+    app_handle.db_mut(|conn| crate::database::import_all(conn, payload))
+}
+
+#[tauri::command]
+pub fn reset_database(app_handle: AppHandle) -> Result<(), AppError> {
+    app_handle.db_mut(|conn| crate::database::reset_all(conn))
 }
