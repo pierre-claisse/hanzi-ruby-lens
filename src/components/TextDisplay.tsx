@@ -2,7 +2,7 @@ import { useMemo, useRef, useEffect, useCallback, useState } from "react";
 import type { Text, TextSegment } from "../types/domain";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
-import { BookSearch, Languages, Copy, Pencil, Scissors, Combine, Lock } from "lucide-react";
+import { BookSearch, Languages, Copy, MessageSquare, Pencil, Scissors, Combine, Lock } from "lucide-react";
 import { RubyWord } from "./RubyWord";
 import { WordContextMenu } from "./WordContextMenu";
 import type { MenuAction, MenuEntry } from "./WordContextMenu";
@@ -18,6 +18,7 @@ interface TextDisplayProps {
   onShowPinyin?: () => void;
   onSplitSegment?: (segmentIndex: number, splitAfterCharIndex: number) => void;
   onMergeSegments?: (segmentIndex: number) => void;
+  onComment?: (segmentIndex: number) => void;
 }
 
 type BlockItem =
@@ -84,6 +85,7 @@ function buildMenuEntries(segIndex: number, segments: TextSegment[], locked: boo
     { label: "MOE Dictionary", icon: BookSearch, action: { type: "dictionary" } },
     { label: "Google Translate", icon: Languages, action: { type: "translate" } },
     { label: "Copy", icon: Copy, action: { type: "copy" } },
+    { label: "Comment", icon: locked ? Lock : MessageSquare, action: { type: "comment" }, disabled: locked },
     { label: "Edit Pinyin", icon: locked ? Lock : Pencil, action: { type: "editPinyin" }, disabled: locked },
   ];
 
@@ -91,6 +93,7 @@ function buildMenuEntries(segIndex: number, segments: TextSegment[], locked: boo
   if (seg.type !== "word") return entries;
 
   const charCount = [...seg.word.characters].length;
+  const hasComment = !!seg.word.comment;
 
   // Split options: one per internal character boundary (only for multi-char words)
   if (charCount >= 2) {
@@ -98,9 +101,9 @@ function buildMenuEntries(segIndex: number, segments: TextSegment[], locked: boo
     for (let i = 0; i < charCount - 1; i++) {
       entries.push({
         label: `Split after ${chars[i]}`,
-        icon: locked ? Lock : Scissors,
+        icon: locked || hasComment ? Lock : Scissors,
         action: { type: "split", splitAfterIndex: i },
-        disabled: locked,
+        disabled: locked || hasComment,
       });
     }
   }
@@ -110,12 +113,13 @@ function buildMenuEntries(segIndex: number, segments: TextSegment[], locked: boo
     const prev = segments[segIndex - 1];
     if (prev.type === "word") {
       const combinedLen = [...prev.word.characters].length + charCount;
+      const prevHasComment = !!prev.word.comment;
       if (combinedLen <= 12) {
         entries.push({
           label: "Merge with previous word",
-          icon: locked ? Lock : Combine,
+          icon: locked || hasComment || prevHasComment ? Lock : Combine,
           action: { type: "mergeWithPrevious" },
-          disabled: locked,
+          disabled: locked || hasComment || prevHasComment,
         });
       }
     }
@@ -126,12 +130,13 @@ function buildMenuEntries(segIndex: number, segments: TextSegment[], locked: boo
     const next = segments[segIndex + 1];
     if (next.type === "word") {
       const combinedLen = charCount + [...next.word.characters].length;
+      const nextHasComment = !!next.word.comment;
       if (combinedLen <= 12) {
         entries.push({
           label: "Merge with next word",
-          icon: locked ? Lock : Combine,
+          icon: locked || hasComment || nextHasComment ? Lock : Combine,
           action: { type: "mergeWithNext" },
-          disabled: locked,
+          disabled: locked || hasComment || nextHasComment,
         });
       }
     }
@@ -140,7 +145,7 @@ function buildMenuEntries(segIndex: number, segments: TextSegment[], locked: boo
   return entries;
 }
 
-export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyinEdit, onShowPinyin, onSplitSegment, onMergeSegments }: TextDisplayProps) {
+export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyinEdit, onShowPinyin, onSplitSegment, onMergeSegments, onComment }: TextDisplayProps) {
   const fontSize = `${1.5 * zoomLevel / 100}rem`;
   const containerRef = useRef<HTMLDivElement>(null);
   const wordRefs = useRef<Map<number, HTMLElement>>(new Map());
@@ -201,6 +206,9 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
       case "copy":
         writeText(segment.word.characters);
         break;
+      case "comment":
+        onComment?.(segIndex);
+        break;
       case "split":
         onSplitSegment?.(segIndex, action.splitAfterIndex);
         break;
@@ -211,7 +219,7 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
         onMergeSegments?.(segIndex);
         break;
     }
-  }, [wordToSegmentIndex, text.segments, showPinyin, onShowPinyin, onSplitSegment, onMergeSegments]);
+  }, [wordToSegmentIndex, text.segments, showPinyin, onShowPinyin, onSplitSegment, onMergeSegments, onComment]);
 
   // Bridge: hook dispatches by entry index → we resolve to MenuAction via ref
   const menuEntriesRef = useRef<MenuEntry[]>([]);

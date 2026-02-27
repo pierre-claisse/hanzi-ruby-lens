@@ -5,6 +5,8 @@ import { LibraryScreen } from "./components/LibraryScreen";
 import { TextInputView } from "./components/TextInputView";
 import { ProcessingState } from "./components/ProcessingState";
 import { ManageTagsDialog } from "./components/ManageTagsDialog";
+import { WordCommentDialog } from "./components/WordCommentDialog";
+import { CommentsPanel } from "./components/CommentsPanel";
 import { usePinyinVisibility } from "./hooks/usePinyinVisibility";
 import { useTextZoom } from "./hooks/useTextZoom";
 import { useTheme } from "./hooks/useTheme";
@@ -24,6 +26,7 @@ function App() {
     updatePinyin,
     splitSegment,
     mergeSegments,
+    updateComment,
     toggleLock,
     deleteText,
     refreshPreviews,
@@ -42,6 +45,8 @@ function App() {
   const { paletteId, setPalette, palettes } = useColorPalette();
   const { formatted: elapsedTime } = useElapsedTime(isProcessing);
   const [showManageTags, setShowManageTags] = useState(false);
+  const [commentDialogSegIndex, setCommentDialogSegIndex] = useState<number | null>(null);
+  const [commentsPanelOpen, setCommentsPanelOpen] = useState(false);
 
   // Suppress Space key on all buttons — Enter is the only activation key
   useEffect(() => {
@@ -108,6 +113,29 @@ function App() {
     setFilterTagIds([]);
   }, [refreshTags, refreshPreviews, setFilterTagIds]);
 
+  // Default comments panel state: open if text has comments
+  useEffect(() => {
+    if (activeText) {
+      const hasComments = activeText.segments.some(
+        (seg) => seg.type === "word" && !!seg.word.comment,
+      );
+      setCommentsPanelOpen(hasComments);
+    }
+  }, [activeText?.id]);
+
+  const handleOpenCommentDialog = useCallback((segmentIndex: number) => {
+    setCommentDialogSegIndex(segmentIndex);
+  }, []);
+
+  const handleCommentSave = useCallback(async (segmentIndex: number, comment: string | null) => {
+    await updateComment(segmentIndex, comment);
+    setCommentDialogSegIndex(null);
+  }, [updateComment]);
+
+  const handleCommentClose = useCallback(() => {
+    setCommentDialogSegIndex(null);
+  }, []);
+
   const showBack = appView === "reading";
 
   const renderContent = () => {
@@ -150,12 +178,23 @@ function App() {
         );
       case "reading":
         return (
-          <div className="bg-surface text-content min-h-screen px-8 pt-24 pb-12">
-            <div className="max-w-5xl mx-auto">
-              {activeText && (
-                <TextDisplay text={activeText} showPinyin={pinyinVisible} zoomLevel={zoomLevel} onPinyinEdit={updatePinyin} onShowPinyin={handleShowPinyin} onSplitSegment={splitSegment} onMergeSegments={mergeSegments} />
-              )}
+          <div className="bg-surface text-content min-h-screen flex">
+            <div className="flex-1 min-w-0 px-2 lg:px-8 pt-24 pb-12 flex justify-center">
+              <div className="max-w-5xl flex-1 min-w-0">
+                {activeText && (
+                  <TextDisplay text={activeText} showPinyin={pinyinVisible} zoomLevel={zoomLevel} onPinyinEdit={updatePinyin} onShowPinyin={handleShowPinyin} onSplitSegment={splitSegment} onMergeSegments={mergeSegments} onComment={handleOpenCommentDialog} />
+                )}
+              </div>
             </div>
+            {activeText && (
+              <CommentsPanel
+                segments={activeText.segments}
+                isOpen={commentsPanelOpen}
+                onToggle={() => setCommentsPanelOpen((prev) => !prev)}
+                onCommentClick={handleOpenCommentDialog}
+                locked={activeText.locked}
+              />
+            )}
           </div>
         );
     }
@@ -198,6 +237,20 @@ function App() {
         tags={tags}
         onTagsChanged={handleTagsChanged}
       />
+      {activeText && commentDialogSegIndex !== null && (() => {
+        const seg = activeText.segments[commentDialogSegIndex];
+        const word = seg?.type === "word" ? seg.word : null;
+        return (
+          <WordCommentDialog
+            open={true}
+            word={word}
+            segmentIndex={commentDialogSegIndex}
+            textId={activeText.id}
+            onSave={handleCommentSave}
+            onClose={handleCommentClose}
+          />
+        );
+      })()}
     </>
   );
 }

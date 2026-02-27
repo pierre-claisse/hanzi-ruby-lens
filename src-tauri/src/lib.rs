@@ -25,6 +25,7 @@ pub fn run() {
             commands::update_pinyin,
             commands::split_segment,
             commands::merge_segments,
+            commands::update_word_comment,
             commands::toggle_lock,
             commands::delete_text,
             commands::list_all_tags,
