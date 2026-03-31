@@ -1,31 +1,31 @@
 <!--
   Sync Impact Report
   ==================
-  Version change: 3.1.0 → 3.2.0
-  Bump rationale: MINOR — new domain language term "Tag" added.
-    No principles removed or redefined. Existing code remains
-    compliant; new term constrains future feature implementation.
+  Version change: 3.2.0 → 4.0.0
+  Bump rationale: MAJOR — Principle VI (Docker-Only Execution) removed
+    entirely. Principle V (Test-First Imperative) redefined to drop
+    Docker-only constraint. These are backward-incompatible governance
+    changes: previously compliant setups that relied on Docker
+    exclusivity are no longer required.
 
   Changed sections:
-    - Domain Language > Text: Added bullet establishing many-to-many
-      relationship with Tags ("A Text MAY have zero or more Tags
-      assigned to it.").
+    - Principle V (Test-First Imperative): Removed all Docker-only
+      clauses. Tests now run directly on the local machine.
 
-  Added sections:
-    - Domain Language > Tag: New subsection defining the Tag entity,
-      its many-to-many relationship with Text, and invariants.
+  Added sections: None.
 
-  Removed sections: None.
+  Removed sections:
+    - Principle VI (Docker-Only Execution): Removed in full.
 
   Template sync status:
     ✅ .specify/templates/plan-template.md — generic template; no
-       domain language references to update.
+       Docker references to update.
     ✅ .specify/templates/spec-template.md — generic template; no
-       domain language references to update.
+       Docker references to update.
     ✅ .specify/templates/tasks-template.md — generic template; no
-       domain language references to update.
+       Docker references to update.
 
-  Deferred TODOs: None.
+  Follow-up TODOs: None.
 -->
 
 # Hanzi Ruby Lens Constitution
@@ -99,25 +99,12 @@ compromising DDD and CQRS.
 
 ### V. Test-First Imperative
 
-Tests MUST be extensive and MUST run exclusively inside Docker
-containers.
+Tests MUST be extensive and MUST run directly on the local machine.
 
-- All test execution MUST happen inside Docker containers.
 - Test coverage MUST include contract, integration, and unit levels.
 - Tests SHOULD be written before implementation (TDD red-green-refactor).
-- No test infrastructure SHOULD exist on the local machine.
-
-### VI. Docker-Only Execution
-
-All code execution (development, testing, building) MUST happen
-exclusively inside Docker containers.
-
-- The local machine MUST only have NodeJS and NPM installed.
-- Development servers, build processes, and test runners MUST run in
-  Docker.
-- Docker Compose SHOULD orchestrate multi-container setups.
-- Reproducibility across environments MUST be guaranteed by
-  containerization.
+- Build and test toolchains (Node.js, npm, Rust/Cargo) MUST be
+  installed locally.
 
 ## Domain Language
 
@@ -241,4 +228,4 @@ comply.
   strong recommendations.
 - When a SHOULD rule is violated, justification MUST be documented.
 
-**Version**: 3.2.0 | **Ratified**: 2026-02-08 | **Last Amended**: 2026-02-24
+**Version**: 4.0.0 | **Ratified**: 2026-02-08 | **Last Amended**: 2026-03-28

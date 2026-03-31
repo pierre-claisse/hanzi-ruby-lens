@@ -26,9 +26,6 @@ Thumbs.db
 # Logs
 *.log
 
-# Build output directory (bind-mounted from Docker)
-output/
-
 # Installers and executables (built artifacts)
 *.exe
 *.msi

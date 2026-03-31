@@ -41,14 +41,13 @@ tests/
 ## Commands
 
 ```sh
-npm test              # Run all tests in Docker (Vitest + cargo test)
-npm run build         # Build Windows executable in Docker (output/)
-npm run build:frontend  # Vite frontend build only
-cargo test            # Rust tests only (inside Docker)
-cargo clippy          # Rust linting (inside Docker)
+npm test              # Run all tests (Vitest + cargo test)
+npm run build         # Build Windows executable
+cargo test            # Rust tests only
+cargo clippy          # Rust linting
 ```
 
-All execution (dev, test, build) happens inside Docker containers — no local Rust/C++ toolchain required. Only Node.js and npm are needed on the host.
+All toolchains (Node.js, npm, Rust/Cargo) run directly on the local machine.
 
 ## Code Style
 
