@@ -15,9 +15,10 @@ interface LibraryScreenProps {
   tags: Tag[];
   onTagsChanged: () => Promise<void>;
   filterActive: boolean;
+  isAuthorizedDevice: boolean;
 }
 
-export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock, tags, onTagsChanged, filterActive }: LibraryScreenProps) {
+export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock, tags, onTagsChanged, filterActive, isAuthorizedDevice }: LibraryScreenProps) {
   const [contextMenu, setContextMenu] = useState<{ ids: number[]; preview: TextPreview; x: number; y: number } | null>(null);
   const [tagsSubmenu, setTagsSubmenu] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
@@ -142,7 +143,7 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock
 
       {/* Context menu */}
       {contextMenu && (() => {
-        const menuEntryCount = 2 + (tags.length > 0 ? 1 : 0) + 1 + 1; // Metadata header + Tags trigger + Lock/Unlock + Delete
+        const menuEntryCount = 2 + (tags.length > 0 ? 1 : 0) + 1 + (isAuthorizedDevice ? 1 : 0); // Metadata header + Tags trigger + Lock/Unlock + Delete (if authorized)
         const menuPos = computeContextMenuPosition(contextMenu.x, contextMenu.y, menuEntryCount, window.innerWidth, window.innerHeight);
 
         // Compute submenu position from main menu's measured rect
@@ -199,14 +200,16 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock
               );
             })()}
 
-            <div
-              role="menuitem"
-              className="px-3 py-2 text-sm text-red-500 cursor-default transition-colors hover:bg-content/10 flex items-center gap-2"
-              onClick={handleDelete}
-            >
-              <Trash2 size={16} />
-              Delete
-            </div>
+            {isAuthorizedDevice && (
+              <div
+                role="menuitem"
+                className="px-3 py-2 text-sm text-red-500 cursor-default transition-colors hover:bg-content/10 flex items-center gap-2"
+                onClick={handleDelete}
+              >
+                <Trash2 size={16} />
+                Delete
+              </div>
+            )}
 
             {/* Metadata footer (non-interactive) */}
             <div className="border-t border-content/10 my-1" />

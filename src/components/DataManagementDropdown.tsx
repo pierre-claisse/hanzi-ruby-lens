@@ -203,8 +203,8 @@ export function DataManagementDropdown({ onImportComplete, onResetComplete }: Da
                   isFocused ? "bg-content/10" : ""
                 }`}
               >
-                <Icon className="w-4 h-4 text-content/60" aria-hidden="true" />
-                <span className="text-sm text-content">{item.label}</span>
+                <Icon className={`w-4 h-4 ${item.id === "reset" ? "text-red-500" : "text-content/60"}`} aria-hidden="true" />
+                <span className={`text-sm ${item.id === "reset" ? "text-red-500" : "text-content"}`}>{item.label}</span>
               </li>
             );
           })}

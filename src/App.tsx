@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { TextDisplay } from "./components/TextDisplay";
 import { TitleBar } from "./components/TitleBar";
 import { LibraryScreen } from "./components/LibraryScreen";
@@ -44,9 +45,15 @@ function App() {
   const [theme, toggleTheme] = useTheme();
   const { paletteId, setPalette, palettes } = useColorPalette();
   const { formatted: elapsedTime } = useElapsedTime(isProcessing);
+  const [isAuthorizedDevice, setIsAuthorizedDevice] = useState(false);
   const [showManageTags, setShowManageTags] = useState(false);
   const [commentDialogSegIndex, setCommentDialogSegIndex] = useState<number | null>(null);
   const [commentsPanelOpen, setCommentsPanelOpen] = useState(false);
+
+  // Check device authorization at startup
+  useEffect(() => {
+    invoke<boolean>("is_authorized_device").then(setIsAuthorizedDevice).catch(() => setIsAuthorizedDevice(false));
+  }, []);
 
   // Suppress Space key on all buttons — Enter is the only activation key
   useEffect(() => {
@@ -152,6 +159,7 @@ function App() {
             tags={tags}
             onTagsChanged={handleTagsChanged}
             filterActive={filterTagIds.length > 0}
+            isAuthorizedDevice={isAuthorizedDevice}
           />
         );
       case "input":
@@ -229,6 +237,7 @@ function App() {
         onToggleSort={toggleSort}
         onDataImportComplete={handleDataImportComplete}
         onDataResetComplete={handleDataResetComplete}
+        isAuthorizedDevice={isAuthorizedDevice}
       />
       {renderContent()}
       <ManageTagsDialog

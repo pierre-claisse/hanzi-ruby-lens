@@ -178,3 +178,51 @@ pub fn import_database(
 pub fn reset_database(app_handle: AppHandle) -> Result<(), AppError> {
     app_handle.db_mut(|conn| crate::database::reset_all(conn))
 }
+
+fn check_device_authorization(
+    current_id: Result<String, impl std::fmt::Debug>,
+    authorized_id: Option<&str>,
+) -> bool {
+    let authorized_id = match authorized_id {
+        Some(id) => id,
+        None => return false,
+    };
+    match current_id {
+        Ok(id) => id == authorized_id,
+        Err(_) => false,
+    }
+}
+
+#[tauri::command]
+pub fn is_authorized_device() -> bool {
+    check_device_authorization(
+        machine_uid::get(),
+        option_env!("AUTHORIZED_MACHINE_ID"),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn authorized_when_ids_match() {
+        assert!(check_device_authorization(Ok::<_, &str>("abc-123".to_string()), Some("abc-123")));
+    }
+
+    #[test]
+    fn unauthorized_when_ids_differ() {
+        assert!(!check_device_authorization(Ok::<_, &str>("abc-123".to_string()), Some("xyz-789")));
+    }
+
+    #[test]
+    fn unauthorized_when_env_var_not_set() {
+        assert!(!check_device_authorization(Ok::<_, &str>("abc-123".to_string()), None));
+    }
+
+    #[test]
+    fn unauthorized_when_machine_uid_fails() {
+        let err: Result<String, &str> = Err("registry error");
+        assert!(!check_device_authorization(err, Some("abc-123")));
+    }
+}

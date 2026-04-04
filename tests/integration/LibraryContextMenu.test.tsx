@@ -37,6 +37,7 @@ const defaultProps = {
   tags: sampleTags,
   onTagsChanged: vi.fn().mockResolvedValue(undefined),
   filterActive: false,
+  isAuthorizedDevice: true,
 };
 
 function renderAndOpenContextMenu(previews: TextPreview[], targetIndex = 0) {
@@ -109,6 +110,20 @@ describe("LibraryScreen context menu", () => {
       expect(items[0]).toHaveTextContent("Tags");
       expect(items[1]).toHaveTextContent("Lock");
       expect(items[2]).toHaveTextContent("Delete");
+    });
+  });
+
+  describe("device authorization", () => {
+    it("hides Delete when isAuthorizedDevice is false", () => {
+      render(<LibraryScreen previews={[unlockedPreview]} {...defaultProps} isAuthorizedDevice={false} />);
+      const cards = screen.getAllByRole("button");
+      fireEvent.contextMenu(cards[0]);
+      expect(screen.queryByText("Delete")).not.toBeInTheDocument();
+    });
+
+    it("shows Delete when isAuthorizedDevice is true", () => {
+      renderAndOpenContextMenu([unlockedPreview]);
+      expect(screen.getByText("Delete")).toBeInTheDocument();
     });
   });
 });
