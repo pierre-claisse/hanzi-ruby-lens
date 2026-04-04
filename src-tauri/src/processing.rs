@@ -120,7 +120,6 @@ pub fn tokenize_pinyin(pinyin: &str, expected_count: usize) -> Result<Vec<String
     }
 
     let normalized = strip_tone_marks(pinyin);
-    let norm_bytes = normalized.as_bytes();
     let pinyin_chars: Vec<char> = pinyin.chars().collect();
     let norm_chars: Vec<char> = normalized.chars().collect();
 

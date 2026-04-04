@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Trash2, ChevronRight, Check } from "lucide-react";
+import { Trash2, ChevronRight, Check, Lock, Unlock } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { TAG_COLORS } from "../data/tagColors";
 import type { TextPreview, Tag } from "../types/domain";
 import { TextPreviewCard } from "./TextPreviewCard";
 import { computeContextMenuPosition, computeSubmenuPosition } from "../utils/menuPositioning";
+import { formatDateTime } from "../utils/formatDateTime";
 
 interface LibraryScreenProps {
   previews: TextPreview[];
@@ -17,7 +18,7 @@ interface LibraryScreenProps {
 }
 
 export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock, tags, onTagsChanged, filterActive }: LibraryScreenProps) {
-  const [contextMenu, setContextMenu] = useState<{ ids: number[]; x: number; y: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ ids: number[]; preview: TextPreview; x: number; y: number } | null>(null);
   const [tagsSubmenu, setTagsSubmenu] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -27,9 +28,10 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock
     e.preventDefault();
     // If the right-clicked card is in the selection, operate on all selected
     const ids = selectedIds.has(id) ? Array.from(selectedIds) : [id];
-    setContextMenu({ ids, x: e.clientX, y: e.clientY });
+    const preview = previews.find((p) => p.id === id)!;
+    setContextMenu({ ids, preview, x: e.clientX, y: e.clientY });
     setTagsSubmenu(false);
-  }, [selectedIds]);
+  }, [selectedIds, previews]);
 
   const handleCardClick = useCallback((e: React.MouseEvent, id: number) => {
     if (e.ctrlKey || e.metaKey) {
@@ -132,7 +134,6 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock
                 selected={selectedIds.has(preview.id)}
                 onClick={(e) => handleCardClick(e, preview.id)}
                 onContextMenu={(e) => handleContextMenu(e, preview.id)}
-                onToggleLock={() => onToggleLock(preview.id)}
               />
             ))}
           </div>
@@ -141,7 +142,7 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock
 
       {/* Context menu */}
       {contextMenu && (() => {
-        const menuEntryCount = (tags.length > 0 ? 1 : 0) + 1; // Tags trigger + Delete
+        const menuEntryCount = 2 + (tags.length > 0 ? 1 : 0) + 1 + 1; // Metadata header + Tags trigger + Lock/Unlock + Delete
         const menuPos = computeContextMenuPosition(contextMenu.x, contextMenu.y, menuEntryCount, window.innerWidth, window.innerHeight);
 
         // Compute submenu position from main menu's measured rect
@@ -158,7 +159,7 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock
           <div
             ref={menuRef}
             role="menu"
-            className="fixed z-50 w-44 rounded-lg border border-content/20 bg-surface shadow-lg py-1"
+            className="fixed z-50 w-52 rounded-lg border border-content/20 bg-surface shadow-lg py-1"
             style={{ top: menuPos.top, left: menuPos.left }}
             onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
           >
@@ -175,6 +176,29 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock
               </div>
             )}
 
+            {/* Lock/Unlock */}
+            {(() => {
+              const allLocked = contextMenu.ids.every((tid) => {
+                const p = previews.find((pr) => pr.id === tid);
+                return p?.locked;
+              });
+              const LockIcon = allLocked ? Unlock : Lock;
+              const label = allLocked ? "Unlock" : "Lock";
+              return (
+                <div
+                  role="menuitem"
+                  className="px-3 py-2 text-sm text-content cursor-default transition-colors hover:bg-content/10 flex items-center gap-2"
+                  onClick={() => {
+                    contextMenu.ids.forEach((tid) => onToggleLock(tid));
+                    setContextMenu(null);
+                  }}
+                >
+                  <LockIcon size={16} />
+                  {label}
+                </div>
+              );
+            })()}
+
             <div
               role="menuitem"
               className="px-3 py-2 text-sm text-red-500 cursor-default transition-colors hover:bg-content/10 flex items-center gap-2"
@@ -182,6 +206,15 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock
             >
               <Trash2 size={16} />
               Delete
+            </div>
+
+            {/* Metadata footer (non-interactive) */}
+            <div className="border-t border-content/10 my-1" />
+            <div className="px-3 py-1.5 text-xs text-content/50">
+              <div>Created: {formatDateTime(contextMenu.preview.createdAt)}</div>
+              {contextMenu.preview.modifiedAt && (
+                <div>Modified: {formatDateTime(contextMenu.preview.modifiedAt)}</div>
+              )}
             </div>
 
             {/* Tags submenu */}

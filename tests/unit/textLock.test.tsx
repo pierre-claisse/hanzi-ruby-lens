@@ -18,70 +18,43 @@ function makePreview(overrides: Partial<TextPreview> = {}): TextPreview {
   };
 }
 
-describe("TextPreviewCard lock toggle", () => {
-  it("renders an unlock icon when text is not locked", () => {
-    render(
-      <TextPreviewCard
-        preview={makePreview({ locked: false })}
-        onClick={vi.fn()}
-        onContextMenu={vi.fn()}
-        onToggleLock={vi.fn()}
-      />,
-    );
-
-    const lockButton = screen.getByRole("button", { name: /lock/i });
-    expect(lockButton).toBeDefined();
-    // Unlock icon should be present (aria-label contains "unlock" or similar)
-  });
-
-  it("renders a lock icon when text is locked", () => {
+describe("TextPreviewCard lock visual", () => {
+  it("shows locked tint when text is locked", () => {
     render(
       <TextPreviewCard
         preview={makePreview({ locked: true })}
         onClick={vi.fn()}
         onContextMenu={vi.fn()}
-        onToggleLock={vi.fn()}
       />,
     );
 
-    const lockButton = screen.getByRole("button", { name: /lock/i });
-    expect(lockButton).toBeDefined();
+    const card = screen.getByRole("button");
+    expect(card.className).toContain("bg-content/5");
   });
 
-  it("calls onToggleLock when clicking the lock button", () => {
-    const onToggleLock = vi.fn();
+  it("shows default background when text is unlocked", () => {
     render(
       <TextPreviewCard
         preview={makePreview({ locked: false })}
         onClick={vi.fn()}
         onContextMenu={vi.fn()}
-        onToggleLock={onToggleLock}
       />,
     );
 
-    const lockButton = screen.getByRole("button", { name: /lock/i });
-    fireEvent.click(lockButton);
-
-    expect(onToggleLock).toHaveBeenCalledOnce();
+    const card = screen.getByRole("button");
+    expect(card.className).toContain("bg-surface");
   });
 
-  it("does not trigger card onClick when clicking lock button", () => {
-    const onClick = vi.fn();
-    const onToggleLock = vi.fn();
+  it("does not render a lock toggle button on the card", () => {
     render(
       <TextPreviewCard
-        preview={makePreview({ locked: false })}
-        onClick={onClick}
+        preview={makePreview({ locked: true })}
+        onClick={vi.fn()}
         onContextMenu={vi.fn()}
-        onToggleLock={onToggleLock}
       />,
     );
 
-    const lockButton = screen.getByRole("button", { name: /lock/i });
-    fireEvent.click(lockButton);
-
-    expect(onToggleLock).toHaveBeenCalledOnce();
-    expect(onClick).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText(/lock/i)).not.toBeInTheDocument();
   });
 });
 
