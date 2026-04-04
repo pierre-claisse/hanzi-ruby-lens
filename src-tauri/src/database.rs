@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use rusqlite::Connection;
 
 use crate::domain::{
-    ExportPayload, ExportResult, ExportTag, ExportText, ExportTextTag, ImportResult, Tag,
+    ExportPayload, ExportTag, ExportText, ExportTextTag, ImportResult, Tag,
     TagSummary, Text, TextPreviewWithTags, TextSegment,
 };
 use crate::error::AppError;
