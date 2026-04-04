@@ -37,6 +37,7 @@ pub fn run() {
             commands::export_database,
             commands::import_database,
             commands::reset_database,
+            commands::is_authorized_device,
         ])
         .setup(|app| {
             let handle = app.handle().clone();
