@@ -15,10 +15,6 @@
 }
 
 @layer base {
-  html {
-    scroll-padding-top: 4rem;
-  }
-
   body {
     @apply font-palette antialiased bg-surface text-content transition-colors;
   }

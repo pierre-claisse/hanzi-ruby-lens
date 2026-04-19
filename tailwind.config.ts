@@ -13,11 +13,6 @@ export default {
       fontFamily: {
         palette: ['var(--font-palette)', "sans-serif"],
       },
-      opacity: {
-        "8": "0.08",
-        "12": "0.12",
-        "24": "0.24",
-      },
     },
   },
   plugins: [],
