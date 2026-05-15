@@ -248,21 +248,17 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
   // Sync ref so hook reads latest entries on next keypress
   menuEntriesRef.current = currentMenuEntries;
 
-  // Scroll tracked word into view when focused (accounts for fixed title bar).
-  // Uses requestAnimationFrame to run after the browser's native focus scroll.
+  // Scroll tracked word into view when focused. Scrolling now happens inside the
+  // reading-view's text-area container (App.tsx: overflow-y-auto), not on body.
+  // scrollIntoView({block:"nearest"}) auto-resolves the nearest scroll ancestor
+  // and only scrolls when the element is out of view. scroll-mt-* / scroll-mb-*
+  // on <ruby> in RubyWord provide the breathing space buffer.
   useEffect(() => {
     if (!isFocused) return;
     const id = requestAnimationFrame(() => {
       const wordEl = wordRefs.current.get(trackedIndex);
       if (!wordEl) return;
-      const rect = wordEl.getBoundingClientRect();
-      const top = 64; // title bar (48px) + padding (16px)
-      const bottom = window.innerHeight - 16;
-      if (rect.top < top) {
-        window.scrollBy({ top: rect.top - top, behavior: "instant" });
-      } else if (rect.bottom > bottom) {
-        window.scrollBy({ top: rect.bottom - bottom, behavior: "instant" });
-      }
+      wordEl.scrollIntoView({ block: "nearest", behavior: "instant" as ScrollBehavior });
     });
     return () => cancelAnimationFrame(id);
   }, [trackedIndex, isFocused]);

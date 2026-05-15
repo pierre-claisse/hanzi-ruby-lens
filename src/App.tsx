@@ -186,12 +186,17 @@ function App() {
         );
       case "reading":
         return (
-          <div className="bg-surface text-content min-h-screen flex">
-            <div className="flex-1 min-w-0 px-2 lg:px-8 pt-24 pb-12 flex justify-center">
-              <div className="max-w-5xl flex-1 min-w-0">
-                {activeText && (
-                  <TextDisplay text={activeText} showPinyin={pinyinVisible} zoomLevel={zoomLevel} onPinyinEdit={updatePinyin} onShowPinyin={handleShowPinyin} onSplitSegment={splitSegment} onMergeSegments={mergeSegments} onComment={handleOpenCommentDialog} />
-                )}
+          <div className="bg-surface text-content h-screen flex pt-12">
+            {/* direction:rtl on the scroll container puts its scrollbar on the
+                left edge (text area's inner left); direction:ltr on the inner
+                wrapper restores normal reading flow. */}
+            <div className="flex-1 min-w-0 overflow-y-auto" style={{ direction: "rtl" }}>
+              <div className="px-2 lg:px-8 pt-12 pb-12 flex justify-center" style={{ direction: "ltr" }}>
+                <div className="max-w-5xl flex-1 min-w-0">
+                  {activeText && (
+                    <TextDisplay text={activeText} showPinyin={pinyinVisible} zoomLevel={zoomLevel} onPinyinEdit={updatePinyin} onShowPinyin={handleShowPinyin} onSplitSegment={splitSegment} onMergeSegments={mergeSegments} onComment={handleOpenCommentDialog} />
+                  )}
+                </div>
               </div>
             </div>
             {activeText && (

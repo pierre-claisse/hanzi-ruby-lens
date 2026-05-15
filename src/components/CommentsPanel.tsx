@@ -16,15 +16,15 @@ export function CommentsPanel({ segments, isOpen, onToggle, onCommentClick, lock
 
   return (
     <div className="flex-shrink-0 relative">
-      {/* Sticky wrapper keeps the toggle button and panel pinned to the viewport
-          as the main text area scrolls. h-screen + top-0 means everything inside
-          stays fixed regardless of page scroll. */}
-      <div className="sticky top-0 h-screen">
+      {/* Wrapper takes the full height of its bounded parent (App.tsx reading
+          view uses h-screen). Body no longer scrolls — the text area now has
+          its own internal scroll — so this wrapper is naturally pinned. */}
+      <div className="h-full">
         {/* Toggle button — positioned relative to the sticky wrapper so it stays
             visible at the same viewport position whether or not the page scrolls. */}
         <button
           type="button"
-          className="absolute -left-10 top-16 z-10 flex items-center justify-center w-8 h-8 rounded-lg text-content/40 hover:text-content hover:bg-content/5 transition-colors"
+          className="absolute -left-10 top-4 z-10 flex items-center justify-center w-8 h-8 rounded-lg text-content/40 hover:text-content hover:bg-content/5 transition-colors"
           onClick={onToggle}
           aria-label={isOpen ? "Close comments panel" : "Open comments panel"}
           title={isOpen ? "Close comments panel" : "Open comments panel"}
@@ -35,7 +35,7 @@ export function CommentsPanel({ segments, isOpen, onToggle, onCommentClick, lock
         {/* Panel wrapper — border stretches full viewport height, width transitions */}
         <div className={`transition-[width,border-color] duration-200 ease-in-out overflow-hidden border-l h-full ${isOpen ? "w-72 border-content/10" : "w-0 border-transparent"}`}>
           {/* Flex column: title stays fixed at top, list scrolls independently */}
-          <div className="w-72 h-full pt-12 flex flex-col">
+          <div className="w-72 h-full flex flex-col">
             <h3 className="flex-shrink-0 px-4 pt-4 pb-3 text-sm font-semibold text-content/60 h-12 flex items-center gap-1.5">
               <MessageSquare className="w-4 h-4" />
               Comments ({comments.length})
