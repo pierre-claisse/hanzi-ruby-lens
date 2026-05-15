@@ -105,7 +105,7 @@ pub fn delete_text(app_handle: AppHandle, text_id: i64) -> Result<(), AppError> 
 
 #[tauri::command]
 pub fn list_all_tags(app_handle: AppHandle) -> Result<Vec<Tag>, AppError> {
-    app_handle.db(|conn| crate::database::list_tags(conn))
+    app_handle.db(crate::database::list_tags)
 }
 
 #[tauri::command]
@@ -150,7 +150,7 @@ pub fn remove_tag(
 
 #[tauri::command]
 pub fn export_database(app_handle: AppHandle, file_path: String) -> Result<ExportResult, AppError> {
-    let payload = app_handle.db(|conn| crate::database::export_all(conn))?;
+    let payload = app_handle.db(crate::database::export_all)?;
     let text_count = payload.texts.len();
     let tag_count = payload.tags.len();
     let json = serde_json::to_string_pretty(&payload)
@@ -176,7 +176,7 @@ pub fn import_database(
 
 #[tauri::command]
 pub fn reset_database(app_handle: AppHandle) -> Result<(), AppError> {
-    app_handle.db_mut(|conn| crate::database::reset_all(conn))
+    app_handle.db_mut(crate::database::reset_all)
 }
 
 fn check_device_authorization(

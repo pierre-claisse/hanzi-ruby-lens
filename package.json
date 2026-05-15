@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "test": "vitest run && cd src-tauri && cargo test",
+    "test": "vite build && vitest run && cd src-tauri && cargo test",
     "build": "tauri build"
   },
   "dependencies": {
