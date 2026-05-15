@@ -28,8 +28,7 @@ installer appears in `src-tauri/target/release/bundle/nsis/`.
 ## Project Structure
 
 ```
+scripts/              Utility scripts
 src/                  React frontend (TypeScript)
 src-tauri/            Rust backend (Tauri 2)
-scripts/              Utility scripts
-specs/                Feature specifications (Spec Kit)
 ```
