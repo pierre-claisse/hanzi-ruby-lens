@@ -53,18 +53,6 @@ All toolchains (Node.js, npm, Rust/Cargo) run directly on the local machine.
 
 - Follow standard Rust and TypeScript conventions
 - Domain language: **Text** (aggregate root = full Chinese content) and **Word** (segment = characters + pinyin)
-- See `.specify/memory/constitution.md` for authoritative project principles
-
-## Specification-Driven Development
-
-Each feature lives in `specs/NNN-feature-name/` with:
-- `spec.md` — Requirements (user stories, acceptance criteria)
-- `plan.md` — Technical design (architecture, constitution check)
-- `tasks.md` — Ordered implementation tasks
-- `research.md` — Design decisions with alternatives considered
-- `data-model.md` — Types and schema
-
-Constitution at `.specify/memory/constitution.md` governs all decisions. Templates at `.specify/templates/`.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
