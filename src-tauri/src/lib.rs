@@ -4,6 +4,7 @@ mod domain;
 mod error;
 mod processing;
 mod state;
+mod sync;
 
 use std::sync::Mutex;
 
@@ -38,6 +39,9 @@ pub fn run() {
             commands::import_database,
             commands::reset_database,
             commands::is_authorized_device,
+            commands::sync_is_configured,
+            commands::sync_save,
+            commands::sync_pull,
         ])
         .setup(|app| {
             let handle = app.handle().clone();

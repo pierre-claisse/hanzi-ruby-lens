@@ -33,6 +33,10 @@ pub struct ExportPayload {
     pub texts: Vec<ExportText>,
     pub tags: Vec<ExportTag>,
     pub text_tags: Vec<ExportTextTag>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sync_author: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sync_timestamp: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]

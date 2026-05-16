@@ -201,6 +201,79 @@ pub fn is_authorized_device() -> bool {
     )
 }
 
+// ── Remote sync (GitHub Gist) commands ──
+
+#[tauri::command]
+pub fn sync_is_configured() -> bool {
+    crate::sync::is_configured()
+}
+
+#[tauri::command]
+pub async fn sync_save(
+    app_handle: AppHandle,
+    password: String,
+    author: String,
+    if_match_etag: Option<String>,
+) -> Result<crate::sync::SyncSaveResult, crate::sync::SyncError> {
+    let mut payload = app_handle
+        .db(crate::database::export_all)
+        .map_err(|e| crate::sync::SyncError::Other(e.to_string()))?;
+
+    let timestamp = crate::sync::now_gmt8_string();
+    payload.sync_author = Some(author.clone());
+    payload.sync_timestamp = Some(timestamp.clone());
+
+    let json = serde_json::to_string(&payload).map_err(|e| {
+        crate::sync::SyncError::Other(format!("Failed to serialize payload: {}", e))
+    })?;
+
+    let etag = crate::sync::save_to_remote(&password, &json, if_match_etag.as_deref()).await?;
+
+    Ok(crate::sync::SyncSaveResult {
+        author,
+        timestamp,
+        etag,
+    })
+}
+
+#[tauri::command]
+pub async fn sync_pull(
+    app_handle: AppHandle,
+    password: String,
+    if_none_match_etag: Option<String>,
+) -> Result<crate::sync::SyncPullResult, crate::sync::SyncError> {
+    let result = crate::sync::pull_from_remote(&password, if_none_match_etag.as_deref()).await?;
+
+    let (content, etag) = match result {
+        crate::sync::GistGetResult::NotModified { etag } => {
+            return Ok(crate::sync::SyncPullResult::UpToDate { etag });
+        }
+        crate::sync::GistGetResult::Modified { content, etag } => (content, etag),
+    };
+
+    let payload: ExportPayload = serde_json::from_str(&content).map_err(|e| {
+        crate::sync::SyncError::Other(format!("Invalid remote payload: {}", e))
+    })?;
+
+    crate::database::validate_export_payload(&payload)
+        .map_err(|e| crate::sync::SyncError::Other(e.to_string()))?;
+
+    let author = payload.sync_author.clone();
+    let timestamp = payload.sync_timestamp.clone();
+
+    let imported = app_handle
+        .db_mut(|conn| crate::database::import_all(conn, payload))
+        .map_err(|e| crate::sync::SyncError::Other(e.to_string()))?;
+
+    Ok(crate::sync::SyncPullResult::Imported {
+        author,
+        timestamp,
+        text_count: imported.text_count,
+        tag_count: imported.tag_count,
+        etag,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

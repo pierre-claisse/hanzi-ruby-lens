@@ -8,6 +8,9 @@ import { ProcessingState } from "./components/ProcessingState";
 import { ManageTagsDialog } from "./components/ManageTagsDialog";
 import { WordCommentDialog } from "./components/WordCommentDialog";
 import { CommentsPanel } from "./components/CommentsPanel";
+import { UserNameOnboarding } from "./components/UserNameOnboarding";
+import { useUserName } from "./hooks/useUserName";
+import { clearSyncState } from "./utils/syncDirty";
 import { usePinyinVisibility } from "./hooks/usePinyinVisibility";
 import { useTextZoom } from "./hooks/useTextZoom";
 import { useTheme } from "./hooks/useTheme";
@@ -46,13 +49,20 @@ function App() {
   const { paletteId, setPalette, palettes } = useColorPalette();
   const { formatted: elapsedTime } = useElapsedTime(isProcessing);
   const [isAuthorizedDevice, setIsAuthorizedDevice] = useState(false);
+  const [syncConfigured, setSyncConfigured] = useState(false);
   const [showManageTags, setShowManageTags] = useState(false);
   const [commentDialogSegIndex, setCommentDialogSegIndex] = useState<number | null>(null);
   const [commentsPanelOpen, setCommentsPanelOpen] = useState(false);
+  const { isSet: hasUserName, setName: setUserName } = useUserName();
 
   // Check device authorization at startup
   useEffect(() => {
     invoke<boolean>("is_authorized_device").then(setIsAuthorizedDevice).catch(() => setIsAuthorizedDevice(false));
+  }, []);
+
+  // Check whether sync is configured at build time
+  useEffect(() => {
+    invoke<boolean>("sync_is_configured").then(setSyncConfigured).catch(() => setSyncConfigured(false));
   }, []);
 
   // Suppress Space key on all buttons — Enter is the only activation key
@@ -109,16 +119,25 @@ function App() {
   }, [tags, setFilterTagIds]);
 
   const handleDataImportComplete = useCallback(async () => {
+    clearSyncState();
     await refreshTags();
     await refreshPreviews();
     setFilterTagIds([]);
   }, [refreshTags, refreshPreviews, setFilterTagIds]);
 
   const handleDataResetComplete = useCallback(async () => {
+    clearSyncState();
     await refreshTags();
     await refreshPreviews();
     setFilterTagIds([]);
   }, [refreshTags, refreshPreviews, setFilterTagIds]);
+
+  const handleSyncPullComplete = useCallback(async () => {
+    await refreshTags();
+    await refreshPreviews();
+    setFilterTagIds([]);
+    if (appView === "reading") setView("library");
+  }, [refreshTags, refreshPreviews, setFilterTagIds, appView, setView]);
 
   // Default comments panel state: open if text has comments
   useEffect(() => {
@@ -243,6 +262,12 @@ function App() {
         onDataImportComplete={handleDataImportComplete}
         onDataResetComplete={handleDataResetComplete}
         isAuthorizedDevice={isAuthorizedDevice}
+        syncConfigured={syncConfigured}
+        onSyncPullComplete={handleSyncPullComplete}
+      />
+      <UserNameOnboarding
+        open={syncConfigured && !hasUserName}
+        onSubmit={(n) => setUserName(n)}
       />
       {renderContent()}
       <ManageTagsDialog

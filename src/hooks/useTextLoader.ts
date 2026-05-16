@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Text, TextPreview, Tag } from "../types/domain";
+import { markLocalDirty } from "../utils/syncDirty";
 
 export type AppView = "library" | "input" | "processing" | "reading";
 
@@ -78,6 +79,7 @@ export function useTextLoader(): UseTextLoaderReturn {
     setAppView("processing");
     try {
       const result = await invoke<Text>("create_text", { title, rawInput });
+      markLocalDirty();
       setActiveText(result);
       setPreviews((prev) => [
         { id: result.id, title: result.title, createdAt: result.createdAt, modifiedAt: null, tags: [], locked: false },
@@ -108,6 +110,7 @@ export function useTextLoader(): UseTextLoaderReturn {
       segmentIndex,
       newPinyin,
     });
+    markLocalDirty();
     setActiveText((prev) => {
       if (!prev) return prev;
       const updatedSegments = prev.segments.map((seg, i) => {
@@ -125,6 +128,7 @@ export function useTextLoader(): UseTextLoaderReturn {
       segmentIndex,
       splitAfterCharIndex,
     });
+    markLocalDirty();
     const reloaded = await invoke<Text | null>("load_text", { textId: activeText.id });
     if (reloaded) setActiveText(reloaded);
   }, [activeText]);
@@ -135,6 +139,7 @@ export function useTextLoader(): UseTextLoaderReturn {
       textId: activeText.id,
       segmentIndex,
     });
+    markLocalDirty();
     const reloaded = await invoke<Text | null>("load_text", { textId: activeText.id });
     if (reloaded) setActiveText(reloaded);
   }, [activeText]);
@@ -146,12 +151,14 @@ export function useTextLoader(): UseTextLoaderReturn {
       segmentIndex,
       comment,
     });
+    markLocalDirty();
     const reloaded = await invoke<Text | null>("load_text", { textId: activeText.id });
     if (reloaded) setActiveText(reloaded);
   }, [activeText]);
 
   const toggleLock = useCallback(async (id: number) => {
     const newLocked = await invoke<boolean>("toggle_lock", { textId: id });
+    markLocalDirty();
     setPreviews((prev) =>
       prev.map((p) => (p.id === id ? { ...p, locked: newLocked } : p)),
     );
@@ -159,6 +166,7 @@ export function useTextLoader(): UseTextLoaderReturn {
 
   const deleteText = useCallback(async (id: number) => {
     await invoke("delete_text", { textId: id });
+    markLocalDirty();
     setPreviews((prev) => prev.filter((p) => p.id !== id));
     if (activeText?.id === id) {
       setActiveText(null);

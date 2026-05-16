@@ -3,6 +3,7 @@ import { X, Trash2, Check } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { TAG_COLORS } from "../data/tagColors";
 import type { Tag } from "../types/domain";
+import { markLocalDirty } from "../utils/syncDirty";
 
 interface ManageTagsDialogProps {
   open: boolean;
@@ -43,6 +44,7 @@ export function ManageTagsDialog({ open, onClose, tags, onTagsChanged }: ManageT
     setError(null);
     try {
       await invoke("create_tag", { label, color: newColor });
+      markLocalDirty();
       setNewLabel("");
       setNewColor(TAG_COLORS[0].key);
       onTagsChanged();
@@ -58,6 +60,7 @@ export function ManageTagsDialog({ open, onClose, tags, onTagsChanged }: ManageT
     setError(null);
     try {
       await invoke("update_tag", { tagId: editingId, label, color: editColor });
+      markLocalDirty();
       setEditingId(null);
       onTagsChanged();
     } catch (err) {
@@ -69,6 +72,7 @@ export function ManageTagsDialog({ open, onClose, tags, onTagsChanged }: ManageT
     setError(null);
     try {
       await invoke("delete_tag", { tagId });
+      markLocalDirty();
       if (editingId === tagId) setEditingId(null);
       onTagsChanged();
     } catch (err) {

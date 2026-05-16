@@ -9,6 +9,7 @@ import { FullscreenToggle } from './FullscreenToggle';
 import { CloseButton } from './CloseButton';
 import { TagFilterDropdown } from './TagFilterDropdown';
 import { DataManagementDropdown } from './DataManagementDropdown';
+import { SyncDropdown } from './SyncDropdown';
 import type { ColorPalette } from '../data/palettes';
 import type { Tag } from '../types/domain';
 
@@ -40,9 +41,11 @@ interface TitleBarProps {
   onDataImportComplete?: () => void;
   onDataResetComplete?: () => void;
   isAuthorizedDevice?: boolean;
+  syncConfigured?: boolean;
+  onSyncPullComplete?: () => void;
 }
 
-export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, onZoomOut, isMinZoom, isMaxZoom, palettes, selectedPaletteId, onPaletteSelect, theme, onThemeToggle, onBack, showBack, rawInput, onAddText, showAddButton, titleText, onManageTags, tags, filterTagIds, onFilterTagIds, sortAsc, onToggleSort, onDataImportComplete, onDataResetComplete, isAuthorizedDevice }: TitleBarProps) {
+export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, onZoomOut, isMinZoom, isMaxZoom, palettes, selectedPaletteId, onPaletteSelect, theme, onThemeToggle, onBack, showBack, rawInput, onAddText, showAddButton, titleText, onManageTags, tags, filterTagIds, onFilterTagIds, sortAsc, onToggleSort, onDataImportComplete, onDataResetComplete, isAuthorizedDevice, syncConfigured, onSyncPullComplete }: TitleBarProps) {
   return (
     <header
       data-tauri-drag-region
@@ -133,6 +136,9 @@ export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, o
             onImportComplete={onDataImportComplete}
             onResetComplete={onDataResetComplete}
           />
+        )}
+        {syncConfigured && onSyncPullComplete && (
+          <SyncDropdown onPullComplete={onSyncPullComplete} />
         )}
         <PaletteSelector palettes={palettes} selectedPaletteId={selectedPaletteId} onSelect={onPaletteSelect} theme={theme} />
         <ThemeToggle theme={theme} onToggle={onThemeToggle} />

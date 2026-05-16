@@ -6,6 +6,7 @@ import type { TextPreview, Tag } from "../types/domain";
 import { TextPreviewCard } from "./TextPreviewCard";
 import { computeContextMenuPosition, computeSubmenuPosition } from "../utils/menuPositioning";
 import { formatDateTime } from "../utils/formatDateTime";
+import { markLocalDirty } from "../utils/syncDirty";
 
 interface LibraryScreenProps {
   previews: TextPreview[];
@@ -90,6 +91,7 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock
     } else {
       await invoke("assign_tag", { textIds, tagId });
     }
+    markLocalDirty();
     await onTagsChanged();
   }, [contextMenu, previews, onTagsChanged]);
 

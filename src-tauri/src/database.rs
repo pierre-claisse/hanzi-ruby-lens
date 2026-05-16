@@ -672,6 +672,8 @@ pub fn export_all(conn: &Connection) -> Result<ExportPayload, AppError> {
         texts,
         tags,
         text_tags,
+        sync_author: None,
+        sync_timestamp: None,
     })
 }
 
