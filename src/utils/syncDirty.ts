@@ -1,13 +1,16 @@
 // Shared sync-state in localStorage:
-//   - "localDirty"     : "true" | "false"  — local DB has changes not yet sent
-//                                            to remote; gates the Pull warning.
-//   - "lastSyncMeta"   : JSON { author?, timestamp? } — shown under the Pull
-//                                            button in SyncDropdown.
-//   - "lastSyncEtag"   : opaque ETag string — sent as If-Match (Save) or
-//                                            If-None-Match (Pull) for GitHub's
-//                                            optimistic concurrency.
+//   - "localDirty"   : "true" | "false"  — local DB has changes not yet sent
+//                                          to remote; gates the Pull warning
+//                                          and the Save button enabled state.
+//   - "lastSyncMeta" : JSON { author?, timestamp? } — captured on every
+//                                          successful Save / Pull. The
+//                                          timestamp is sent to the backend
+//                                          on Save as the concurrency token
+//                                          (GitHub Gists do not support
+//                                          If-Match, so we compare
+//                                          application-side).
 //
-// All three keys are mutated outside the hook (App.tsx after Reset / Import,
+// Both keys are mutated outside the hook (App.tsx after Reset / Import,
 // every data-modifying callback after success). The custom event below is
 // dispatched on every write so any mounted useLastSync instance re-reads the
 // new values immediately (localStorage's native `storage` event is cross-tab
@@ -15,7 +18,6 @@
 
 const DIRTY_KEY = "localDirty";
 const META_KEY = "lastSyncMeta";
-const ETAG_KEY = "lastSyncEtag";
 const EVENT = "hrl-sync-state-changed";
 
 function notify() {
@@ -49,17 +51,16 @@ export function isLocalDirty(): boolean {
 }
 
 /**
- * Wipe all sync-related metadata: dirty flag, last-sync meta, ETag.
+ * Wipe all sync-related metadata: dirty flag, last-sync meta.
  * Use after any operation that invalidates the local↔remote relationship:
- *  - Reset (local emptied; ETag no longer represents what we have locally).
+ *  - Reset (local emptied; meta no longer represents what we have locally).
  *  - Import (local replaced by a file unrelated to the remote).
- * The next Pull will fetch fresh (no If-None-Match) and the next Save will
- * push without an If-Match constraint.
+ * The next Save will then see `lastSyncTimestamp === undefined` and the
+ * backend will treat any non-empty remote as a conflict (forcing a Pull first).
  */
 export function clearSyncState() {
   try {
     localStorage.removeItem(META_KEY);
-    localStorage.removeItem(ETAG_KEY);
     localStorage.setItem(DIRTY_KEY, "false");
   } catch {
     // localStorage unavailable

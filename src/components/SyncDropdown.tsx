@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Check, Cloud, CloudDownload, CloudUpload } from "lucide-react";
+import { AlertCircle, AlertTriangle, Check, CircleUser, CloudDownload, CloudUpload } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { message, confirm } from "@tauri-apps/plugin-dialog";
 import { useUserName } from "../hooks/useUserName";
@@ -13,19 +13,14 @@ interface SyncDropdownProps {
 interface SyncSaveResult {
   author: string;
   timestamp: string;
-  etag: string | null;
 }
 
-type SyncPullResult =
-  | { kind: "upToDate"; etag: string | null }
-  | {
-      kind: "imported";
-      author: string | null;
-      timestamp: string | null;
-      textCount: number;
-      tagCount: number;
-      etag: string | null;
-    };
+interface SyncPullResult {
+  author: string | null;
+  timestamp: string | null;
+  textCount: number;
+  tagCount: number;
+}
 
 interface SyncErrorPayload {
   kind: string;
@@ -47,42 +42,45 @@ type Flow =
   | { type: "password"; action: "pull" | "save"; error?: string; inProgress: boolean };
 
 export function SyncDropdown({ onPullComplete }: SyncDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const [flow, setFlow] = useState<Flow>({ type: "idle" });
-  const containerRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [avatarOpen, setAvatarOpen] = useState(false);
   const [nameDraft, setNameDraft] = useState<string>("");
+  const avatarRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const { name: storedName, setName } = useUserName();
-  const { etag, isDirty, recordSync } = useLastSync();
+  const { meta, isDirty, recordSync } = useLastSync();
 
-  // Sync the input draft with the stored name whenever the panel opens.
+  // Init/refresh the draft from storedName when the avatar dropdown opens.
   useEffect(() => {
-    if (isOpen) setNameDraft(storedName);
-  }, [isOpen, storedName]);
+    if (avatarOpen) {
+      setNameDraft(storedName);
+      // autofocus the input shortly after mount
+      setTimeout(() => nameInputRef.current?.focus(), 0);
+    }
+  }, [avatarOpen, storedName]);
 
-  // Click-outside to close the panel (but not while a modal flow is active).
+  // Click-outside to close the avatar dropdown.
   useEffect(() => {
-    if (!isOpen || flow.type !== "idle") return;
+    if (!avatarOpen) return;
     const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
+      if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) {
+        setAvatarOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [isOpen, flow.type]);
+  }, [avatarOpen]);
 
   const nameDirty = nameDraft.trim() !== storedName.trim();
   const applyNameDraft = useCallback(() => {
     setName(nameDraft.trim());
+    setAvatarOpen(false);
   }, [nameDraft, setName]);
 
   // ── Pull flow ────────────────────────────────────────────────────────────
 
   const startPull = useCallback(async () => {
-    setIsOpen(false);
-
     if (isDirty) {
       const confirmed = await confirm(
         "You have local changes that haven't been saved to the cloud. Pulling will overwrite them. Continue anyway?",
@@ -90,7 +88,6 @@ export function SyncDropdown({ onPullComplete }: SyncDropdownProps) {
       );
       if (!confirmed) return;
     }
-
     setFlow({ type: "password", action: "pull", inProgress: false });
   }, [isDirty]);
 
@@ -98,40 +95,28 @@ export function SyncDropdown({ onPullComplete }: SyncDropdownProps) {
     async (password: string) => {
       setFlow({ type: "password", action: "pull", inProgress: true });
       try {
-        const result = await invoke<SyncPullResult>("sync_pull", {
-          password,
-          ifNoneMatchEtag: etag,
-        });
+        const result = await invoke<SyncPullResult>("sync_pull", { password });
         setFlow({ type: "idle" });
-        if (result.kind === "upToDate") {
-          // Local already matches remote — leave etag and dirty as-is.
-          await message("Already up to date — no changes pulled.", {
-            title: "Sync Pull",
-            kind: "info",
-          });
-        } else {
-          recordSync({
-            author: result.author ?? undefined,
-            timestamp: result.timestamp ?? undefined,
-            etag: result.etag,
-          });
-          onPullComplete();
-          await message(
-            `Pulled ${result.textCount} text(s), ${result.tagCount} tag(s)` +
-              (result.author && result.timestamp
-                ? ` — last saved by ${result.author} at ${result.timestamp}`
-                : "") +
-              ".",
-            { title: "Sync Pull", kind: "info" },
-          );
-        }
+        recordSync({
+          author: result.author ?? undefined,
+          timestamp: result.timestamp ?? undefined,
+        });
+        onPullComplete();
+        await message(
+          `Pulled ${result.textCount} text(s), ${result.tagCount} tag(s)` +
+            (result.author && result.timestamp
+              ? ` — last saved by ${result.author} at ${result.timestamp}`
+              : "") +
+            ".",
+          { title: "Sync Pull", kind: "info" },
+        );
       } catch (err) {
         if (isSyncErrorPayload(err)) {
           if (err.kind === "invalid_password") {
             setFlow({
               type: "password",
               action: "pull",
-              error: "Invalid sync password.",
+              error: "Invalid password.",
               inProgress: false,
             });
             return;
@@ -147,20 +132,14 @@ export function SyncDropdown({ onPullComplete }: SyncDropdownProps) {
         }
       }
     },
-    [etag, recordSync, onPullComplete],
+    [recordSync, onPullComplete],
   );
 
   // ── Save flow ────────────────────────────────────────────────────────────
 
   const startSave = useCallback(() => {
-    setIsOpen(false);
-    if (!storedName.trim()) {
-      // Onboarding should normally cover this; guard defensively.
-      message("Please set your name first.", { title: "Sync Save", kind: "warning" });
-      return;
-    }
     setFlow({ type: "password", action: "save", inProgress: false });
-  }, [storedName]);
+  }, []);
 
   const submitSavePassword = useCallback(
     async (password: string) => {
@@ -170,13 +149,12 @@ export function SyncDropdown({ onPullComplete }: SyncDropdownProps) {
         const result = await invoke<SyncSaveResult>("sync_save", {
           password,
           author,
-          ifMatchEtag: etag,
+          lastSyncTimestamp: meta?.timestamp ?? null,
         });
         setFlow({ type: "idle" });
         recordSync({
           author: result.author,
           timestamp: result.timestamp,
-          etag: result.etag,
         });
         await message(
           `Saved at ${result.timestamp}${result.author ? ` by ${result.author}` : ""}.`,
@@ -188,7 +166,7 @@ export function SyncDropdown({ onPullComplete }: SyncDropdownProps) {
             setFlow({
               type: "password",
               action: "save",
-              error: "Invalid sync password.",
+              error: "Invalid password.",
               inProgress: false,
             });
             return;
@@ -215,7 +193,7 @@ export function SyncDropdown({ onPullComplete }: SyncDropdownProps) {
         }
       }
     },
-    [etag, storedName, recordSync, startPull],
+    [meta?.timestamp, storedName, recordSync, startPull],
   );
 
   const handlePasswordSubmit = useCallback(
@@ -236,74 +214,90 @@ export function SyncDropdown({ onPullComplete }: SyncDropdownProps) {
 
   return (
     <>
-      <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={startPull}
+        onPointerDown={(e) => e.stopPropagation()}
+        aria-label={isDirty ? "Pull from sync (will overwrite local changes)" : "Pull from sync"}
+        title={isDirty ? "Pull — will overwrite local changes" : "Pull"}
+        className="relative p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer"
+      >
+        <CloudDownload className="w-5 h-5" aria-hidden="true" />
+        {isDirty && (
+          <span className="absolute -top-1 -right-1 flex items-center justify-center bg-surface rounded-full">
+            <AlertTriangle className="w-3.5 h-3.5 text-accent" strokeWidth={2.5} aria-hidden="true" />
+          </span>
+        )}
+      </button>
+
+      <button
+        type="button"
+        onClick={startSave}
+        onPointerDown={(e) => e.stopPropagation()}
+        disabled={!isDirty}
+        aria-label={isDirty ? "Save to sync (you have unsaved local changes)" : "Save to sync (nothing to save)"}
+        title={isDirty ? "Save — unsaved local changes" : "Nothing to save"}
+        className="relative p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-surface"
+      >
+        <CloudUpload className="w-5 h-5" aria-hidden="true" />
+        {isDirty && (
+          <span className="absolute -top-1 -right-1 flex items-center justify-center bg-surface rounded-full">
+            <AlertCircle className="w-3.5 h-3.5 text-accent" strokeWidth={2.5} aria-hidden="true" />
+          </span>
+        )}
+      </button>
+
+      <div ref={avatarRef} className="relative">
         <button
-          ref={buttonRef}
-          onClick={() => setIsOpen((v) => !v)}
+          type="button"
+          onClick={() => setAvatarOpen((v) => !v)}
           onPointerDown={(e) => e.stopPropagation()}
-          aria-label="Sync"
-          aria-expanded={isOpen}
+          aria-label="Your sync name"
+          aria-expanded={avatarOpen}
+          title={storedName || "Set your name"}
           className="p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer"
         >
-          <Cloud className="w-5 h-5" aria-hidden="true" />
+          <CircleUser className="w-5 h-5" aria-hidden="true" />
         </button>
 
-        {isOpen && (
+        {avatarOpen && (
           <div
             onPointerDown={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
-            className="absolute right-0 top-full mt-1 w-72 rounded-lg border border-content/20 bg-surface shadow-lg py-2 z-50"
+            className="absolute right-0 top-full mt-1 w-56 rounded-lg border border-content/20 bg-surface shadow-lg py-2 px-3 z-50"
           >
-            <div className="px-3 py-2">
-              <label className="block text-xs text-content/50 mb-1">Your name</label>
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="text"
-                  className="flex-1 min-w-0 px-2 py-1 text-sm bg-content/5 border border-content/20 rounded text-content placeholder:text-content/30 focus:outline-none focus:ring-2 focus:ring-accent"
-                  placeholder="Type your name"
-                  value={nameDraft}
-                  onChange={(e) => setNameDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && nameDirty) {
-                      e.preventDefault();
-                      applyNameDraft();
-                    }
-                  }}
-                  maxLength={64}
-                />
-                {nameDirty && (
-                  <button
-                    type="button"
-                    onClick={applyNameDraft}
-                    className="flex-shrink-0 p-1 rounded text-accent hover:bg-accent/10 transition-colors"
-                    aria-label="Apply name"
-                    title="Apply name"
-                  >
-                    <Check className="w-4 h-4" aria-hidden="true" />
-                  </button>
-                )}
-              </div>
+            <label className="block text-xs text-content/50 mb-1">Your name</label>
+            <div className="flex items-center gap-1.5">
+              <input
+                ref={nameInputRef}
+                type="text"
+                className="flex-1 min-w-0 px-2 py-1 text-sm bg-content/5 border border-content/20 rounded text-content placeholder:text-content/30 focus:outline-none focus:ring-2 focus:ring-accent"
+                placeholder="Type your name"
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && nameDirty) {
+                    e.preventDefault();
+                    applyNameDraft();
+                  } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    setAvatarOpen(false);
+                  }
+                }}
+                maxLength={64}
+              />
+              {nameDirty && (
+                <button
+                  type="button"
+                  onClick={applyNameDraft}
+                  className="flex-shrink-0 p-1 rounded text-accent hover:bg-accent/10 transition-colors"
+                  aria-label="Apply name"
+                  title="Apply name"
+                >
+                  <Check className="w-4 h-4" aria-hidden="true" />
+                </button>
+              )}
             </div>
-            <div className="my-1 border-t border-content/10" />
-            <button
-              type="button"
-              onClick={startPull}
-              className="w-full text-left flex items-center gap-2 px-3 py-2 hover:bg-content/5 transition-colors"
-            >
-              <CloudDownload className="w-4 h-4 text-content/60" aria-hidden="true" />
-              <span className="text-sm text-content">Pull</span>
-            </button>
-            <button
-              type="button"
-              onClick={startSave}
-              className="w-full text-left flex items-center gap-2 px-3 py-2 hover:bg-content/5 transition-colors"
-            >
-              <CloudUpload className="w-4 h-4 text-content/60" aria-hidden="true" />
-              <span className="text-sm text-content">Save</span>
-            </button>
-            {isDirty && (
-              <p className="px-3 pb-2 text-[11px] text-amber-500">Local changes not yet saved.</p>
-            )}
           </div>
         )}
       </div>
@@ -312,13 +306,8 @@ export function SyncDropdown({ onPullComplete }: SyncDropdownProps) {
         open={flow.type === "password"}
         title={
           flow.type === "password" && flow.action === "save"
-            ? "Sync Save — enter password"
-            : "Sync Pull — enter password"
-        }
-        description={
-          flow.type === "password" && flow.action === "save"
-            ? "Enter the password to save your changes."
-            : "Enter the password to pull the latest changes."
+            ? "Save your changes"
+            : "Pull the latest changes"
         }
         inProgress={flow.type === "password" && flow.inProgress}
         errorMessage={flow.type === "password" ? flow.error : undefined}

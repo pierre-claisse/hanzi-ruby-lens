@@ -7,7 +7,6 @@ import {
 } from "../utils/syncDirty";
 
 const META_KEY = "lastSyncMeta";
-const ETAG_KEY = "lastSyncEtag";
 
 export interface SyncMeta {
   author?: string;
@@ -24,46 +23,30 @@ function readMeta(): SyncMeta | null {
   }
 }
 
-function readEtag(): string | null {
-  try {
-    return localStorage.getItem(ETAG_KEY);
-  } catch {
-    return null;
-  }
-}
-
 export function useLastSync() {
   const [meta, setMetaState] = useState<SyncMeta | null>(readMeta);
-  const [etag, setEtagState] = useState<string | null>(readEtag);
   const [isDirty, setDirtyState] = useState<boolean>(isLocalDirty);
 
-  // Single subscription: re-read all sync state on any change. Covers writes
-  // from App.tsx (Reset / Import wipe everything) and from this hook itself
-  // (recordSync writes meta + etag + clears dirty).
   useEffect(() => {
     const refresh = () => {
       setMetaState(readMeta());
-      setEtagState(readEtag());
       setDirtyState(isLocalDirty());
     };
     return subscribeSyncState(refresh);
   }, []);
 
   const recordSync = useCallback(
-    (next: { author?: string; timestamp?: string; etag?: string | null }) => {
+    (next: { author?: string; timestamp?: string }) => {
       const newMeta: SyncMeta = {
         author: next.author,
         timestamp: next.timestamp,
       };
       try {
         localStorage.setItem(META_KEY, JSON.stringify(newMeta));
-        if (next.etag !== undefined && next.etag !== null) {
-          localStorage.setItem(ETAG_KEY, next.etag);
-        }
       } catch {
         // ignore
       }
-      // notifying via clearLocalDirty also triggers the meta/etag refresh path
+      // notifying via clearLocalDirty also re-broadcasts the meta refresh path
       // (single shared event).
       clearLocalDirty();
     },
@@ -72,7 +55,6 @@ export function useLastSync() {
 
   return {
     meta,
-    etag,
     isDirty,
     recordSync,
     markDirty: markLocalDirty,

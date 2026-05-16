@@ -213,7 +213,7 @@ pub async fn sync_save(
     app_handle: AppHandle,
     password: String,
     author: String,
-    if_match_etag: Option<String>,
+    last_sync_timestamp: Option<String>,
 ) -> Result<crate::sync::SyncSaveResult, crate::sync::SyncError> {
     let mut payload = app_handle
         .db(crate::database::export_all)
@@ -227,29 +227,17 @@ pub async fn sync_save(
         crate::sync::SyncError::Other(format!("Failed to serialize payload: {}", e))
     })?;
 
-    let etag = crate::sync::save_to_remote(&password, &json, if_match_etag.as_deref()).await?;
+    crate::sync::save_to_remote(&password, &json, last_sync_timestamp.as_deref()).await?;
 
-    Ok(crate::sync::SyncSaveResult {
-        author,
-        timestamp,
-        etag,
-    })
+    Ok(crate::sync::SyncSaveResult { author, timestamp })
 }
 
 #[tauri::command]
 pub async fn sync_pull(
     app_handle: AppHandle,
     password: String,
-    if_none_match_etag: Option<String>,
 ) -> Result<crate::sync::SyncPullResult, crate::sync::SyncError> {
-    let result = crate::sync::pull_from_remote(&password, if_none_match_etag.as_deref()).await?;
-
-    let (content, etag) = match result {
-        crate::sync::GistGetResult::NotModified { etag } => {
-            return Ok(crate::sync::SyncPullResult::UpToDate { etag });
-        }
-        crate::sync::GistGetResult::Modified { content, etag } => (content, etag),
-    };
+    let content = crate::sync::pull_from_remote(&password).await?;
 
     let payload: ExportPayload = serde_json::from_str(&content).map_err(|e| {
         crate::sync::SyncError::Other(format!("Invalid remote payload: {}", e))
@@ -265,12 +253,11 @@ pub async fn sync_pull(
         .db_mut(|conn| crate::database::import_all(conn, payload))
         .map_err(|e| crate::sync::SyncError::Other(e.to_string()))?;
 
-    Ok(crate::sync::SyncPullResult::Imported {
+    Ok(crate::sync::SyncPullResult {
         author,
         timestamp,
         text_count: imported.text_count,
         tag_count: imported.tag_count,
-        etag,
     })
 }
 

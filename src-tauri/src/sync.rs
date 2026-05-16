@@ -16,9 +16,7 @@
 use std::sync::OnceLock;
 
 use chrono::FixedOffset;
-use reqwest::header::{
-    HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, ETAG, IF_MATCH, IF_NONE_MATCH, USER_AGENT,
-};
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, USER_AGENT};
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use zeroize::Zeroize;
@@ -178,35 +176,14 @@ fn auth_headers(pat: &str) -> Result<HeaderMap, SyncError> {
     Ok(headers)
 }
 
-#[derive(Debug)]
-pub enum GistGetResult {
-    Modified { content: String, etag: Option<String> },
-    NotModified { etag: Option<String> },
-}
-
-async fn http_get_gist(
-    pat: &str,
-    gist_id: &str,
-    if_none_match: Option<&str>,
-) -> Result<GistGetResult, SyncError> {
+async fn http_get_gist(pat: &str, gist_id: &str) -> Result<String, SyncError> {
     let url = format!("{}/gists/{}", GITHUB_API, gist_id);
-    let mut headers = auth_headers(pat)?;
-    if let Some(etag) = if_none_match {
-        if let Ok(v) = HeaderValue::from_str(etag) {
-            headers.insert(IF_NONE_MATCH, v);
-        }
-    }
+    let headers = auth_headers(pat)?;
 
     let resp = http_client().get(&url).headers(headers).send().await?;
     let status = resp.status();
-    let etag = resp
-        .headers()
-        .get(ETAG)
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string());
 
     match status {
-        StatusCode::NOT_MODIFIED => Ok(GistGetResult::NotModified { etag }),
         StatusCode::OK => {
             #[derive(Deserialize)]
             struct GistFile {
@@ -239,7 +216,7 @@ async fn http_get_gist(
             } else {
                 file.content.clone()
             };
-            Ok(GistGetResult::Modified { content, etag })
+            Ok(content)
         }
         StatusCode::UNAUTHORIZED => Err(SyncError::Auth(
             "GitHub rejected the embedded PAT (401)".into(),
@@ -258,19 +235,9 @@ async fn http_get_gist(
     }
 }
 
-async fn http_patch_gist(
-    pat: &str,
-    gist_id: &str,
-    content: &str,
-    if_match: Option<&str>,
-) -> Result<Option<String>, SyncError> {
+async fn http_patch_gist(pat: &str, gist_id: &str, content: &str) -> Result<(), SyncError> {
     let url = format!("{}/gists/{}", GITHUB_API, gist_id);
-    let mut headers = auth_headers(pat)?;
-    if let Some(etag) = if_match {
-        if let Ok(v) = HeaderValue::from_str(etag) {
-            headers.insert(IF_MATCH, v);
-        }
-    }
+    let headers = auth_headers(pat)?;
 
     let body = serde_json::json!({
         "files": {
@@ -285,15 +252,9 @@ async fn http_patch_gist(
         .send()
         .await?;
     let status = resp.status();
-    let etag = resp
-        .headers()
-        .get(ETAG)
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string());
 
     match status {
-        StatusCode::OK => Ok(etag),
-        StatusCode::PRECONDITION_FAILED => Err(SyncError::Conflict),
+        StatusCode::OK => Ok(()),
         StatusCode::UNAUTHORIZED => Err(SyncError::Auth(
             "GitHub rejected the embedded PAT (401)".into(),
         )),
@@ -311,6 +272,18 @@ async fn http_patch_gist(
     }
 }
 
+/// Extract the `sync_timestamp` field from a remote JSON payload, if any.
+/// Tolerant of missing field / unparseable JSON (returns None in both cases).
+fn extract_remote_sync_timestamp(json: &str) -> Option<String> {
+    serde_json::from_str::<serde_json::Value>(json)
+        .ok()
+        .and_then(|v| {
+            v.get("sync_timestamp")
+                .and_then(|t| t.as_str())
+                .map(String::from)
+        })
+}
+
 // ── Public Save / Pull primitives ───────────────────────────────────────────
 
 #[derive(Debug, Serialize)]
@@ -318,22 +291,15 @@ async fn http_patch_gist(
 pub struct SyncSaveResult {
     pub author: String,
     pub timestamp: String,
-    pub etag: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
-#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
-pub enum SyncPullResult {
-    UpToDate {
-        etag: Option<String>,
-    },
-    Imported {
-        author: Option<String>,
-        timestamp: Option<String>,
-        text_count: usize,
-        tag_count: usize,
-        etag: Option<String>,
-    },
+#[serde(rename_all = "camelCase")]
+pub struct SyncPullResult {
+    pub author: Option<String>,
+    pub timestamp: Option<String>,
+    pub text_count: usize,
+    pub tag_count: usize,
 }
 
 pub fn now_gmt8_string() -> String {
@@ -345,24 +311,48 @@ pub fn now_gmt8_string() -> String {
 }
 
 /// Save the given JSON payload to the configured Gist.
-/// `if_match_etag`: if `Some`, sends `If-Match` for optimistic concurrency.
+///
+/// Optimistic concurrency: before PATCH, fetches the current remote content
+/// and reads its `sync_timestamp`. If that field exists and differs from
+/// `last_sync_timestamp` (the timestamp we recorded at our previous Save or
+/// Pull), the remote has changed since our last sync and we return
+/// `SyncError::Conflict` instead of writing.
+///
+/// GitHub's Gists API does NOT support `If-Match` on PATCH (returns HTTP 400),
+/// so we implement the check application-side. Race window: between our GET
+/// and our PATCH another writer could slip in. Acceptable for a 2-user
+/// scenario; absolute atomicity would require a backend.
 pub async fn save_to_remote(
     password: &str,
     json_payload: &str,
-    if_match_etag: Option<&str>,
-) -> Result<Option<String>, SyncError> {
+    last_sync_timestamp: Option<&str>,
+) -> Result<(), SyncError> {
     let secrets = decrypt_secrets(password)?;
-    http_patch_gist(&secrets.pat, &secrets.gist_id, json_payload, if_match_etag).await
+    let remote_json = http_get_gist(&secrets.pat, &secrets.gist_id).await?;
+    let remote_ts = extract_remote_sync_timestamp(&remote_json);
+
+    // Conflict if the remote has been touched by anyone since our last sync.
+    // Sub-cases:
+    //   * remote has no sync_timestamp at all (fresh Gist, manual content)
+    //     → no conflict possible, save.
+    //   * remote has a sync_timestamp but ours is None
+    //     → we never synced; saving would clobber whoever wrote that → conflict.
+    //   * both present and equal → green light.
+    //   * both present and different → someone wrote between our last sync
+    //     and now → conflict.
+    if let Some(remote_ts) = remote_ts.as_deref() {
+        if Some(remote_ts) != last_sync_timestamp {
+            return Err(SyncError::Conflict);
+        }
+    }
+
+    http_patch_gist(&secrets.pat, &secrets.gist_id, json_payload).await
 }
 
 /// Pull the JSON payload from the configured Gist.
-/// `if_none_match_etag`: if `Some`, allows server to respond 304 Not Modified.
-pub async fn pull_from_remote(
-    password: &str,
-    if_none_match_etag: Option<&str>,
-) -> Result<GistGetResult, SyncError> {
+pub async fn pull_from_remote(password: &str) -> Result<String, SyncError> {
     let secrets = decrypt_secrets(password)?;
-    http_get_gist(&secrets.pat, &secrets.gist_id, if_none_match_etag).await
+    http_get_gist(&secrets.pat, &secrets.gist_id).await
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────

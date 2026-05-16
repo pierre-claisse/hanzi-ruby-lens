@@ -4,7 +4,6 @@ import { X } from "lucide-react";
 interface SyncPasswordDialogProps {
   open: boolean;
   title: string;
-  description?: string;
   inProgress?: boolean;
   errorMessage?: string;
   onSubmit: (password: string) => void;
@@ -14,7 +13,6 @@ interface SyncPasswordDialogProps {
 export function SyncPasswordDialog({
   open,
   title,
-  description,
   inProgress,
   errorMessage,
   onSubmit,
@@ -74,14 +72,11 @@ export function SyncPasswordDialog({
           </button>
         </div>
         <div className="px-5 py-4">
-          {description && (
-            <p className="text-sm text-content/70 mb-3">{description}</p>
-          )}
           <input
             ref={inputRef}
             type="password"
             className="w-full px-3 py-2 text-sm bg-content/5 border border-content/20 rounded-lg text-content placeholder:text-content/30 focus:outline-none focus:ring-2 focus:ring-accent"
-            placeholder="Sync password"
+            placeholder="Enter the password"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
