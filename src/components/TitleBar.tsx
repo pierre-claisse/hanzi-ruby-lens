@@ -74,31 +74,30 @@ export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, o
             ({zoomLevel}%)
           </span>
         )}
+        {showAddButton && tags && filterTagIds && onFilterTagIds && onToggleSort !== undefined && (
+          <>
+            <TagFilterDropdown
+              tags={tags}
+              selectedIds={filterTagIds}
+              onChange={onFilterTagIds}
+            />
+            <button
+              type="button"
+              className="p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer"
+              onClick={onToggleSort}
+              onPointerDown={(e) => e.stopPropagation()}
+              aria-label={sortAsc ? "Sort: oldest first" : "Sort: newest first"}
+              title={sortAsc ? "Sort: oldest first" : "Sort: newest first"}
+            >
+              {sortAsc ? (
+                <ArrowUp className="w-4 h-4" aria-hidden="true" />
+              ) : (
+                <ArrowDown className="w-4 h-4" aria-hidden="true" />
+              )}
+            </button>
+          </>
+        )}
       </div>
-
-      {showAddButton && tags && filterTagIds && onFilterTagIds && onToggleSort !== undefined && (
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
-          <TagFilterDropdown
-            tags={tags}
-            selectedIds={filterTagIds}
-            onChange={onFilterTagIds}
-          />
-          <button
-            type="button"
-            className="p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer"
-            onClick={onToggleSort}
-            onPointerDown={(e) => e.stopPropagation()}
-            aria-label={sortAsc ? "Sort: oldest first" : "Sort: newest first"}
-            title={sortAsc ? "Sort: oldest first" : "Sort: newest first"}
-          >
-            {sortAsc ? (
-              <ArrowUp className="w-4 h-4" aria-hidden="true" />
-            ) : (
-              <ArrowDown className="w-4 h-4" aria-hidden="true" />
-            )}
-          </button>
-        </div>
-      )}
 
       <div className="flex gap-1">
         {showBack && (
