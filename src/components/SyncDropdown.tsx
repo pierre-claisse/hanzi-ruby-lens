@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import type { ReactNode } from "react";
 import { AlertCircle, AlertTriangle, Check, CircleUser, CloudDownload, CloudUpload } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { message, confirm } from "@tauri-apps/plugin-dialog";
@@ -8,6 +9,8 @@ import { SyncPasswordDialog } from "./SyncPasswordDialog";
 
 interface SyncDropdownProps {
   onPullComplete: () => void;
+  /** Rendered between the Save button and the Avatar button. */
+  betweenSlot?: ReactNode;
 }
 
 interface SyncSaveResult {
@@ -41,7 +44,7 @@ type Flow =
   | { type: "idle" }
   | { type: "password"; action: "pull" | "save"; error?: string; inProgress: boolean };
 
-export function SyncDropdown({ onPullComplete }: SyncDropdownProps) {
+export function SyncDropdown({ onPullComplete, betweenSlot }: SyncDropdownProps) {
   const [flow, setFlow] = useState<Flow>({ type: "idle" });
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [nameDraft, setNameDraft] = useState<string>("");
@@ -102,12 +105,10 @@ export function SyncDropdown({ onPullComplete }: SyncDropdownProps) {
           timestamp: result.timestamp ?? undefined,
         });
         onPullComplete();
+        const who = result.author ? ` from ${result.author}` : "";
+        const when = result.timestamp ? ` (${result.timestamp})` : "";
         await message(
-          `Pulled ${result.textCount} text(s), ${result.tagCount} tag(s)` +
-            (result.author && result.timestamp
-              ? ` — last saved by ${result.author} at ${result.timestamp}`
-              : "") +
-            ".",
+          `Library and calendar synced with latest data${who}${when}.`,
           { title: "Sync Pull", kind: "info" },
         );
       } catch (err) {
@@ -246,6 +247,8 @@ export function SyncDropdown({ onPullComplete }: SyncDropdownProps) {
           </span>
         )}
       </button>
+
+      {betweenSlot}
 
       <div ref={avatarRef} className="relative">
         <button

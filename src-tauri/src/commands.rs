@@ -1,6 +1,9 @@
 use tauri::AppHandle;
 
-use crate::domain::{ExportPayload, ExportResult, ImportResult, Tag, Text, TextPreviewWithTags};
+use crate::domain::{
+    ExportPayload, ExportResult, ImportResult, Session, SessionKind, Tag, Text,
+    TextPreviewWithTags,
+};
 use crate::error::AppError;
 use crate::processing;
 use crate::state::ServiceAccess;
@@ -192,6 +195,77 @@ fn check_device_authorization(
         Ok(id) => id == authorized_id,
         Err(_) => false,
     }
+}
+
+// ── Session commands ──
+
+fn parse_kind(kind: &str) -> Result<SessionKind, AppError> {
+    SessionKind::parse(kind)
+        .ok_or_else(|| AppError::Validation(format!("Unknown session kind: {}", kind)))
+}
+
+#[tauri::command]
+pub fn list_sessions(
+    app_handle: AppHandle,
+    from: String,
+    to: String,
+) -> Result<Vec<Session>, AppError> {
+    app_handle.db(|conn| crate::database::list_sessions_in_range(conn, &from, &to))
+}
+
+#[allow(clippy::too_many_arguments)]
+#[tauri::command]
+pub fn create_session(
+    app_handle: AppHandle,
+    date: String,
+    start_time: String,
+    end_time: String,
+    kind: String,
+    done: bool,
+    notes: Option<String>,
+    author: Option<String>,
+    text_ids: Vec<i64>,
+) -> Result<Session, AppError> {
+    let kind = parse_kind(&kind)?;
+    app_handle.db_mut(|conn| {
+        crate::database::create_session(
+            conn, &date, &start_time, &end_time, kind, done, notes, author, &text_ids,
+        )
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+#[tauri::command]
+pub fn update_session(
+    app_handle: AppHandle,
+    session_id: i64,
+    date: String,
+    start_time: String,
+    end_time: String,
+    kind: String,
+    done: bool,
+    notes: Option<String>,
+    text_ids: Vec<i64>,
+) -> Result<Session, AppError> {
+    let kind = parse_kind(&kind)?;
+    app_handle.db_mut(|conn| {
+        crate::database::update_session_db(
+            conn,
+            session_id,
+            &date,
+            &start_time,
+            &end_time,
+            kind,
+            done,
+            notes,
+            &text_ids,
+        )
+    })
+}
+
+#[tauri::command]
+pub fn delete_session(app_handle: AppHandle, session_id: i64) -> Result<(), AppError> {
+    app_handle.db(|conn| crate::database::delete_session_db(conn, session_id))
 }
 
 #[tauri::command]

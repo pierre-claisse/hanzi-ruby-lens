@@ -1,4 +1,4 @@
-import { ArrowLeft, Plus, Tags, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowLeft, Plus, Tags, ArrowUp, ArrowDown, CalendarDays, Library } from 'lucide-react';
 import { PinyinToggle } from './PinyinToggle';
 import { TranslateButton } from './TranslateButton';
 import { ZoomInButton } from './ZoomInButton';
@@ -12,8 +12,10 @@ import { DataManagementDropdown } from './DataManagementDropdown';
 import { SyncDropdown } from './SyncDropdown';
 import type { ColorPalette } from '../data/palettes';
 import type { Tag } from '../types/domain';
+import type { AppView } from '../hooks/useTextLoader';
 
 interface TitleBarProps {
+  appView: AppView;
   pinyinVisible: boolean;
   onPinyinToggle: (visible: boolean) => void;
   zoomLevel: number;
@@ -30,7 +32,6 @@ interface TitleBarProps {
   showBack?: boolean;
   rawInput?: string;
   onAddText?: () => void;
-  showAddButton?: boolean;
   titleText?: string;
   onManageTags?: () => void;
   tags?: Tag[];
@@ -43,9 +44,28 @@ interface TitleBarProps {
   isAuthorizedDevice?: boolean;
   syncConfigured?: boolean;
   onSyncPullComplete?: () => void;
+  onToggleCalendarView?: () => void;
 }
 
-export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, onZoomOut, isMinZoom, isMaxZoom, palettes, selectedPaletteId, onPaletteSelect, theme, onThemeToggle, onBack, showBack, rawInput, onAddText, showAddButton, titleText, onManageTags, tags, filterTagIds, onFilterTagIds, sortAsc, onToggleSort, onDataImportComplete, onDataResetComplete, isAuthorizedDevice, syncConfigured, onSyncPullComplete }: TitleBarProps) {
+export function TitleBar({ appView, pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, onZoomOut, isMinZoom, isMaxZoom, palettes, selectedPaletteId, onPaletteSelect, theme, onThemeToggle, onBack, showBack, rawInput, onAddText, titleText, onManageTags, tags, filterTagIds, onFilterTagIds, sortAsc, onToggleSort, onDataImportComplete, onDataResetComplete, isAuthorizedDevice, syncConfigured, onSyncPullComplete, onToggleCalendarView }: TitleBarProps) {
+  const isLibrary = appView === "library";
+  const isCalendar = appView === "calendar";
+  const calendarToggleButton = onToggleCalendarView && (isLibrary || isCalendar) ? (
+    <button
+      type="button"
+      className="p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer"
+      onClick={onToggleCalendarView}
+      onPointerDown={(e) => e.stopPropagation()}
+      aria-label={isLibrary ? "Open calendar" : "Back to library"}
+      title={isLibrary ? "Calendar" : "Library"}
+    >
+      {isLibrary ? (
+        <CalendarDays className="w-5 h-5" aria-hidden="true" />
+      ) : (
+        <Library className="w-5 h-5" aria-hidden="true" />
+      )}
+    </button>
+  ) : null;
   return (
     <header
       data-tauri-drag-region
@@ -74,7 +94,7 @@ export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, o
             ({zoomLevel}%)
           </span>
         )}
-        {showAddButton && tags && filterTagIds && onFilterTagIds && onToggleSort !== undefined && (
+        {isLibrary && tags && filterTagIds && onFilterTagIds && onToggleSort !== undefined && (
           <>
             <TagFilterDropdown
               tags={tags}
@@ -108,7 +128,7 @@ export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, o
             <ZoomInButton onClick={onZoomIn} disabled={isMaxZoom} />
           </>
         )}
-        {showAddButton && onAddText && (
+        {isLibrary && onAddText && (
           <button
             type="button"
             className="p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer"
@@ -119,7 +139,7 @@ export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, o
             <Plus className="w-5 h-5" aria-hidden="true" />
           </button>
         )}
-        {showAddButton && onManageTags && (
+        {isLibrary && onManageTags && (
           <button
             type="button"
             className="p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer"
@@ -130,15 +150,19 @@ export function TitleBar({ pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, o
             <Tags className="w-5 h-5" aria-hidden="true" />
           </button>
         )}
-        {showAddButton && isAuthorizedDevice && onDataImportComplete && onDataResetComplete && (
+        {(isLibrary || isCalendar) && isAuthorizedDevice && onDataImportComplete && onDataResetComplete && (
           <DataManagementDropdown
             onImportComplete={onDataImportComplete}
             onResetComplete={onDataResetComplete}
           />
         )}
         {syncConfigured && onSyncPullComplete && (
-          <SyncDropdown onPullComplete={onSyncPullComplete} />
+          <SyncDropdown
+            onPullComplete={onSyncPullComplete}
+            betweenSlot={calendarToggleButton}
+          />
         )}
+        {!syncConfigured && calendarToggleButton}
         <PaletteSelector palettes={palettes} selectedPaletteId={selectedPaletteId} onSelect={onPaletteSelect} theme={theme} />
         <ThemeToggle theme={theme} onToggle={onThemeToggle} />
         <FullscreenToggle />

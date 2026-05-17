@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { TextDisplay } from "./components/TextDisplay";
 import { TitleBar } from "./components/TitleBar";
@@ -8,10 +8,16 @@ import { ProcessingState } from "./components/ProcessingState";
 import { ManageTagsDialog } from "./components/ManageTagsDialog";
 import { WordCommentDialog } from "./components/WordCommentDialog";
 import { CommentsPanel } from "./components/CommentsPanel";
+import { CalendarScreen, visibleMonthRange } from "./components/CalendarScreen";
+import { DateSessionsPanel } from "./components/DateSessionsPanel";
+import { SessionDialog } from "./components/SessionDialog";
 import { UserNameOnboarding } from "./components/UserNameOnboarding";
 import { useUserName } from "./hooks/useUserName";
+import { useSessions } from "./hooks/useSessions";
+import type { SessionMutation } from "./hooks/useSessions";
 import { clearSyncState } from "./utils/syncDirty";
 import { markCommentRead } from "./utils/readComments";
+import { todayGmt8 } from "./utils/calendarGrid";
 import { usePinyinVisibility } from "./hooks/usePinyinVisibility";
 import { useTextZoom } from "./hooks/useTextZoom";
 import { useTheme } from "./hooks/useTheme";
@@ -55,6 +61,25 @@ function App() {
   const [commentDialogSegIndex, setCommentDialogSegIndex] = useState<number | null>(null);
   const [commentsPanelOpen, setCommentsPanelOpen] = useState(false);
   const { name: userName, isSet: hasUserName, setName: setUserName } = useUserName();
+
+  // Calendar state — hoisted so the panel can outlive grid cell renders.
+  const today = useMemo(() => todayGmt8(), []);
+  const [calendarYearMonth, setCalendarYearMonth] = useState<{ year: number; month: number }>(() => {
+    const [y, mo] = today.split("-").map(Number);
+    return { year: y, month: mo };
+  });
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState<string | null>(null);
+  const [sessionDialogState, setSessionDialogState] = useState<
+    { mode: "create"; defaultDate: string } | { mode: "edit"; sessionId: number } | null
+  >(null);
+  const {
+    sessions: calendarSessions,
+    loadRange: loadSessionsRange,
+    createSession,
+    updateSession,
+    deleteSession,
+    refresh: refreshSessions,
+  } = useSessions();
 
   // Check device authorization at startup
   useEffect(() => {
@@ -123,22 +148,98 @@ function App() {
     clearSyncState();
     await refreshTags();
     await refreshPreviews();
+    await refreshSessions();
     setFilterTagIds([]);
-  }, [refreshTags, refreshPreviews, setFilterTagIds]);
+  }, [refreshTags, refreshPreviews, refreshSessions, setFilterTagIds]);
 
   const handleDataResetComplete = useCallback(async () => {
     clearSyncState();
     await refreshTags();
     await refreshPreviews();
+    await refreshSessions();
     setFilterTagIds([]);
-  }, [refreshTags, refreshPreviews, setFilterTagIds]);
+  }, [refreshTags, refreshPreviews, refreshSessions, setFilterTagIds]);
 
   const handleSyncPullComplete = useCallback(async () => {
     await refreshTags();
     await refreshPreviews();
+    await refreshSessions();
     setFilterTagIds([]);
     if (appView === "reading") setView("library");
-  }, [refreshTags, refreshPreviews, setFilterTagIds, appView, setView]);
+  }, [refreshTags, refreshPreviews, refreshSessions, setFilterTagIds, appView, setView]);
+
+  const handleToggleCalendarView = useCallback(() => {
+    setView(appView === "calendar" ? "library" : "calendar");
+  }, [appView, setView]);
+
+  // Load sessions for the visible month + adjacent overflow whenever the
+  // calendar view is active or the month/year changes.
+  useEffect(() => {
+    if (appView !== "calendar") return;
+    const { from, to } = visibleMonthRange(calendarYearMonth.year, calendarYearMonth.month);
+    loadSessionsRange(from, to).catch((err) => console.error("Failed to load sessions:", err));
+  }, [appView, calendarYearMonth, loadSessionsRange]);
+
+  const handleCalendarSelectDate = useCallback((date: string) => {
+    setCalendarSelectedDate(date);
+  }, []);
+
+  const panelDate = calendarSelectedDate ?? today;
+
+  const handleAddSessionFromPanel = useCallback(() => {
+    setSessionDialogState({ mode: "create", defaultDate: panelDate });
+  }, [panelDate]);
+
+  const handleEditSessionFromPanel = useCallback((id: number) => {
+    setSessionDialogState({ mode: "edit", sessionId: id });
+  }, []);
+
+  const handleCloseSessionDialog = useCallback(() => {
+    setSessionDialogState(null);
+  }, []);
+
+  const handleSessionSave = useCallback(
+    async (id: number | null, input: SessionMutation) => {
+      const author = userName.trim() ? userName.trim() : null;
+      if (id == null) {
+        await createSession(input, author);
+      } else {
+        await updateSession(id, input);
+      }
+      setSessionDialogState(null);
+    },
+    [createSession, updateSession, userName],
+  );
+
+  const handleSessionDelete = useCallback(
+    async (id: number) => {
+      await deleteSession(id);
+      setSessionDialogState(null);
+    },
+    [deleteSession],
+  );
+
+  const handleToggleSessionDone = useCallback(
+    async (id: number) => {
+      const s = calendarSessions.find((x) => x.id === id);
+      if (!s) return;
+      await updateSession(id, {
+        date: s.date,
+        startTime: s.startTime,
+        endTime: s.endTime,
+        kind: s.kind,
+        done: !s.done,
+        notes: s.notes,
+        textIds: s.textIds,
+      });
+    },
+    [calendarSessions, updateSession],
+  );
+
+  const editingSession =
+    sessionDialogState?.mode === "edit"
+      ? calendarSessions.find((s) => s.id === sessionDialogState.sessionId) ?? null
+      : null;
 
   // Default comments panel state: open if text has comments
   useEffect(() => {
@@ -211,6 +312,31 @@ function App() {
             />
           </div>
         );
+      case "calendar":
+        return (
+          <div className="bg-surface text-content h-screen flex pt-12">
+            <div className="flex-1 min-w-0 overflow-y-auto" style={{ direction: "rtl" }}>
+              <div style={{ direction: "ltr" }}>
+                <CalendarScreen
+                  year={calendarYearMonth.year}
+                  month={calendarYearMonth.month}
+                  onChangeYearMonth={(year, month) => setCalendarYearMonth({ year, month })}
+                  sessions={calendarSessions}
+                  selectedDate={calendarSelectedDate}
+                  onSelectDate={handleCalendarSelectDate}
+                />
+              </div>
+            </div>
+            <DateSessionsPanel
+              date={panelDate}
+              sessions={calendarSessions}
+              texts={previews}
+              onAddSession={handleAddSessionFromPanel}
+              onEditSession={handleEditSessionFromPanel}
+              onToggleDone={handleToggleSessionDone}
+            />
+          </div>
+        );
       case "reading":
         return (
           <div className="bg-surface text-content h-screen flex pt-12">
@@ -244,6 +370,7 @@ function App() {
   return (
     <>
       <TitleBar
+        appView={appView}
         pinyinVisible={pinyinVisible}
         onPinyinToggle={setPinyinVisible}
         zoomLevel={zoomLevel}
@@ -260,8 +387,13 @@ function App() {
         showBack={showBack}
         rawInput={activeText?.rawInput ?? ""}
         onAddText={handleAddText}
-        showAddButton={appView === "library"}
-        titleText={appView === "reading" ? (activeText?.title ?? "") : "Library"}
+        titleText={
+          appView === "reading"
+            ? activeText?.title ?? ""
+            : appView === "calendar"
+            ? "Calendar"
+            : "Library"
+        }
         onManageTags={() => setShowManageTags(true)}
         tags={tags}
         filterTagIds={filterTagIds}
@@ -273,6 +405,7 @@ function App() {
         isAuthorizedDevice={isAuthorizedDevice}
         syncConfigured={syncConfigured}
         onSyncPullComplete={handleSyncPullComplete}
+        onToggleCalendarView={handleToggleCalendarView}
       />
       <UserNameOnboarding
         open={syncConfigured && !hasUserName}
@@ -299,6 +432,19 @@ function App() {
           />
         );
       })()}
+      {sessionDialogState && (
+        <SessionDialog
+          open
+          session={editingSession}
+          defaultDate={
+            sessionDialogState.mode === "create" ? sessionDialogState.defaultDate : panelDate
+          }
+          texts={previews}
+          onSave={handleSessionSave}
+          onDelete={handleSessionDelete}
+          onClose={handleCloseSessionDialog}
+        />
+      )}
     </>
   );
 }

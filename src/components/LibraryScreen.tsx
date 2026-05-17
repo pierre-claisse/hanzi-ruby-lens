@@ -132,8 +132,12 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock
   };
 
   return (
-    <div className="bg-surface text-content min-h-screen pt-16 pb-12 px-8">
-      <div className="max-w-5xl mx-auto">
+    <div
+      className="bg-surface text-content h-screen pt-12 overflow-y-auto"
+      style={{ direction: "rtl" }}
+    >
+      <div style={{ direction: "ltr" }} className="pt-4 pb-12 px-8">
+        <div className="max-w-5xl mx-auto">
         {previews.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <p className="text-content/40 text-lg text-center">
@@ -297,6 +301,7 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

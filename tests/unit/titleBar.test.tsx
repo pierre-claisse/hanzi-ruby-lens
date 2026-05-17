@@ -13,6 +13,7 @@ vi.mock("@tauri-apps/api/window", () => ({
 }));
 
 const defaultProps = {
+  appView: "library" as const,
   pinyinVisible: true,
   onPinyinToggle: vi.fn(),
   zoomLevel: 100,

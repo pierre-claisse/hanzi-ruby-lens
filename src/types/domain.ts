@@ -40,3 +40,19 @@ export interface TextPreview {
   locked: boolean;
   comments: CommentRef[];
 }
+
+export type SessionKind = "live_lesson" | "study_session";
+
+export interface Session {
+  id: number;
+  date: string;           // YYYY-MM-DD GMT+8
+  startTime: string;      // HH:MM GMT+8
+  endTime: string;        // HH:MM GMT+8
+  kind: SessionKind;
+  done: boolean;
+  notes: string | null;
+  author: string | null;
+  textIds: number[];
+  createdAt: string;
+  modifiedAt: string | null;
+}

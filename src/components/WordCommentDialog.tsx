@@ -42,15 +42,11 @@ export function WordCommentDialog({ open, word, segmentIndex, textId, onSave, on
   }, [segmentIndex, onSave, onClose]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      onClose();
-    }
     if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSave();
     }
-  }, [onClose, handleSave]);
+  }, [handleSave]);
 
   if (!open || !word) return null;
 
@@ -65,14 +61,8 @@ export function WordCommentDialog({ open, word, segmentIndex, textId, onSave, on
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      onMouseDown={onClose}
-    >
-      <div
-        className="bg-surface border border-content/20 rounded-xl shadow-xl w-full max-w-3xl mx-4"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-surface border border-content/20 rounded-xl shadow-xl w-full max-w-3xl mx-4">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-content/10">
           <h2 className="text-lg font-semibold text-content">

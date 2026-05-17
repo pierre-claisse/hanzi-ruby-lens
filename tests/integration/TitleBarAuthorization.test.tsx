@@ -21,6 +21,7 @@ vi.mock("@tauri-apps/api/window", () => ({
 }));
 
 const baseProps = {
+  appView: "library" as const,
   pinyinVisible: true,
   onPinyinToggle: vi.fn(),
   zoomLevel: 0,
@@ -33,7 +34,6 @@ const baseProps = {
   onPaletteSelect: vi.fn(),
   theme: "light" as const,
   onThemeToggle: vi.fn(),
-  showAddButton: true,
   onAddText: vi.fn(),
   onManageTags: vi.fn(),
   tags: [],

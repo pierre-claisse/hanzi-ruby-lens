@@ -27,12 +27,39 @@ pub struct ExportTextTag {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExportSession {
+    pub id: i64,
+    pub date: String,
+    pub start_time: String,
+    pub end_time: String,
+    pub kind: String,
+    pub done: i64,
+    #[serde(default)]
+    pub notes: Option<String>,
+    #[serde(default)]
+    pub author: Option<String>,
+    pub created_at: String,
+    #[serde(default)]
+    pub modified_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExportSessionText {
+    pub session_id: i64,
+    pub text_id: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExportPayload {
     pub version: u32,
     pub exported_at: String,
     pub texts: Vec<ExportText>,
     pub tags: Vec<ExportTag>,
     pub text_tags: Vec<ExportTextTag>,
+    #[serde(default)]
+    pub sessions: Vec<ExportSession>,
+    #[serde(default)]
+    pub session_texts: Vec<ExportSessionText>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sync_author: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -111,6 +138,46 @@ pub struct TagSummary {
 pub struct CommentRef {
     pub segment_index: usize,
     pub comment_at: String,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SessionKind {
+    LiveLesson,
+    StudySession,
+}
+
+impl SessionKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            SessionKind::LiveLesson => "live_lesson",
+            SessionKind::StudySession => "study_session",
+        }
+    }
+
+    pub fn parse(s: &str) -> Option<SessionKind> {
+        match s {
+            "live_lesson" => Some(SessionKind::LiveLesson),
+            "study_session" => Some(SessionKind::StudySession),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Session {
+    pub id: i64,
+    pub date: String,
+    pub start_time: String,
+    pub end_time: String,
+    pub kind: SessionKind,
+    pub done: bool,
+    pub notes: Option<String>,
+    pub author: Option<String>,
+    pub text_ids: Vec<i64>,
+    pub created_at: String,
+    pub modified_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

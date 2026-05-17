@@ -75,7 +75,15 @@ impl Serialize for SyncError {
 
 impl From<reqwest::Error> for SyncError {
     fn from(e: reqwest::Error) -> Self {
-        SyncError::Network(e.to_string())
+        use std::error::Error;
+        let mut msg = e.to_string();
+        let mut cause: Option<&dyn Error> = e.source();
+        while let Some(c) = cause {
+            msg.push_str(" — ");
+            msg.push_str(&c.to_string());
+            cause = c.source();
+        }
+        SyncError::Network(msg)
     }
 }
 

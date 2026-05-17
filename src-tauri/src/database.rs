@@ -3,8 +3,9 @@ use std::path::PathBuf;
 use rusqlite::Connection;
 
 use crate::domain::{
-    CommentRef, ExportPayload, ExportTag, ExportText, ExportTextTag, ImportResult, Tag,
-    TagSummary, Text, TextPreviewWithTags, TextSegment,
+    CommentRef, ExportPayload, ExportSession, ExportSessionText, ExportTag, ExportText,
+    ExportTextTag, ImportResult, Session, SessionKind, Tag, TagSummary, Text,
+    TextPreviewWithTags, TextSegment,
 };
 use crate::error::AppError;
 
@@ -39,6 +40,30 @@ pub fn initialize(db_path: PathBuf) -> Result<Connection, AppError> {
 
     // Migration: add locked column (idempotent — ignore if already exists)
     let _ = conn.execute_batch("ALTER TABLE texts ADD COLUMN locked INTEGER NOT NULL DEFAULT 0");
+
+    // Sessions schema (calendar feature).
+    conn.execute_batch(
+        "CREATE TABLE IF NOT EXISTS sessions (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            date        TEXT    NOT NULL,
+            start_time  TEXT    NOT NULL,
+            end_time    TEXT    NOT NULL,
+            kind        TEXT    NOT NULL,
+            done        INTEGER NOT NULL DEFAULT 0,
+            notes       TEXT,
+            author      TEXT,
+            created_at  TEXT    NOT NULL,
+            modified_at TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_sessions_date ON sessions(date);
+
+        CREATE TABLE IF NOT EXISTS session_texts (
+            session_id INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+            text_id    INTEGER NOT NULL REFERENCES texts(id)    ON DELETE CASCADE,
+            PRIMARY KEY (session_id, text_id)
+        );",
+    )?;
 
     Ok(conn)
 }
@@ -657,6 +682,267 @@ pub fn delete_text(conn: &Connection, id: i64) -> Result<(), AppError> {
     Ok(())
 }
 
+// ── Session operations ──
+
+fn now_gmt8_iso() -> String {
+    chrono::Utc::now()
+        .with_timezone(&chrono::FixedOffset::east_opt(8 * 3600).unwrap())
+        .format("%Y-%m-%dT%H:%M:%S")
+        .to_string()
+}
+
+fn load_session_text_ids(conn: &Connection, session_id: i64) -> Result<Vec<i64>, AppError> {
+    let mut stmt = conn.prepare(
+        "SELECT text_id FROM session_texts WHERE session_id = ?1 ORDER BY text_id",
+    )?;
+    let ids = stmt
+        .query_map(rusqlite::params![session_id], |row| row.get::<_, i64>(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(ids)
+}
+
+fn replace_session_texts(
+    tx: &rusqlite::Transaction,
+    session_id: i64,
+    text_ids: &[i64],
+) -> Result<(), AppError> {
+    tx.execute(
+        "DELETE FROM session_texts WHERE session_id = ?1",
+        rusqlite::params![session_id],
+    )?;
+    let mut seen = std::collections::HashSet::new();
+    for tid in text_ids {
+        if !seen.insert(*tid) {
+            continue;
+        }
+        tx.execute(
+            "INSERT INTO session_texts (session_id, text_id) VALUES (?1, ?2)",
+            rusqlite::params![session_id, tid],
+        )
+        .map_err(|e| match &e {
+            rusqlite::Error::SqliteFailure(err, _)
+                if err.code == rusqlite::ffi::ErrorCode::ConstraintViolation =>
+            {
+                AppError::Validation(format!("Text with id {} not found", tid))
+            }
+            _ => AppError::Database(e),
+        })?;
+    }
+    Ok(())
+}
+
+struct SessionRow {
+    id: i64,
+    date: String,
+    start_time: String,
+    end_time: String,
+    kind: String,
+    done: i64,
+    notes: Option<String>,
+    author: Option<String>,
+    created_at: String,
+    modified_at: Option<String>,
+}
+
+pub fn list_sessions_in_range(
+    conn: &Connection,
+    from: &str,
+    to: &str,
+) -> Result<Vec<Session>, AppError> {
+    let mut stmt = conn.prepare(
+        "SELECT id, date, start_time, end_time, kind, done, notes, author, created_at, modified_at \
+         FROM sessions WHERE date >= ?1 AND date <= ?2 ORDER BY date, start_time, id",
+    )?;
+    let rows = stmt
+        .query_map(rusqlite::params![from, to], |row| {
+            Ok(SessionRow {
+                id: row.get(0)?,
+                date: row.get(1)?,
+                start_time: row.get(2)?,
+                end_time: row.get(3)?,
+                kind: row.get(4)?,
+                done: row.get(5)?,
+                notes: row.get(6)?,
+                author: row.get(7)?,
+                created_at: row.get(8)?,
+                modified_at: row.get(9)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let mut sessions = Vec::with_capacity(rows.len());
+    for r in rows {
+        let kind = SessionKind::parse(&r.kind).ok_or_else(|| {
+            AppError::Validation(format!("Unknown session kind in row {}: {}", r.id, r.kind))
+        })?;
+        let text_ids = load_session_text_ids(conn, r.id)?;
+        sessions.push(Session {
+            id: r.id,
+            date: r.date,
+            start_time: r.start_time,
+            end_time: r.end_time,
+            kind,
+            done: r.done != 0,
+            notes: r.notes,
+            author: r.author,
+            text_ids,
+            created_at: r.created_at,
+            modified_at: r.modified_at,
+        });
+    }
+    Ok(sessions)
+}
+
+fn validate_session_fields(
+    date: &str,
+    start_time: &str,
+    end_time: &str,
+) -> Result<(), AppError> {
+    if date.len() != 10 || date.as_bytes()[4] != b'-' || date.as_bytes()[7] != b'-' {
+        return Err(AppError::Validation(format!("Invalid date format: {}", date)));
+    }
+    for t in [start_time, end_time] {
+        if t.len() != 5 || t.as_bytes()[2] != b':' {
+            return Err(AppError::Validation(format!("Invalid time format: {}", t)));
+        }
+    }
+    if end_time <= start_time {
+        return Err(AppError::Validation(
+            "End time must be strictly greater than start time".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn create_session(
+    conn: &mut Connection,
+    date: &str,
+    start_time: &str,
+    end_time: &str,
+    kind: SessionKind,
+    done: bool,
+    notes: Option<String>,
+    author: Option<String>,
+    text_ids: &[i64],
+) -> Result<Session, AppError> {
+    validate_session_fields(date, start_time, end_time)?;
+    let created_at = now_gmt8_iso();
+
+    let tx = conn.transaction()?;
+    tx.execute(
+        "INSERT INTO sessions (date, start_time, end_time, kind, done, notes, author, created_at) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        rusqlite::params![
+            date,
+            start_time,
+            end_time,
+            kind.as_str(),
+            if done { 1 } else { 0 },
+            notes,
+            author,
+            created_at,
+        ],
+    )?;
+    let id = tx.last_insert_rowid();
+    replace_session_texts(&tx, id, text_ids)?;
+    tx.commit()?;
+
+    let mut deduped = text_ids.to_vec();
+    deduped.sort_unstable();
+    deduped.dedup();
+
+    Ok(Session {
+        id,
+        date: date.to_string(),
+        start_time: start_time.to_string(),
+        end_time: end_time.to_string(),
+        kind,
+        done,
+        notes,
+        author,
+        text_ids: deduped,
+        created_at,
+        modified_at: None,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn update_session_db(
+    conn: &mut Connection,
+    id: i64,
+    date: &str,
+    start_time: &str,
+    end_time: &str,
+    kind: SessionKind,
+    done: bool,
+    notes: Option<String>,
+    text_ids: &[i64],
+) -> Result<Session, AppError> {
+    validate_session_fields(date, start_time, end_time)?;
+    let modified_at = now_gmt8_iso();
+
+    let tx = conn.transaction()?;
+    let affected = tx.execute(
+        "UPDATE sessions SET date = ?1, start_time = ?2, end_time = ?3, kind = ?4, done = ?5, \
+         notes = ?6, modified_at = ?7 WHERE id = ?8",
+        rusqlite::params![
+            date,
+            start_time,
+            end_time,
+            kind.as_str(),
+            if done { 1 } else { 0 },
+            notes,
+            modified_at,
+            id,
+        ],
+    )?;
+    if affected == 0 {
+        return Err(AppError::Validation(format!(
+            "Session with id {} not found",
+            id
+        )));
+    }
+    replace_session_texts(&tx, id, text_ids)?;
+
+    let (author, created_at): (Option<String>, String) = tx.query_row(
+        "SELECT author, created_at FROM sessions WHERE id = ?1",
+        rusqlite::params![id],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+
+    tx.commit()?;
+
+    let mut deduped = text_ids.to_vec();
+    deduped.sort_unstable();
+    deduped.dedup();
+
+    Ok(Session {
+        id,
+        date: date.to_string(),
+        start_time: start_time.to_string(),
+        end_time: end_time.to_string(),
+        kind,
+        done,
+        notes,
+        author,
+        text_ids: deduped,
+        created_at,
+        modified_at: Some(modified_at),
+    })
+}
+
+pub fn delete_session_db(conn: &Connection, id: i64) -> Result<(), AppError> {
+    let affected = conn.execute("DELETE FROM sessions WHERE id = ?1", rusqlite::params![id])?;
+    if affected == 0 {
+        return Err(AppError::Validation(format!(
+            "Session with id {} not found",
+            id
+        )));
+    }
+    Ok(())
+}
+
 // ── Export / Import / Reset operations ──
 
 pub fn export_all(conn: &Connection) -> Result<ExportPayload, AppError> {
@@ -699,6 +985,41 @@ pub fn export_all(conn: &Connection) -> Result<ExportPayload, AppError> {
         .collect::<Result<Vec<_>, _>>()?;
     drop(stmt);
 
+    let mut stmt = conn.prepare(
+        "SELECT id, date, start_time, end_time, kind, done, notes, author, created_at, modified_at \
+         FROM sessions ORDER BY id",
+    )?;
+    let sessions = stmt
+        .query_map([], |row| {
+            Ok(ExportSession {
+                id: row.get(0)?,
+                date: row.get(1)?,
+                start_time: row.get(2)?,
+                end_time: row.get(3)?,
+                kind: row.get(4)?,
+                done: row.get(5)?,
+                notes: row.get(6)?,
+                author: row.get(7)?,
+                created_at: row.get(8)?,
+                modified_at: row.get(9)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    drop(stmt);
+
+    let mut stmt = conn.prepare(
+        "SELECT session_id, text_id FROM session_texts ORDER BY session_id, text_id",
+    )?;
+    let session_texts = stmt
+        .query_map([], |row| {
+            Ok(ExportSessionText {
+                session_id: row.get(0)?,
+                text_id: row.get(1)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    drop(stmt);
+
     let exported_at = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
 
     Ok(ExportPayload {
@@ -707,6 +1028,8 @@ pub fn export_all(conn: &Connection) -> Result<ExportPayload, AppError> {
         texts,
         tags,
         text_tags,
+        sessions,
+        session_texts,
         sync_author: None,
         sync_timestamp: None,
     })
@@ -745,6 +1068,37 @@ pub fn validate_export_payload(payload: &ExportPayload) -> Result<(), AppError> 
         }
     }
 
+    let session_ids: std::collections::HashSet<i64> =
+        payload.sessions.iter().map(|s| s.id).collect();
+    if session_ids.len() != payload.sessions.len() {
+        return Err(AppError::Validation(
+            "Duplicate session IDs in export file".to_string(),
+        ));
+    }
+    for s in &payload.sessions {
+        if SessionKind::parse(&s.kind).is_none() {
+            return Err(AppError::Validation(format!(
+                "Unknown session kind \"{}\" for session id {}",
+                s.kind, s.id
+            )));
+        }
+    }
+
+    for st in &payload.session_texts {
+        if !session_ids.contains(&st.session_id) {
+            return Err(AppError::Validation(format!(
+                "session_texts references non-existent session_id: {}",
+                st.session_id
+            )));
+        }
+        if !text_ids.contains(&st.text_id) {
+            return Err(AppError::Validation(format!(
+                "session_texts references non-existent text_id: {}",
+                st.text_id
+            )));
+        }
+    }
+
     Ok(())
 }
 
@@ -754,7 +1108,13 @@ pub fn import_all(conn: &mut Connection, payload: ExportPayload) -> Result<Impor
 
     let tx = conn.transaction()?;
 
-    tx.execute_batch("DELETE FROM text_tags; DELETE FROM tags; DELETE FROM texts;")?;
+    tx.execute_batch(
+        "DELETE FROM session_texts; \
+         DELETE FROM sessions; \
+         DELETE FROM text_tags; \
+         DELETE FROM tags; \
+         DELETE FROM texts;",
+    )?;
 
     for text in &payload.texts {
         tx.execute(
@@ -777,6 +1137,32 @@ pub fn import_all(conn: &mut Connection, payload: ExportPayload) -> Result<Impor
         )?;
     }
 
+    for s in &payload.sessions {
+        tx.execute(
+            "INSERT INTO sessions (id, date, start_time, end_time, kind, done, notes, author, created_at, modified_at) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            rusqlite::params![
+                s.id,
+                s.date,
+                s.start_time,
+                s.end_time,
+                s.kind,
+                s.done,
+                s.notes,
+                s.author,
+                s.created_at,
+                s.modified_at,
+            ],
+        )?;
+    }
+
+    for st in &payload.session_texts {
+        tx.execute(
+            "INSERT INTO session_texts (session_id, text_id) VALUES (?1, ?2)",
+            rusqlite::params![st.session_id, st.text_id],
+        )?;
+    }
+
     tx.commit()?;
 
     Ok(ImportResult {
@@ -787,7 +1173,13 @@ pub fn import_all(conn: &mut Connection, payload: ExportPayload) -> Result<Impor
 
 pub fn reset_all(conn: &mut Connection) -> Result<(), AppError> {
     let tx = conn.transaction()?;
-    tx.execute_batch("DELETE FROM text_tags; DELETE FROM tags; DELETE FROM texts;")?;
+    tx.execute_batch(
+        "DELETE FROM session_texts; \
+         DELETE FROM sessions; \
+         DELETE FROM text_tags; \
+         DELETE FROM tags; \
+         DELETE FROM texts;",
+    )?;
     tx.commit()?;
     Ok(())
 }
@@ -821,6 +1213,25 @@ mod tests {
                 text_id INTEGER NOT NULL REFERENCES texts(id) ON DELETE CASCADE,
                 tag_id  INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
                 PRIMARY KEY (text_id, tag_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS sessions (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                date        TEXT    NOT NULL,
+                start_time  TEXT    NOT NULL,
+                end_time    TEXT    NOT NULL,
+                kind        TEXT    NOT NULL,
+                done        INTEGER NOT NULL DEFAULT 0,
+                notes       TEXT,
+                author      TEXT,
+                created_at  TEXT    NOT NULL,
+                modified_at TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS session_texts (
+                session_id INTEGER NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+                text_id    INTEGER NOT NULL REFERENCES texts(id)    ON DELETE CASCADE,
+                PRIMARY KEY (session_id, text_id)
             );",
         )
         .unwrap();
@@ -1207,5 +1618,261 @@ mod tests {
 
         let result = merge_segments_db(&mut conn, text.id, 99);
         assert!(result.is_err(), "Segment index out of bounds should error");
+    }
+
+    // ── Session tests ──
+
+    fn make_text(conn: &mut Connection, title: &str) -> i64 {
+        let segments = sample_segments();
+        insert_text(conn, title, "你好世界", &segments).unwrap().id
+    }
+
+    #[test]
+    fn create_and_list_session_with_text_ids() {
+        let mut conn = in_memory_db();
+        let t1 = make_text(&mut conn, "Text 1");
+        let t2 = make_text(&mut conn, "Text 2");
+
+        let session = create_session(
+            &mut conn,
+            "2026-05-17",
+            "14:00",
+            "15:30",
+            SessionKind::LiveLesson,
+            false,
+            Some("HSK4 vocab".to_string()),
+            Some("Pierre".to_string()),
+            &[t1, t2],
+        )
+        .unwrap();
+
+        assert!(session.id > 0);
+        assert_eq!(session.text_ids, vec![t1, t2]);
+        assert_eq!(session.kind, SessionKind::LiveLesson);
+        assert!(!session.done);
+        assert!(session.modified_at.is_none());
+
+        let listed = list_sessions_in_range(&conn, "2026-05-01", "2026-05-31").unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].id, session.id);
+        assert_eq!(listed[0].text_ids, vec![t1, t2]);
+    }
+
+    #[test]
+    fn list_sessions_in_range_filters_by_date() {
+        let mut conn = in_memory_db();
+        create_session(
+            &mut conn, "2026-04-15", "10:00", "11:00",
+            SessionKind::StudySession, false, None, None, &[],
+        ).unwrap();
+        create_session(
+            &mut conn, "2026-05-15", "10:00", "11:00",
+            SessionKind::StudySession, false, None, None, &[],
+        ).unwrap();
+        create_session(
+            &mut conn, "2026-06-15", "10:00", "11:00",
+            SessionKind::StudySession, false, None, None, &[],
+        ).unwrap();
+
+        let listed = list_sessions_in_range(&conn, "2026-05-01", "2026-05-31").unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].date, "2026-05-15");
+    }
+
+    #[test]
+    fn update_session_preserves_author_and_created_at_replaces_text_ids() {
+        let mut conn = in_memory_db();
+        let t1 = make_text(&mut conn, "Text 1");
+        let t2 = make_text(&mut conn, "Text 2");
+        let t3 = make_text(&mut conn, "Text 3");
+
+        let original = create_session(
+            &mut conn, "2026-05-17", "14:00", "15:30",
+            SessionKind::LiveLesson, false, None,
+            Some("Pierre".to_string()), &[t1, t2],
+        ).unwrap();
+
+        let updated = update_session_db(
+            &mut conn,
+            original.id,
+            "2026-05-18",
+            "16:00",
+            "17:00",
+            SessionKind::StudySession,
+            true,
+            Some("notes".to_string()),
+            &[t3],
+        )
+        .unwrap();
+
+        assert_eq!(updated.id, original.id);
+        assert_eq!(updated.author, Some("Pierre".to_string()));
+        assert_eq!(updated.created_at, original.created_at);
+        assert!(updated.modified_at.is_some());
+        assert_eq!(updated.text_ids, vec![t3]);
+        assert!(updated.done);
+        assert_eq!(updated.kind, SessionKind::StudySession);
+    }
+
+    #[test]
+    fn update_session_nonexistent_returns_error() {
+        let mut conn = in_memory_db();
+        let result = update_session_db(
+            &mut conn, 999, "2026-05-17", "14:00", "15:00",
+            SessionKind::LiveLesson, false, None, &[],
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn delete_session_cascades_session_texts() {
+        let mut conn = in_memory_db();
+        let t1 = make_text(&mut conn, "Text 1");
+        let session = create_session(
+            &mut conn, "2026-05-17", "14:00", "15:00",
+            SessionKind::LiveLesson, false, None, None, &[t1],
+        ).unwrap();
+
+        delete_session_db(&conn, session.id).unwrap();
+
+        let count: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM session_texts WHERE session_id = ?1",
+                rusqlite::params![session.id],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn delete_text_cascades_session_texts_but_keeps_sessions() {
+        let mut conn = in_memory_db();
+        let t1 = make_text(&mut conn, "Text 1");
+        let session = create_session(
+            &mut conn, "2026-05-17", "14:00", "15:00",
+            SessionKind::LiveLesson, false, None, None, &[t1],
+        ).unwrap();
+
+        delete_text(&conn, t1).unwrap();
+
+        let listed = list_sessions_in_range(&conn, "2026-05-01", "2026-05-31").unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].id, session.id);
+        assert_eq!(listed[0].text_ids, Vec::<i64>::new());
+    }
+
+    #[test]
+    fn create_session_validates_end_after_start() {
+        let mut conn = in_memory_db();
+        let result = create_session(
+            &mut conn, "2026-05-17", "15:00", "14:00",
+            SessionKind::LiveLesson, false, None, None, &[],
+        );
+        assert!(result.is_err(), "end <= start should be rejected");
+    }
+
+    #[test]
+    fn create_session_validates_date_format() {
+        let mut conn = in_memory_db();
+        let result = create_session(
+            &mut conn, "17/05/2026", "14:00", "15:00",
+            SessionKind::LiveLesson, false, None, None, &[],
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn create_session_rejects_unknown_text_id() {
+        let mut conn = in_memory_db();
+        let result = create_session(
+            &mut conn, "2026-05-17", "14:00", "15:00",
+            SessionKind::LiveLesson, false, None, None, &[9999],
+        );
+        assert!(result.is_err(), "FK constraint should fire on unknown text_id");
+    }
+
+    #[test]
+    fn export_import_round_trip_with_sessions() {
+        let mut conn = in_memory_db();
+        let t1 = make_text(&mut conn, "Text 1");
+        let _ = create_session(
+            &mut conn, "2026-05-17", "14:00", "15:30",
+            SessionKind::LiveLesson, true, Some("note".to_string()),
+            Some("Pierre".to_string()), &[t1],
+        ).unwrap();
+
+        let payload = export_all(&conn).unwrap();
+        assert_eq!(payload.sessions.len(), 1);
+        assert_eq!(payload.session_texts.len(), 1);
+
+        // Round-trip via JSON.
+        let json = serde_json::to_string(&payload).unwrap();
+        let parsed: ExportPayload = serde_json::from_str(&json).unwrap();
+
+        let mut conn2 = in_memory_db();
+        import_all(&mut conn2, parsed).unwrap();
+        let listed = list_sessions_in_range(&conn2, "2026-05-01", "2026-05-31").unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!(listed[0].kind, SessionKind::LiveLesson);
+        assert!(listed[0].done);
+        assert_eq!(listed[0].notes, Some("note".to_string()));
+        assert_eq!(listed[0].author, Some("Pierre".to_string()));
+        assert_eq!(listed[0].text_ids, vec![t1]);
+    }
+
+    #[test]
+    fn export_payload_back_compat_without_sessions_field() {
+        let json = r#"{
+            "version": 1,
+            "exported_at": "2026-01-01T00:00:00",
+            "texts": [],
+            "tags": [],
+            "text_tags": []
+        }"#;
+        let parsed: ExportPayload = serde_json::from_str(json).unwrap();
+        assert!(parsed.sessions.is_empty());
+        assert!(parsed.session_texts.is_empty());
+    }
+
+    #[test]
+    fn validate_rejects_orphan_session_text() {
+        let payload = ExportPayload {
+            version: 1,
+            exported_at: "2026-01-01".to_string(),
+            texts: vec![],
+            tags: vec![],
+            text_tags: vec![],
+            sessions: vec![],
+            session_texts: vec![ExportSessionText { session_id: 1, text_id: 99 }],
+            sync_author: None,
+            sync_timestamp: None,
+        };
+        let result = validate_export_payload(&payload);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn validate_rejects_unknown_session_kind() {
+        let payload = ExportPayload {
+            version: 1,
+            exported_at: "2026-01-01".to_string(),
+            texts: vec![],
+            tags: vec![],
+            text_tags: vec![],
+            sessions: vec![ExportSession {
+                id: 1, date: "2026-05-17".to_string(),
+                start_time: "10:00".to_string(), end_time: "11:00".to_string(),
+                kind: "bogus".to_string(), done: 0,
+                notes: None, author: None,
+                created_at: "2026-05-17T10:00:00".to_string(),
+                modified_at: None,
+            }],
+            session_texts: vec![],
+            sync_author: None,
+            sync_timestamp: None,
+        };
+        let result = validate_export_payload(&payload);
+        assert!(result.is_err());
     }
 }

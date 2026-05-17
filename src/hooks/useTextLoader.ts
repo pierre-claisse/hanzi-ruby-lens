@@ -5,7 +5,7 @@ import type { Text, TextPreview, Tag } from "../types/domain";
 import { markLocalDirty } from "../utils/syncDirty";
 import { markCommentRead } from "../utils/readComments";
 
-export type AppView = "library" | "input" | "processing" | "reading";
+export type AppView = "library" | "input" | "processing" | "reading" | "calendar";
 
 interface UseTextLoaderReturn {
   previews: TextPreview[];
