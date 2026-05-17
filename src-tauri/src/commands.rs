@@ -87,9 +87,10 @@ pub fn update_word_comment(
     text_id: i64,
     segment_index: usize,
     comment: Option<String>,
+    author: Option<String>,
 ) -> Result<(), AppError> {
     app_handle.db_mut(|conn| {
-        crate::database::update_word_comment_db(conn, text_id, segment_index, comment)
+        crate::database::update_word_comment_db(conn, text_id, segment_index, comment, author)
     })
 }
 

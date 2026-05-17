@@ -288,14 +288,14 @@ pub fn split_segment_db(
         word: crate::domain::Word {
             characters: left_chars,
             pinyin: left_pinyin,
-            comment: None,
+            ..Default::default()
         },
     };
     let right_word = TextSegment::Word {
         word: crate::domain::Word {
             characters: right_chars,
             pinyin: right_pinyin,
-            comment: None,
+            ..Default::default()
         },
     };
 
@@ -399,7 +399,7 @@ pub fn merge_segments_db(
         word: crate::domain::Word {
             characters: merged_chars,
             pinyin: merged_pinyin,
-            comment: None,
+            ..Default::default()
         },
     };
 
@@ -422,6 +422,7 @@ pub fn update_word_comment_db(
     id: i64,
     segment_index: usize,
     comment: Option<String>,
+    author: Option<String>,
 ) -> Result<(), AppError> {
     // Load the text row (locked check + segments)
     let (locked, segments_json): (i64, String) = conn
@@ -465,9 +466,13 @@ pub fn update_word_comment_db(
                         ));
                     }
                     word.comment = Some(text.clone());
+                    word.comment_author = author.filter(|a| !a.trim().is_empty());
+                    word.comment_at = Some(crate::sync::now_gmt8_string());
                 }
                 _ => {
                     word.comment = None;
+                    word.comment_author = None;
+                    word.comment_at = None;
                 }
             }
         }
@@ -798,7 +803,7 @@ mod tests {
                 word: Word {
                     characters: "你好".to_string(),
                     pinyin: "nǐhǎo".to_string(),
-                    comment: None,
+                    ..Default::default()
                 },
             },
             TextSegment::Plain {
@@ -808,7 +813,7 @@ mod tests {
                 word: Word {
                     characters: "世界".to_string(),
                     pinyin: "shìjiè".to_string(),
-                    comment: None,
+                    ..Default::default()
                 },
             },
         ]
@@ -942,7 +947,7 @@ mod tests {
                 word: Word {
                     characters: "你好嗎".to_string(),
                     pinyin: "nǐhǎoma".to_string(),
-                    comment: None,
+                    ..Default::default()
                 },
             },
         ]
@@ -955,7 +960,7 @@ mod tests {
             word: Word {
                 characters: "你好".to_string(),
                 pinyin: "nǐhǎo".to_string(),
-                comment: None,
+                ..Default::default()
             },
         }];
         let text = insert_text(&mut conn, "Test", "你好", &segments).unwrap();
@@ -1042,7 +1047,7 @@ mod tests {
             word: Word {
                 characters: "你好".to_string(),
                 pinyin: "nǐhǎo".to_string(),
-                comment: None,
+                ..Default::default()
             },
         }];
         let text = insert_text(&mut conn, "Test", "你好", &segments).unwrap();
@@ -1079,10 +1084,10 @@ mod tests {
         let mut conn = in_memory_db();
         let segments = vec![
             TextSegment::Word {
-                word: Word { characters: "你".to_string(), pinyin: "nǐ".to_string(), comment: None },
+                word: Word { characters: "你".to_string(), pinyin: "nǐ".to_string(), comment: None, ..Default::default() },
             },
             TextSegment::Word {
-                word: Word { characters: "好".to_string(), pinyin: "hǎo".to_string(), comment: None },
+                word: Word { characters: "好".to_string(), pinyin: "hǎo".to_string(), comment: None, ..Default::default() },
             },
         ];
         let text = insert_text(&mut conn, "Test", "你好", &segments).unwrap();
@@ -1107,10 +1112,10 @@ mod tests {
         let short_chars = "甲乙丙";  // 3 chars = total 13
         let segments = vec![
             TextSegment::Word {
-                word: Word { characters: long_chars.to_string(), pinyin: "test".to_string(), comment: None },
+                word: Word { characters: long_chars.to_string(), pinyin: "test".to_string(), comment: None, ..Default::default() },
             },
             TextSegment::Word {
-                word: Word { characters: short_chars.to_string(), pinyin: "test2".to_string(), comment: None },
+                word: Word { characters: short_chars.to_string(), pinyin: "test2".to_string(), comment: None, ..Default::default() },
             },
         ];
         let raw = format!("{}{}", long_chars, short_chars);
@@ -1126,7 +1131,7 @@ mod tests {
         let segments = vec![
             TextSegment::Plain { text: "，".to_string() },
             TextSegment::Word {
-                word: Word { characters: "好".to_string(), pinyin: "hǎo".to_string(), comment: None },
+                word: Word { characters: "好".to_string(), pinyin: "hǎo".to_string(), comment: None, ..Default::default() },
             },
         ];
         let text = insert_text(&mut conn, "Test", "，好", &segments).unwrap();
@@ -1140,7 +1145,7 @@ mod tests {
         let mut conn = in_memory_db();
         let segments = vec![
             TextSegment::Word {
-                word: Word { characters: "好".to_string(), pinyin: "hǎo".to_string(), comment: None },
+                word: Word { characters: "好".to_string(), pinyin: "hǎo".to_string(), comment: None, ..Default::default() },
             },
             TextSegment::Plain { text: "，".to_string() },
         ];
@@ -1155,7 +1160,7 @@ mod tests {
         let mut conn = in_memory_db();
         let segments = vec![
             TextSegment::Word {
-                word: Word { characters: "好".to_string(), pinyin: "hǎo".to_string(), comment: None },
+                word: Word { characters: "好".to_string(), pinyin: "hǎo".to_string(), comment: None, ..Default::default() },
             },
         ];
         let text = insert_text(&mut conn, "Test", "好", &segments).unwrap();

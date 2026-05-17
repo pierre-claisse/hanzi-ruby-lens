@@ -53,12 +53,20 @@ pub struct ImportResult {
     pub tag_count: usize,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Word {
     pub characters: String,
     pub pinyin: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub comment: Option<String>,
+    /// Display name of the user who last set/edited the comment.
+    /// Kept in sync with `comment`: present iff `comment` is.
+    #[serde(default, rename = "commentAuthor", skip_serializing_if = "Option::is_none")]
+    pub comment_author: Option<String>,
+    /// Timestamp of the last comment edit, formatted "YYYY-MM-DD HH:MM GMT+8".
+    /// Kept in sync with `comment`.
+    #[serde(default, rename = "commentAt", skip_serializing_if = "Option::is_none")]
+    pub comment_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

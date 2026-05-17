@@ -323,7 +323,7 @@ pub fn process_text_native(input: &str) -> Vec<TextSegment> {
                     word: Word {
                         characters: word.to_string(),
                         pinyin,
-                        comment: None,
+                        ..Default::default()
                     },
                 });
             }

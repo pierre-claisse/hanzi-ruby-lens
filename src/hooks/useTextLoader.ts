@@ -16,7 +16,7 @@ interface UseTextLoaderReturn {
   updatePinyin: (segmentIndex: number, newPinyin: string) => Promise<void>;
   splitSegment: (segmentIndex: number, splitAfterCharIndex: number) => Promise<void>;
   mergeSegments: (segmentIndex: number) => Promise<void>;
-  updateComment: (segmentIndex: number, comment: string | null) => Promise<void>;
+  updateComment: (segmentIndex: number, comment: string | null, author: string | null) => Promise<void>;
   toggleLock: (id: number) => Promise<void>;
   deleteText: (id: number) => Promise<void>;
   refreshPreviews: () => Promise<void>;
@@ -144,12 +144,13 @@ export function useTextLoader(): UseTextLoaderReturn {
     if (reloaded) setActiveText(reloaded);
   }, [activeText]);
 
-  const updateComment = useCallback(async (segmentIndex: number, comment: string | null) => {
+  const updateComment = useCallback(async (segmentIndex: number, comment: string | null, author: string | null) => {
     if (!activeText) return;
     await invoke("update_word_comment", {
       textId: activeText.id,
       segmentIndex,
       comment,
+      author,
     });
     markLocalDirty();
     const reloaded = await invoke<Text | null>("load_text", { textId: activeText.id });

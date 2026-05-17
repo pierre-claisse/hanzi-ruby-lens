@@ -2,6 +2,8 @@ export interface Word {
   characters: string;
   pinyin: string;
   comment?: string;
+  commentAuthor?: string;
+  commentAt?: string;
 }
 
 export type TextSegment =

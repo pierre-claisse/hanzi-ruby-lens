@@ -215,7 +215,7 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock
 
             {/* Metadata footer (non-interactive) */}
             <div className="border-t border-content/10 my-1" />
-            <div className="px-3 py-1.5 text-xs text-content/50">
+            <div className="px-3 py-1.5 text-xs text-content/50 space-y-0.5">
               <div>Created: {formatDateTime(contextMenu.preview.createdAt)}</div>
               {contextMenu.preview.modifiedAt && (
                 <div>Modified: {formatDateTime(contextMenu.preview.modifiedAt)}</div>

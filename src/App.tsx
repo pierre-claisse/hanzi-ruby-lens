@@ -53,7 +53,7 @@ function App() {
   const [showManageTags, setShowManageTags] = useState(false);
   const [commentDialogSegIndex, setCommentDialogSegIndex] = useState<number | null>(null);
   const [commentsPanelOpen, setCommentsPanelOpen] = useState(false);
-  const { isSet: hasUserName, setName: setUserName } = useUserName();
+  const { name: userName, isSet: hasUserName, setName: setUserName } = useUserName();
 
   // Check device authorization at startup
   useEffect(() => {
@@ -154,9 +154,10 @@ function App() {
   }, []);
 
   const handleCommentSave = useCallback(async (segmentIndex: number, comment: string | null) => {
-    await updateComment(segmentIndex, comment);
+    const trimmedName = userName.trim();
+    await updateComment(segmentIndex, comment, trimmedName ? trimmedName : null);
     setCommentDialogSegIndex(null);
-  }, [updateComment]);
+  }, [updateComment, userName]);
 
   const handleCommentClose = useCallback(() => {
     setCommentDialogSegIndex(null);

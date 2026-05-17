@@ -61,6 +61,12 @@ export function CommentsPanel({ segments, isOpen, onToggle, onCommentClick, lock
                       >
                         <span className="text-accent font-medium text-sm">{seg.word.characters}</span>
                         <p className="text-xs text-content/70 mt-1 line-clamp-3">{seg.word.comment}</p>
+                        {(seg.word.commentAuthor || seg.word.commentAt) && (
+                          <p className="text-[10px] text-content/40 mt-1">
+                            {seg.word.commentAuthor ?? "—"}
+                            {seg.word.commentAt && ` · ${seg.word.commentAt}`}
+                          </p>
+                        )}
                       </button>
                     );
                   })}
