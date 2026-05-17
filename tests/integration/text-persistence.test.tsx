@@ -34,7 +34,7 @@ const sampleText: Text = {
 };
 
 const samplePreviews: TextPreview[] = [
-  { id: 1, title: "持久化測試", createdAt: "2026-02-23T12:00:00", modifiedAt: null, tags: [], locked: false },
+  { id: 1, title: "持久化測試", createdAt: "2026-02-23T12:00:00", modifiedAt: null, tags: [], locked: false, comments: [] },
 ];
 
 describe("Text Persistence Integration", () => {

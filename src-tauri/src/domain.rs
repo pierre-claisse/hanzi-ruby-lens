@@ -108,6 +108,13 @@ pub struct TagSummary {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CommentRef {
+    pub segment_index: usize,
+    pub comment_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TextPreviewWithTags {
     pub id: i64,
     pub title: String,
@@ -115,4 +122,5 @@ pub struct TextPreviewWithTags {
     pub modified_at: Option<String>,
     pub tags: Vec<TagSummary>,
     pub locked: bool,
+    pub comments: Vec<CommentRef>,
 }

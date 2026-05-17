@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Trash2, ChevronRight, Check, Lock, Unlock } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { TAG_COLORS } from "../data/tagColors";
@@ -7,6 +7,7 @@ import { TextPreviewCard } from "./TextPreviewCard";
 import { computeContextMenuPosition, computeSubmenuPosition } from "../utils/menuPositioning";
 import { formatDateTime } from "../utils/formatDateTime";
 import { markLocalDirty } from "../utils/syncDirty";
+import { useReadComments } from "../hooks/useReadComments";
 
 interface LibraryScreenProps {
   previews: TextPreview[];
@@ -25,6 +26,19 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const menuRef = useRef<HTMLDivElement>(null);
+  const { isRead } = useReadComments();
+
+  const unreadCountByTextId = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const preview of previews) {
+      const count = preview.comments.reduce(
+        (acc, c) => (isRead(preview.id, c.segmentIndex, c.commentAt) ? acc : acc + 1),
+        0,
+      );
+      map.set(preview.id, count);
+    }
+    return map;
+  }, [previews, isRead]);
 
   const handleContextMenu = useCallback((e: React.MouseEvent, id: number) => {
     e.preventDefault();
@@ -135,6 +149,7 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock
                 key={preview.id}
                 preview={preview}
                 selected={selectedIds.has(preview.id)}
+                unreadCount={unreadCountByTextId.get(preview.id) ?? 0}
                 onClick={(e) => handleCardClick(e, preview.id)}
                 onContextMenu={(e) => handleContextMenu(e, preview.id)}
               />

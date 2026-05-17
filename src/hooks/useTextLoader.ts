@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Text, TextPreview, Tag } from "../types/domain";
 import { markLocalDirty } from "../utils/syncDirty";
+import { markCommentRead } from "../utils/readComments";
 
 export type AppView = "library" | "input" | "processing" | "reading";
 
@@ -82,7 +83,7 @@ export function useTextLoader(): UseTextLoaderReturn {
       markLocalDirty();
       setActiveText(result);
       setPreviews((prev) => [
-        { id: result.id, title: result.title, createdAt: result.createdAt, modifiedAt: null, tags: [], locked: false },
+        { id: result.id, title: result.title, createdAt: result.createdAt, modifiedAt: null, tags: [], locked: false, comments: [] },
         ...prev,
       ]);
       setAppView("reading");
@@ -154,7 +155,13 @@ export function useTextLoader(): UseTextLoaderReturn {
     });
     markLocalDirty();
     const reloaded = await invoke<Text | null>("load_text", { textId: activeText.id });
-    if (reloaded) setActiveText(reloaded);
+    if (reloaded) {
+      setActiveText(reloaded);
+      const seg = reloaded.segments[segmentIndex];
+      if (seg?.type === "word" && seg.word.commentAt) {
+        markCommentRead(reloaded.id, segmentIndex, seg.word.commentAt);
+      }
+    }
   }, [activeText]);
 
   const toggleLock = useCallback(async (id: number) => {

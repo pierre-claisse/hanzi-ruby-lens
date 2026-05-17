@@ -11,6 +11,7 @@ import { CommentsPanel } from "./components/CommentsPanel";
 import { UserNameOnboarding } from "./components/UserNameOnboarding";
 import { useUserName } from "./hooks/useUserName";
 import { clearSyncState } from "./utils/syncDirty";
+import { markCommentRead } from "./utils/readComments";
 import { usePinyinVisibility } from "./hooks/usePinyinVisibility";
 import { useTextZoom } from "./hooks/useTextZoom";
 import { useTheme } from "./hooks/useTheme";
@@ -150,8 +151,14 @@ function App() {
   }, [activeText?.id]);
 
   const handleOpenCommentDialog = useCallback((segmentIndex: number) => {
+    if (activeText) {
+      const seg = activeText.segments[segmentIndex];
+      if (seg?.type === "word" && seg.word.commentAt) {
+        markCommentRead(activeText.id, segmentIndex, seg.word.commentAt);
+      }
+    }
     setCommentDialogSegIndex(segmentIndex);
-  }, []);
+  }, [activeText]);
 
   const handleCommentSave = useCallback(async (segmentIndex: number, comment: string | null) => {
     const trimmedName = userName.trim();
@@ -221,6 +228,7 @@ function App() {
             </div>
             {activeText && (
               <CommentsPanel
+                textId={activeText.id}
                 segments={activeText.segments}
                 isOpen={commentsPanelOpen}
                 onToggle={() => setCommentsPanelOpen((prev) => !prev)}

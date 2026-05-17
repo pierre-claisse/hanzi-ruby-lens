@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Trash2 } from "lucide-react";
+import { X, Trash2, Mail, MailOpen } from "lucide-react";
 import type { Word } from "../types/domain";
+import { useReadComments } from "../hooks/useReadComments";
 
 interface WordCommentDialogProps {
   open: boolean;
@@ -11,7 +12,8 @@ interface WordCommentDialogProps {
   onClose: () => void;
 }
 
-export function WordCommentDialog({ open, word, segmentIndex, onSave, onClose }: WordCommentDialogProps) {
+export function WordCommentDialog({ open, word, segmentIndex, textId, onSave, onClose }: WordCommentDialogProps) {
+  const { isRead, toggle } = useReadComments();
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -29,9 +31,10 @@ export function WordCommentDialog({ open, word, segmentIndex, onSave, onClose }:
 
   const handleSave = useCallback(() => {
     const trimmed = value.trim();
+    if (trimmed === (word?.comment ?? "")) return;
     onSave(segmentIndex, trimmed || null);
     onClose();
-  }, [value, segmentIndex, onSave, onClose]);
+  }, [value, word, segmentIndex, onSave, onClose]);
 
   const handleDelete = useCallback(() => {
     onSave(segmentIndex, null);
@@ -53,6 +56,13 @@ export function WordCommentDialog({ open, word, segmentIndex, onSave, onClose }:
 
   const isEditing = !!word.comment;
   const charCount = value.length;
+  const commentAt = word.commentAt;
+  const commentIsRead = !!commentAt && isRead(textId, segmentIndex, commentAt);
+  const hasChanged = value.trim() !== (word.comment ?? "");
+
+  const handleToggleRead = () => {
+    if (commentAt) toggle(textId, segmentIndex, commentAt);
+  };
 
   return (
     <div
@@ -96,7 +106,7 @@ export function WordCommentDialog({ open, word, segmentIndex, onSave, onClose }:
 
         {/* Footer */}
         <div className="flex items-center justify-between px-5 py-3 border-t border-content/10">
-          <div>
+          <div className="flex items-center gap-2">
             {isEditing && (
               <button
                 type="button"
@@ -105,6 +115,17 @@ export function WordCommentDialog({ open, word, segmentIndex, onSave, onClose }:
               >
                 <Trash2 className="w-4 h-4" />
                 Delete
+              </button>
+            )}
+            {isEditing && commentAt && (
+              <button
+                type="button"
+                className="flex items-center gap-1.5 px-3 py-2 text-sm text-content/60 hover:text-content hover:bg-content/5 rounded-lg transition-colors"
+                onClick={handleToggleRead}
+                title={commentIsRead ? "Mark as unread" : "Mark as read"}
+              >
+                {commentIsRead ? <Mail className="w-4 h-4" /> : <MailOpen className="w-4 h-4" />}
+                {commentIsRead ? "Mark as unread" : "Mark as read"}
               </button>
             )}
           </div>
@@ -118,7 +139,8 @@ export function WordCommentDialog({ open, word, segmentIndex, onSave, onClose }:
             </button>
             <button
               type="button"
-              className="px-4 py-2 text-sm font-medium rounded-lg bg-accent text-white hover:opacity-90 transition-opacity"
+              disabled={!hasChanged}
+              className="px-4 py-2 text-sm font-medium rounded-lg bg-accent text-white hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:opacity-40"
               onClick={handleSave}
             >
               Save

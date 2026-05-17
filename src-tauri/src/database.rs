@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use rusqlite::Connection;
 
 use crate::domain::{
-    ExportPayload, ExportTag, ExportText, ExportTextTag, ImportResult, Tag,
+    CommentRef, ExportPayload, ExportTag, ExportText, ExportTextTag, ImportResult, Tag,
     TagSummary, Text, TextPreviewWithTags, TextSegment,
 };
 use crate::error::AppError;
@@ -79,22 +79,22 @@ pub fn list_all_texts(
 ) -> Result<Vec<TextPreviewWithTags>, AppError> {
     let order = if sort_asc { "ASC" } else { "DESC" };
 
-    let text_rows: Vec<(i64, String, String, Option<String>, bool)> = if tag_ids.is_empty() {
+    let text_rows: Vec<(i64, String, String, Option<String>, bool, String)> = if tag_ids.is_empty() {
         let sql = format!(
-            "SELECT id, title, created_at, modified_at, locked FROM texts ORDER BY created_at {}",
+            "SELECT id, title, created_at, modified_at, locked, segments FROM texts ORDER BY created_at {}",
             order
         );
         let mut stmt = conn.prepare(&sql)?;
         let rows = stmt.query_map([], |row| {
             let locked: i64 = row.get(4)?;
-            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, locked != 0))
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, locked != 0, row.get(5)?))
         })?
             .collect::<Result<Vec<_>, _>>()?;
         rows
     } else {
         let placeholders: Vec<String> = tag_ids.iter().enumerate().map(|(i, _)| format!("?{}", i + 1)).collect();
         let sql = format!(
-            "SELECT DISTINCT t.id, t.title, t.created_at, t.modified_at, t.locked FROM texts t \
+            "SELECT DISTINCT t.id, t.title, t.created_at, t.modified_at, t.locked, t.segments FROM texts t \
              INNER JOIN text_tags tt ON t.id = tt.text_id \
              WHERE tt.tag_id IN ({}) \
              ORDER BY t.created_at {}",
@@ -106,7 +106,7 @@ pub fn list_all_texts(
             tag_ids.iter().map(|id| id as &dyn rusqlite::types::ToSql).collect();
         let rows = stmt.query_map(params.as_slice(), |row| {
             let locked: i64 = row.get(4)?;
-            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, locked != 0))
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, locked != 0, row.get(5)?))
         })?
         .collect::<Result<Vec<_>, _>>()?;
         rows
@@ -116,7 +116,7 @@ pub fn list_all_texts(
         conn.prepare("SELECT tg.id, tg.label, tg.color FROM tags tg INNER JOIN text_tags tt ON tg.id = tt.tag_id WHERE tt.text_id = ?1")?;
 
     let mut results = Vec::with_capacity(text_rows.len());
-    for (id, title, created_at, modified_at, locked) in text_rows {
+    for (id, title, created_at, modified_at, locked, segments_json) in text_rows {
         let tags = tag_stmt
             .query_map(rusqlite::params![id], |row| {
                 Ok(TagSummary {
@@ -126,6 +126,7 @@ pub fn list_all_texts(
                 })
             })?
             .collect::<Result<Vec<_>, _>>()?;
+        let comments = extract_comment_refs(&segments_json);
         results.push(TextPreviewWithTags {
             id,
             title,
@@ -133,9 +134,38 @@ pub fn list_all_texts(
             modified_at,
             tags,
             locked,
+            comments,
         });
     }
     Ok(results)
+}
+
+/// Extract comment metadata (segmentIndex + commentAt) from a serialized
+/// segments JSON. Comments without a `commentAt` (legacy data written before
+/// the metadata feature) are skipped — they have no stable identity for the
+/// local read/unread tracker. Parse failures yield an empty list rather than
+/// propagating, so a malformed row doesn't break the whole listing.
+fn extract_comment_refs(segments_json: &str) -> Vec<CommentRef> {
+    let segments: Vec<TextSegment> = match serde_json::from_str(segments_json) {
+        Ok(s) => s,
+        Err(_) => return Vec::new(),
+    };
+    segments
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, seg)| match seg {
+            TextSegment::Word { word } => {
+                match (&word.comment, &word.comment_at) {
+                    (Some(_), Some(ts)) => Some(CommentRef {
+                        segment_index: idx,
+                        comment_at: ts.clone(),
+                    }),
+                    _ => None,
+                }
+            }
+            TextSegment::Plain { .. } => None,
+        })
+        .collect()
 }
 
 pub fn load_text_by_id(conn: &Connection, id: i64) -> Result<Option<Text>, AppError> {

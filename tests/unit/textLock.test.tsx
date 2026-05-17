@@ -14,6 +14,7 @@ function makePreview(overrides: Partial<TextPreview> = {}): TextPreview {
     modifiedAt: null,
     tags: [],
     locked: false,
+    comments: [],
     ...overrides,
   };
 }

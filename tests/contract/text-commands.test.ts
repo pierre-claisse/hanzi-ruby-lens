@@ -69,8 +69,8 @@ describe("Tauri Command Contract: multi-text library", () => {
   describe("list_texts", () => {
     it("invokes 'list_texts' with tagIds and sortAsc params and returns TextPreview[]", async () => {
       const previews: TextPreview[] = [
-        { id: 2, title: "Newer", createdAt: "2026-02-02T00:00:00", modifiedAt: null, tags: [], locked: false },
-        { id: 1, title: "Older", createdAt: "2026-01-01T00:00:00", modifiedAt: null, tags: [], locked: false },
+        { id: 2, title: "Newer", createdAt: "2026-02-02T00:00:00", modifiedAt: null, tags: [], locked: false, comments: [] },
+        { id: 1, title: "Older", createdAt: "2026-01-01T00:00:00", modifiedAt: null, tags: [], locked: false, comments: [] },
       ];
       mockInvoke.mockResolvedValue(previews);
 

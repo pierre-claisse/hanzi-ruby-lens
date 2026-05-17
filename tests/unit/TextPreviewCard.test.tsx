@@ -10,6 +10,7 @@ const basePreview: TextPreview = {
   modifiedAt: null,
   tags: [],
   locked: false,
+  comments: [],
 };
 
 describe("TextPreviewCard", () => {

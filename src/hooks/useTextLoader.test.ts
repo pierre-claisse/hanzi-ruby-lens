@@ -21,7 +21,7 @@ vi.mock("@tauri-apps/api/window", () => ({
 import { useTextLoader } from "./useTextLoader";
 
 const samplePreviews: TextPreview[] = [
-  { id: 1, title: "Test Title", createdAt: "2026-02-23T12:00:00", modifiedAt: null, tags: [] },
+  { id: 1, title: "Test Title", createdAt: "2026-02-23T12:00:00", modifiedAt: null, tags: [], locked: false, comments: [] },
 ];
 
 const sampleText: Text = {

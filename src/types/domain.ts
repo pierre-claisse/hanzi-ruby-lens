@@ -26,6 +26,11 @@ export interface Tag {
   color: string;
 }
 
+export interface CommentRef {
+  segmentIndex: number;
+  commentAt: string;
+}
+
 export interface TextPreview {
   id: number;
   title: string;
@@ -33,4 +38,5 @@ export interface TextPreview {
   modifiedAt: string | null;
   tags: Tag[];
   locked: boolean;
+  comments: CommentRef[];
 }

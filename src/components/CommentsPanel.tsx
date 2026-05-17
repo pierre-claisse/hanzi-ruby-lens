@@ -1,7 +1,9 @@
 import { PanelRightClose, PanelRightOpen, MessageSquare } from "lucide-react";
 import type { TextSegment } from "../types/domain";
+import { useReadComments } from "../hooks/useReadComments";
 
 interface CommentsPanelProps {
+  textId: number;
   segments: TextSegment[];
   isOpen: boolean;
   onToggle: () => void;
@@ -9,10 +11,17 @@ interface CommentsPanelProps {
   locked: boolean;
 }
 
-export function CommentsPanel({ segments, isOpen, onToggle, onCommentClick, locked }: CommentsPanelProps) {
+export function CommentsPanel({ textId, segments, isOpen, onToggle, onCommentClick, locked }: CommentsPanelProps) {
+  const { isRead } = useReadComments();
+
   const comments = segments
     .map((seg, index) => ({ seg, index }))
     .filter((item) => item.seg.type === "word" && !!item.seg.word.comment);
+
+  const unreadCount = comments.reduce((acc, { seg, index }) => {
+    if (seg.type !== "word" || !seg.word.commentAt) return acc;
+    return isRead(textId, index, seg.word.commentAt) ? acc : acc + 1;
+  }, 0);
 
   return (
     <div className="flex-shrink-0 relative">
@@ -30,6 +39,14 @@ export function CommentsPanel({ segments, isOpen, onToggle, onCommentClick, lock
           title={isOpen ? "Close comments panel" : "Open comments panel"}
         >
           {isOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+          {unreadCount > 0 && (
+            <span
+              aria-label={`${unreadCount} unread comment${unreadCount > 1 ? "s" : ""}`}
+              className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[1rem] h-4 px-1 rounded-full bg-accent text-white text-[10px] font-bold"
+            >
+              {unreadCount}
+            </span>
+          )}
         </button>
 
         {/* Panel wrapper — border stretches full viewport height, width transitions */}
@@ -48,6 +65,9 @@ export function CommentsPanel({ segments, isOpen, onToggle, onCommentClick, lock
                 <div className="space-y-2">
                   {comments.map(({ seg, index }) => {
                     if (seg.type !== "word") return null;
+                    const commentAt = seg.word.commentAt;
+                    const unread = !!commentAt && !isRead(textId, index, commentAt);
+                    const handleClick = locked ? undefined : () => onCommentClick(index);
                     return (
                       <button
                         key={index}
@@ -57,9 +77,17 @@ export function CommentsPanel({ segments, isOpen, onToggle, onCommentClick, lock
                             ? "cursor-default"
                             : "hover:border-accent/30 hover:bg-accent/5 cursor-pointer"
                         }`}
-                        onClick={locked ? undefined : () => onCommentClick(index)}
+                        onClick={handleClick}
                       >
-                        <span className="text-accent font-medium text-sm">{seg.word.characters}</span>
+                        <div className="flex items-center gap-1.5">
+                          {unread && (
+                            <span
+                              aria-label="Unread comment"
+                              className="flex-shrink-0 inline-block w-2 h-2 rounded-full bg-accent"
+                            />
+                          )}
+                          <span className="text-accent font-medium text-sm">{seg.word.characters}</span>
+                        </div>
                         <p className="text-xs text-content/70 mt-1 line-clamp-3">{seg.word.comment}</p>
                         {(seg.word.commentAuthor || seg.word.commentAt) && (
                           <p className="text-[10px] text-content/40 mt-1">

@@ -19,6 +19,7 @@ const unlockedPreview: TextPreview = {
   modifiedAt: "2026-02-20T14:45:00",
   tags: [],
   locked: false,
+  comments: [],
 };
 
 const lockedPreview: TextPreview = {
@@ -28,6 +29,7 @@ const lockedPreview: TextPreview = {
   modifiedAt: null,
   tags: [],
   locked: true,
+  comments: [],
 };
 
 const defaultProps = {
