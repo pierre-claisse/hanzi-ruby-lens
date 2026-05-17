@@ -21,12 +21,11 @@ interface WordContextMenuProps {
   entries: MenuEntry[];
   focusedIndex: number;
   position: { top: number; left: number };
-  direction?: "above" | "below";
   onEntryHover: (index: number) => void;
   onAction: (action: MenuAction) => void;
 }
 
-export function WordContextMenu({ entries, focusedIndex, position, direction, onEntryHover, onAction }: WordContextMenuProps) {
+export function WordContextMenu({ entries, focusedIndex, position, onEntryHover, onAction }: WordContextMenuProps) {
   return (
     <div
       role="menu"

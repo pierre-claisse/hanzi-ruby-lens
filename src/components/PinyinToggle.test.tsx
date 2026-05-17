@@ -88,9 +88,6 @@ describe("PinyinToggle", () => {
     render(<PinyinToggle visible={true} onToggle={mockOnToggle} />);
 
     const button = screen.getByRole("button");
-    const mockEvent = {
-      stopPropagation: vi.fn(),
-    } as unknown as React.PointerEvent<HTMLButtonElement>;
 
     // Manually trigger onPointerDown event
     fireEvent.pointerDown(button);

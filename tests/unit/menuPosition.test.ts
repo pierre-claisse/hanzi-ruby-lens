@@ -19,7 +19,6 @@ describe("computeMenuPosition — quadrant positioning", () => {
     const word = makeWordRect(100, 85);
     const result = computeMenuPosition(word, CONTAINER, ENTRY_COUNT, VP_W, VP_H);
 
-    expect(result.direction).toBe("below");
     // Menu top = word.bottom + GAP
     expect(result.top).toBe(word.bottom + GAP);
     // Menu left = word.right + GAP (right of word)
@@ -31,7 +30,6 @@ describe("computeMenuPosition — quadrant positioning", () => {
     const word = makeWordRect(600, 85);
     const result = computeMenuPosition(word, CONTAINER, ENTRY_COUNT, VP_W, VP_H);
 
-    expect(result.direction).toBe("below");
     // Menu top = word.bottom + GAP
     expect(result.top).toBe(word.bottom + GAP);
     // Menu left = word.left - MENU_WIDTH_PX - GAP (left of word)
@@ -43,7 +41,6 @@ describe("computeMenuPosition — quadrant positioning", () => {
     const word = makeWordRect(100, 435);
     const result = computeMenuPosition(word, CONTAINER, ENTRY_COUNT, VP_W, VP_H);
 
-    expect(result.direction).toBe("above");
     // Menu top = word.top - menuHeight - GAP
     expect(result.top).toBe(word.top - MENU_HEIGHT - GAP);
     // Menu left = word.right + GAP (right of word)
@@ -55,7 +52,6 @@ describe("computeMenuPosition — quadrant positioning", () => {
     const word = makeWordRect(600, 435);
     const result = computeMenuPosition(word, CONTAINER, ENTRY_COUNT, VP_W, VP_H);
 
-    expect(result.direction).toBe("above");
     // Menu top = word.top - menuHeight - GAP
     expect(result.top).toBe(word.top - MENU_HEIGHT - GAP);
     // Menu left = word.left - MENU_WIDTH_PX - GAP (left of word)
@@ -67,8 +63,8 @@ describe("computeMenuPosition — quadrant positioning", () => {
     const word = makeWordRect(380, 285);
     const result = computeMenuPosition(word, CONTAINER, ENTRY_COUNT, VP_W, VP_H);
 
-    // Midpoint tie-break: not strictly greater → top-left behavior
-    expect(result.direction).toBe("below");
+    // Midpoint tie-break: not strictly greater → top-left behavior (below)
+    expect(result.top).toBe(word.bottom + GAP);
     expect(result.left).toBe(word.right + GAP);
   });
 
@@ -77,7 +73,6 @@ describe("computeMenuPosition — quadrant positioning", () => {
     const word = makeWordRect(100, 85); // top-left quadrant
     const result = computeMenuPosition(word, containerOffset, ENTRY_COUNT, VP_W, VP_H);
 
-    expect(result.direction).toBe("below");
     expect(result.top).toBe(word.bottom - containerOffset.top + GAP);
     expect(result.left).toBe(word.right - containerOffset.left + GAP);
   });
@@ -110,7 +105,6 @@ describe("computeContextMenuPosition — click-point quadrant positioning", () =
   it("bottom-right click → menu above and to the left", () => {
     const result = computeContextMenuPosition(600, 450, ENTRY_COUNT, VP_W, VP_H);
 
-    expect(result.direction).toBe("above");
     // Menu should be positioned left of click (click X > midX)
     expect(result.left).toBe(600 - MENU_WIDTH_PX - GAP);
   });
@@ -118,7 +112,6 @@ describe("computeContextMenuPosition — click-point quadrant positioning", () =
   it("top-left click → menu below and to the right", () => {
     const result = computeContextMenuPosition(100, 100, ENTRY_COUNT, VP_W, VP_H);
 
-    expect(result.direction).toBe("below");
     // Menu should be positioned right of click (click X < midX)
     expect(result.left).toBe(100 + GAP);
     expect(result.top).toBe(100 + GAP);

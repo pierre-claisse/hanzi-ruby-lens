@@ -285,7 +285,7 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
   const getMenuPosition = useCallback(() => {
     const wordEl = wordRefs.current.get(trackedIndex);
     const containerEl = containerRef.current;
-    if (!wordEl || !containerEl) return { top: 0, left: 0, direction: "below" as const };
+    if (!wordEl || !containerEl) return { top: 0, left: 0 };
 
     return computeMenuPosition(
       wordEl.getBoundingClientRect(),
@@ -391,7 +391,6 @@ export function TextDisplay({ text, showPinyin = true, zoomLevel = 100, onPinyin
             entries={currentMenuEntries}
             focusedIndex={menuFocusedIndex}
             position={menuPos}
-            direction={menuPos.direction}
             onEntryHover={handleMenuEntryHover}
             onAction={handleMenuClick}
           />

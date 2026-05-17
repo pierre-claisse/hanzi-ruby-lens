@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Text, TextPreview, Tag } from "../types/domain";
 import { markLocalDirty } from "../utils/syncDirty";
@@ -26,7 +27,7 @@ interface UseTextLoaderReturn {
   tags: Tag[];
   refreshTags: () => Promise<void>;
   filterTagIds: number[];
-  setFilterTagIds: (ids: number[]) => void;
+  setFilterTagIds: Dispatch<SetStateAction<number[]>>;
   sortAsc: boolean;
   toggleSort: () => void;
 }

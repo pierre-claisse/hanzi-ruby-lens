@@ -35,6 +35,7 @@ const sampleText: Text = {
     { type: "plain", text: "，" },
     { type: "word", word: { characters: "世界", pinyin: "shìjiè" } },
   ],
+  locked: false,
 };
 
 describe("useTextLoader", () => {

@@ -17,7 +17,7 @@ export function computeMenuPosition(
   menuEntryCount: number,
   viewportWidth: number,
   viewportHeight: number,
-): { top: number; left: number; direction: "above" | "below" } {
+): { top: number; left: number } {
   const menuHeight = menuEntryCount * MENU_ITEM_HEIGHT_PX + MENU_PADDING_PX;
   const wordCenterY = wordRect.top + wordRect.height / 2;
   const wordCenterX = wordRect.left + wordRect.width / 2;
@@ -26,13 +26,10 @@ export function computeMenuPosition(
 
   // Vertical: bottom half → above, top half (or midpoint) → below
   let top: number;
-  let direction: "above" | "below";
   if (wordCenterY > midY) {
     top = wordRect.top - containerRect.top - menuHeight - MENU_GAP_PX;
-    direction = "above";
   } else {
     top = wordRect.bottom - containerRect.top + MENU_GAP_PX;
-    direction = "below";
   }
 
   // Horizontal: right half → left of word, left half (or midpoint) → right of word
@@ -47,7 +44,7 @@ export function computeMenuPosition(
   if (left < 0) left = 0;
   if (top < 0) top = 0;
 
-  return { top, left, direction };
+  return { top, left };
 }
 
 /**
@@ -61,7 +58,7 @@ export function computeContextMenuPosition(
   menuEntryCount: number,
   viewportWidth: number,
   viewportHeight: number,
-): { top: number; left: number; direction: "above" | "below" } {
+): { top: number; left: number } {
   const syntheticRect = {
     top: clickY,
     bottom: clickY,
