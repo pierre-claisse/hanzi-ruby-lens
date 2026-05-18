@@ -17,6 +17,17 @@ function pad2(n: number): string {
   return n < 10 ? `0${n}` : String(n);
 }
 
+/**
+ * Current instant as a UTC ISO 8601 string ("2026-05-18T08:30:00Z"). Matches
+ * the format produced by the (deprecated) backend `sync::now_utc_iso`. All
+ * write paths in the IDB layer call this for createdAt / modifiedAt /
+ * commentAt / session timestamps.
+ */
+export function nowUtcIso(): string {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}T${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}:${pad2(d.getUTCSeconds())}Z`;
+}
+
 function partsToObj(parts: Intl.DateTimeFormatPart[]): Record<string, string> {
   const out: Record<string, string> = {};
   for (const p of parts) out[p.type] = p.value;
