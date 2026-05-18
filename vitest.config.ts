@@ -7,6 +7,23 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // Mirror the Tauri shims aliased in vite.config.ts so test imports
+      // resolve to the same drop-in modules.
+      "@tauri-apps/api/core": fileURLToPath(
+        new URL("./src/tauriShim/core.ts", import.meta.url),
+      ),
+      "@tauri-apps/api/window": fileURLToPath(
+        new URL("./src/tauriShim/window.ts", import.meta.url),
+      ),
+      "@tauri-apps/plugin-dialog": fileURLToPath(
+        new URL("./src/tauriShim/dialog.ts", import.meta.url),
+      ),
+      "@tauri-apps/plugin-clipboard-manager": fileURLToPath(
+        new URL("./src/tauriShim/clipboard.ts", import.meta.url),
+      ),
+      "@tauri-apps/plugin-opener": fileURLToPath(
+        new URL("./src/tauriShim/opener.ts", import.meta.url),
+      ),
     },
   },
   test: {

@@ -4,10 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "test": "vite build && vitest run && cd src-tauri && cargo test",
+    "test": "vite build && vitest run",
     "build:web": "vite build",
-    "build:tauri": "tauri build",
-    "build": "tauri build"
+    "build": "vite build"
   },
   "dependencies": {
     "@fontsource-variable/chiron-hei-hk": "^5.2.5",
@@ -16,10 +15,6 @@
     "@fontsource/huninn": "^5.2.2",
     "@fontsource/lxgw-wenkai-tc": "^5.2.8",
     "@noble/hashes": "^2.2.0",
-    "@tauri-apps/api": "^2.0.0",
-    "@tauri-apps/plugin-clipboard-manager": "^2.0.0",
-    "@tauri-apps/plugin-dialog": "^2.0.0",
-    "@tauri-apps/plugin-opener": "^2.0.0",
     "chiron-sung-hk-webfont": "^1.0.24",
     "idb": "^8.0.3",
     "jieba-wasm": "^2.4.0",
@@ -29,7 +24,6 @@
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.0.0",
     "@testing-library/jest-dom": "^6.0.0",
     "@testing-library/react": "^16.0.0",
     "@testing-library/user-event": "^14.6.1",

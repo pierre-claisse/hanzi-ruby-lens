@@ -42,6 +42,7 @@ export async function save(options?: {
 export async function open(_options?: {
   multiple?: boolean;
   filters?: unknown;
+  directory?: boolean;
 }): Promise<string | string[] | null> {
   return null;
 }
