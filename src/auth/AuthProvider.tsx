@@ -41,8 +41,14 @@ function toState(r: UnlockResult): AuthState {
   };
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({ status: "locked" });
+export interface AuthProviderProps {
+  children: ReactNode;
+  /** Test-only: pre-seed an unlocked state to bypass the LoginScreen. */
+  initialState?: AuthState;
+}
+
+export function AuthProvider({ children, initialState }: AuthProviderProps) {
+  const [state, setState] = useState<AuthState>(initialState ?? { status: "locked" });
 
   const signInAsCommon = useCallback(async (syncPassword: string) => {
     const r = await unlockAsCommon(syncPassword);

@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "../../src/App";
 import type { Text, TextPreview } from "../../src/types/domain";
+import { UnlockedAuth } from "../helpers/authWrapper";
 
 // Mock Tauri window API
 vi.mock("@tauri-apps/api/window", () => ({
@@ -52,7 +53,7 @@ describe("Multi-Text Library Flow", () => {
         return Promise.resolve(null);
       });
 
-      render(<App />);
+      render(<UnlockedAuth><App /></UnlockedAuth>);
 
       await waitFor(() => {
         expect(screen.getByText("Test Title")).toBeInTheDocument();
@@ -70,7 +71,7 @@ describe("Multi-Text Library Flow", () => {
         return Promise.resolve(null);
       });
 
-      render(<App />);
+      render(<UnlockedAuth><App /></UnlockedAuth>);
 
       await waitFor(() => {
         expect(screen.getByText(/no texts yet/i)).toBeInTheDocument();
@@ -93,7 +94,7 @@ describe("Multi-Text Library Flow", () => {
         return Promise.resolve(null);
       });
 
-      render(<App />);
+      render(<UnlockedAuth><App /></UnlockedAuth>);
 
       await waitFor(() => {
         expect(
@@ -119,7 +120,7 @@ describe("Multi-Text Library Flow", () => {
         return Promise.resolve(null);
       });
 
-      render(<App />);
+      render(<UnlockedAuth><App /></UnlockedAuth>);
 
       await waitFor(() => {
         expect(
@@ -153,7 +154,7 @@ describe("Multi-Text Library Flow", () => {
         return Promise.resolve(null);
       });
 
-      render(<App />);
+      render(<UnlockedAuth><App /></UnlockedAuth>);
 
       await waitFor(() => {
         expect(
@@ -179,7 +180,7 @@ describe("Multi-Text Library Flow", () => {
         return Promise.resolve(null);
       });
 
-      render(<App />);
+      render(<UnlockedAuth><App /></UnlockedAuth>);
 
       await waitFor(() => {
         expect(
@@ -208,7 +209,7 @@ describe("Multi-Text Library Flow", () => {
         return Promise.resolve(null);
       });
 
-      render(<App />);
+      render(<UnlockedAuth><App /></UnlockedAuth>);
 
       await waitFor(() => {
         expect(screen.getByText("Test Title")).toBeInTheDocument();
@@ -230,7 +231,7 @@ describe("Multi-Text Library Flow", () => {
         return Promise.resolve(null);
       });
 
-      render(<App />);
+      render(<UnlockedAuth><App /></UnlockedAuth>);
 
       await waitFor(() => {
         expect(screen.getByText("Test Title")).toBeInTheDocument();

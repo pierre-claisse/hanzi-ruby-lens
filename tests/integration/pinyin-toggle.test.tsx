@@ -3,6 +3,7 @@ import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/re
 import userEvent from "@testing-library/user-event";
 import App from "../../src/App";
 import type { Text, TextPreview } from "../../src/types/domain";
+import { UnlockedAuth } from "../helpers/authWrapper";
 
 // Mock Tauri window API
 vi.mock("@tauri-apps/api/window", () => ({
@@ -83,7 +84,7 @@ describe("Pinyin Toggle Integration", () => {
   // T016: End-to-end toggle flow (click → hide → click → show)
   it("toggles Pinyin visibility end-to-end", async () => {
     const user = userEvent.setup();
-    const { container } = render(<App />);
+    const { container } = render(<UnlockedAuth><App /></UnlockedAuth>);
 
     await navigateToReading(user, container);
 
@@ -135,7 +136,7 @@ describe("Pinyin Toggle Integration", () => {
   it("persists Pinyin visibility preference across app reloads", async () => {
     const user = userEvent.setup();
     // First render: Default state (visible)
-    let { container } = render(<App />);
+    let { container } = render(<UnlockedAuth><App /></UnlockedAuth>);
 
     await navigateToReading(user, container);
 
@@ -156,7 +157,7 @@ describe("Pinyin Toggle Integration", () => {
 
     // Simulate page reload: cleanup and re-render
     cleanup();
-    ({ container } = render(<App />));
+    ({ container } = render(<UnlockedAuth><App /></UnlockedAuth>));
 
     // Navigate to reading again
     await navigateToReading(user, container);
@@ -182,7 +183,7 @@ describe("Pinyin Toggle Integration", () => {
   // T018: Multiple rapid toggles work correctly (no UI flicker)
   it("handles rapid toggles without UI flicker", async () => {
     const user = userEvent.setup();
-    const { container } = render(<App />);
+    const { container } = render(<UnlockedAuth><App /></UnlockedAuth>);
 
     await navigateToReading(user, container);
 
@@ -219,7 +220,7 @@ describe("Pinyin Toggle Integration", () => {
 
   it("preserves Chinese characters in DOM during rapid toggles", async () => {
     const user = userEvent.setup();
-    const { container } = render(<App />);
+    const { container } = render(<UnlockedAuth><App /></UnlockedAuth>);
 
     await navigateToReading(user, container);
 

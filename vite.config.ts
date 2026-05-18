@@ -21,9 +21,9 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         // Precache the bundle (JS/CSS/HTML/etc.) but NOT the giant Chinese
-        // fonts — those are runtime-cached on first use to keep the initial
-        // install reasonable.
-        globPatterns: ["**/*.{js,css,html,wasm,bin,json,svg,png,ico}"],
+        // fonts and the jieba WASM (~4 MB) — those are runtime-cached on
+        // first use to keep the initial install reasonable.
+        globPatterns: ["**/*.{js,css,html,bin,json,svg,png,ico}"],
         navigateFallback: "index.html",
         runtimeCaching: [
           {
@@ -31,8 +31,8 @@ export default defineConfig({
             handler: "NetworkOnly",
           },
           {
-            // Fonts (huge — multi-MB Chinese) — cache aggressively after
-            // first fetch so subsequent visits are instant.
+            // Fonts (multi-MB Chinese) — cache aggressively after first
+            // fetch so subsequent visits are instant.
             urlPattern: ({ request }) => request.destination === "font",
             handler: "CacheFirst",
             options: {
@@ -40,6 +40,19 @@ export default defineConfig({
               expiration: {
                 maxEntries: 64,
                 maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+              },
+            },
+          },
+          {
+            // jieba WASM (~4 MB) — only fetched on first text creation;
+            // cached forever after, since the URL is content-hashed.
+            urlPattern: ({ url }) => url.pathname.endsWith(".wasm"),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "wasm",
+              expiration: {
+                maxEntries: 8,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
               },
             },
           },
@@ -71,6 +84,25 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // Tauri compatibility shims — let every existing
+      // `import ... from "@tauri-apps/api/core"` etc. resolve to a TS shim
+      // that dispatches to the in-browser modules. Removed in Phase 8 along
+      // with all `invoke()` call sites.
+      "@tauri-apps/api/core": fileURLToPath(
+        new URL("./src/tauriShim/core.ts", import.meta.url),
+      ),
+      "@tauri-apps/api/window": fileURLToPath(
+        new URL("./src/tauriShim/window.ts", import.meta.url),
+      ),
+      "@tauri-apps/plugin-dialog": fileURLToPath(
+        new URL("./src/tauriShim/dialog.ts", import.meta.url),
+      ),
+      "@tauri-apps/plugin-clipboard-manager": fileURLToPath(
+        new URL("./src/tauriShim/clipboard.ts", import.meta.url),
+      ),
+      "@tauri-apps/plugin-opener": fileURLToPath(
+        new URL("./src/tauriShim/opener.ts", import.meta.url),
+      ),
     },
   },
   clearScreen: false,

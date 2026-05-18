@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import App from "./App";
 import type { TextPreview } from "./types/domain";
+import { UnlockedAuth } from "../tests/helpers/authWrapper";
 
 // Mock Tauri window API
 vi.mock("@tauri-apps/api/window", () => ({
@@ -27,7 +28,7 @@ describe("App", () => {
   it("renders library empty state when no texts exist", async () => {
     mockInvoke.mockResolvedValue([]);
 
-    render(<App />);
+    render(<UnlockedAuth><App /></UnlockedAuth>);
 
     await waitFor(() => {
       expect(screen.getByText(/no texts yet/i)).toBeInTheDocument();
@@ -44,7 +45,7 @@ describe("App", () => {
       return Promise.resolve([]);
     });
 
-    render(<App />);
+    render(<UnlockedAuth><App /></UnlockedAuth>);
 
     await waitFor(() => {
       expect(screen.getByText("My Text")).toBeInTheDocument();
@@ -54,7 +55,7 @@ describe("App", () => {
   it("renders TitleBar with title", async () => {
     mockInvoke.mockResolvedValue([]);
 
-    render(<App />);
+    render(<UnlockedAuth><App /></UnlockedAuth>);
 
     await waitFor(() => {
       expect(screen.getByText("Library")).toBeInTheDocument();
@@ -64,7 +65,7 @@ describe("App", () => {
   it("renders ThemeToggle button inside TitleBar", async () => {
     mockInvoke.mockResolvedValue([]);
 
-    render(<App />);
+    render(<UnlockedAuth><App /></UnlockedAuth>);
 
     await waitFor(() => {
       const themeToggleButton = screen.getByRole("button", {
@@ -77,7 +78,7 @@ describe("App", () => {
   it("renders add text button", async () => {
     mockInvoke.mockResolvedValue([]);
 
-    render(<App />);
+    render(<UnlockedAuth><App /></UnlockedAuth>);
 
     await waitFor(() => {
       expect(

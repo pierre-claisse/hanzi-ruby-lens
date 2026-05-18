@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "../../src/App";
 import type { Text, TextPreview } from "../../src/types/domain";
+import { UnlockedAuth } from "../helpers/authWrapper";
 
 // Mock Tauri window API
 vi.mock("@tauri-apps/api/window", () => ({
@@ -49,7 +50,7 @@ describe("Text Persistence Integration", () => {
       return Promise.resolve(null);
     });
 
-    render(<App />);
+    render(<UnlockedAuth><App /></UnlockedAuth>);
 
     await waitFor(() => {
       expect(screen.getByText("持久化測試")).toBeInTheDocument();
@@ -65,7 +66,7 @@ describe("Text Persistence Integration", () => {
       return Promise.resolve(null);
     });
 
-    render(<App />);
+    render(<UnlockedAuth><App /></UnlockedAuth>);
 
     await waitFor(() => {
       expect(screen.getByText("持久化測試")).toBeInTheDocument();
@@ -86,7 +87,7 @@ describe("Text Persistence Integration", () => {
       return Promise.resolve(null);
     });
 
-    render(<App />);
+    render(<UnlockedAuth><App /></UnlockedAuth>);
 
     await waitFor(() => {
       expect(screen.getByText(/no texts yet/i)).toBeInTheDocument();
@@ -101,7 +102,7 @@ describe("Text Persistence Integration", () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     mockInvoke.mockRejectedValue("Database error: corrupted");
 
-    render(<App />);
+    render(<UnlockedAuth><App /></UnlockedAuth>);
 
     await waitFor(() => {
       // Library should still render (with empty previews) after error

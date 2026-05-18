@@ -1,58 +1,30 @@
+// Pull / Save / Avatar controls in the title bar. The PWA refactor (Phase 6)
+// removed the per-action SyncPasswordDialog — the syncPassword is captured
+// once at login by the AuthProvider and reused for every sync call until
+// the next page reload.
 import { useState, useRef, useEffect, useCallback } from "react";
 import type { ReactNode } from "react";
 import { AlertCircle, AlertTriangle, CircleUser, CloudDownload, CloudUpload } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
 import { message, confirm } from "@tauri-apps/plugin-dialog";
+import { useAuth } from "../auth";
 import { useLastSync } from "../hooks/useLastSync";
-import { SyncPasswordDialog } from "./SyncPasswordDialog";
-import { formatInZone } from "../utils/dateTimeFormat";
+import { pullGist, saveGist, SyncError } from "../sync";
+import { exportAll, importAll, validateExportPayload, type ExportPayload } from "../db";
+import { formatInZone, nowUtcIso } from "../utils/dateTimeFormat";
 
 interface SyncDropdownProps {
-  /** Fixed identity name, derived from isAuthorizedDevice — never edited here. */
   name: string;
-  /** Viewer time zone, used to format the pull-message timestamp. */
   timeZone: string;
   onPullComplete: () => void;
   /** Rendered between the Save button and the Avatar button. */
   betweenSlot?: ReactNode;
 }
 
-interface SyncSaveResult {
-  author: string;
-  timestamp: string;
-}
-
-interface SyncPullResult {
-  author: string | null;
-  timestamp: string | null;
-  textCount: number;
-  tagCount: number;
-}
-
-interface SyncErrorPayload {
-  kind: string;
-  message: string;
-}
-
-function isSyncErrorPayload(e: unknown): e is SyncErrorPayload {
-  return (
-    typeof e === "object" &&
-    e !== null &&
-    "kind" in e &&
-    "message" in e &&
-    typeof (e as Record<string, unknown>).kind === "string"
-  );
-}
-
-type Flow =
-  | { type: "idle" }
-  | { type: "password"; action: "pull" | "save"; error?: string; inProgress: boolean };
-
 export function SyncDropdown({ name, timeZone, onPullComplete, betweenSlot }: SyncDropdownProps) {
-  const [flow, setFlow] = useState<Flow>({ type: "idle" });
+  const { state, signOut } = useAuth();
   const [avatarOpen, setAvatarOpen] = useState(false);
+  const [inFlight, setInFlight] = useState<null | "pull" | "save">(null);
   const avatarRef = useRef<HTMLDivElement>(null);
-
   const { meta, isDirty, recordSync } = useLastSync();
 
   // Click-outside to close the avatar dropdown.
@@ -67,147 +39,95 @@ export function SyncDropdown({ name, timeZone, onPullComplete, betweenSlot }: Sy
     return () => document.removeEventListener("mousedown", handler);
   }, [avatarOpen]);
 
-  // ── Pull flow ────────────────────────────────────────────────────────────
+  if (state.status !== "unlocked") return null;
+  const { pat, gistId } = state;
 
-  const startPull = useCallback(async () => {
+  const handlePull = useCallback(async () => {
+    if (inFlight) return;
     if (isDirty) {
-      const confirmed = await confirm(
+      const ok = await confirm(
         "You have local changes that haven't been saved to the cloud. Pulling will overwrite them. Continue anyway?",
         { title: "Discard local changes?", kind: "warning" },
       );
-      if (!confirmed) return;
+      if (!ok) return;
     }
-    setFlow({ type: "password", action: "pull", inProgress: false });
-  }, [isDirty]);
-
-  const submitPullPassword = useCallback(
-    async (password: string) => {
-      setFlow({ type: "password", action: "pull", inProgress: true });
+    setInFlight("pull");
+    try {
+      const json = await pullGist(pat, gistId);
+      let payload: ExportPayload;
       try {
-        const result = await invoke<SyncPullResult>("sync_pull", { password });
-        setFlow({ type: "idle" });
-        recordSync({
-          author: result.author ?? undefined,
-          timestamp: result.timestamp ?? undefined,
-        });
-        onPullComplete();
-        const who = result.author ? ` from ${result.author}` : "";
-        const when = result.timestamp ? ` (${formatInZone(result.timestamp, timeZone)})` : "";
-        await message(
-          `Library and calendar synced with latest data${who}${when}.`,
-          { title: "Sync Pull", kind: "info" },
-        );
-      } catch (err) {
-        if (isSyncErrorPayload(err)) {
-          if (err.kind === "invalid_password") {
-            setFlow({
-              type: "password",
-              action: "pull",
-              error: "Invalid password.",
-              inProgress: false,
-            });
-            return;
-          }
-          setFlow({ type: "idle" });
-          await message(err.message, { title: "Sync Pull Error", kind: "error" });
-        } else {
-          setFlow({ type: "idle" });
-          await message(typeof err === "string" ? err : "Pull failed.", {
-            title: "Sync Pull Error",
-            kind: "error",
-          });
-        }
+        payload = JSON.parse(json) as ExportPayload;
+      } catch (e) {
+        throw new SyncError("other", `Invalid remote payload: ${(e as Error).message}`);
       }
-    },
-    [recordSync, onPullComplete, timeZone],
-  );
+      validateExportPayload(payload);
+      await importAll(payload);
+      recordSync({
+        author: payload.sync_author ?? undefined,
+        timestamp: payload.sync_timestamp ?? undefined,
+      });
+      onPullComplete();
+      const who = payload.sync_author ? ` from ${payload.sync_author}` : "";
+      const when = payload.sync_timestamp
+        ? ` (${formatInZone(payload.sync_timestamp, timeZone)})`
+        : "";
+      await message(`Library and calendar synced with latest data${who}${when}.`, {
+        title: "Sync Pull",
+        kind: "info",
+      });
+    } catch (err) {
+      const msg = err instanceof SyncError ? err.message : (err as Error).message;
+      await message(msg, { title: "Sync Pull Error", kind: "error" });
+    } finally {
+      setInFlight(null);
+    }
+  }, [inFlight, isDirty, pat, gistId, recordSync, onPullComplete, timeZone]);
 
-  // ── Save flow ────────────────────────────────────────────────────────────
-
-  const startSave = useCallback(() => {
-    setFlow({ type: "password", action: "save", inProgress: false });
-  }, []);
-
-  const submitSavePassword = useCallback(
-    async (password: string) => {
-      const author = name;
-      setFlow({ type: "password", action: "save", inProgress: true });
-      try {
-        const result = await invoke<SyncSaveResult>("sync_save", {
-          password,
-          author,
-          lastSyncTimestamp: meta?.timestamp ?? null,
-        });
-        setFlow({ type: "idle" });
-        recordSync({
-          author: result.author,
-          timestamp: result.timestamp,
-        });
-        await message(
-          `Saved at ${formatInZone(result.timestamp, timeZone)}${result.author ? ` by ${result.author}` : ""}.`,
-          { title: "Sync Save", kind: "info" },
+  const handleSave = useCallback(async () => {
+    if (inFlight) return;
+    setInFlight("save");
+    try {
+      const payload = await exportAll();
+      const timestamp = nowUtcIso();
+      payload.sync_author = name;
+      payload.sync_timestamp = timestamp;
+      const json = JSON.stringify(payload);
+      await saveGist(pat, gistId, json, meta?.timestamp ?? null);
+      recordSync({ author: name, timestamp });
+      await message(
+        `Saved at ${formatInZone(timestamp, timeZone)} by ${name}.`,
+        { title: "Sync Save", kind: "info" },
+      );
+    } catch (err) {
+      if (err instanceof SyncError && err.kind === "conflict") {
+        const wantsPullFirst = await confirm(
+          "The remote data has been updated since your last pull. Your save would overwrite those changes.\n\nClick OK to pull first (your local changes will be replaced by the remote version, then you can re-apply and save them). Click Cancel to abandon this save.",
+          { title: "Sync conflict", kind: "warning" },
         );
-      } catch (err) {
-        if (isSyncErrorPayload(err)) {
-          if (err.kind === "invalid_password") {
-            setFlow({
-              type: "password",
-              action: "save",
-              error: "Invalid password.",
-              inProgress: false,
-            });
-            return;
-          }
-          if (err.kind === "conflict") {
-            setFlow({ type: "idle" });
-            const wantsPullFirst = await confirm(
-              "The remote data has been updated since your last pull. Your save would overwrite those changes.\n\nClick OK to pull first (your local changes will be replaced by the remote version, then you can re-apply and save them). Click Cancel to abandon this save.",
-              { title: "Sync conflict", kind: "warning" },
-            );
-            if (wantsPullFirst) {
-              startPull();
-            }
-            return;
-          }
-          setFlow({ type: "idle" });
-          await message(err.message, { title: "Sync Save Error", kind: "error" });
-        } else {
-          setFlow({ type: "idle" });
-          await message(typeof err === "string" ? err : "Save failed.", {
-            title: "Sync Save Error",
-            kind: "error",
-          });
+        if (wantsPullFirst) {
+          setInFlight(null);
+          handlePull();
+          return;
         }
+      } else {
+        const msg = err instanceof SyncError ? err.message : (err as Error).message;
+        await message(msg, { title: "Sync Save Error", kind: "error" });
       }
-    },
-    [meta?.timestamp, name, recordSync, startPull, timeZone],
-  );
-
-  const handlePasswordSubmit = useCallback(
-    (password: string) => {
-      if (flow.type !== "password") return;
-      if (flow.action === "pull") submitPullPassword(password);
-      else submitSavePassword(password);
-    },
-    [flow, submitPullPassword, submitSavePassword],
-  );
-
-  const handlePasswordClose = useCallback(() => {
-    if (flow.type === "password" && flow.inProgress) return;
-    setFlow({ type: "idle" });
-  }, [flow]);
-
-  // ── UI ───────────────────────────────────────────────────────────────────
+    } finally {
+      setInFlight(null);
+    }
+  }, [inFlight, pat, gistId, name, meta?.timestamp, recordSync, handlePull, timeZone]);
 
   return (
     <>
       <button
         type="button"
-        onClick={startPull}
+        onClick={handlePull}
         onPointerDown={(e) => e.stopPropagation()}
+        disabled={inFlight !== null}
         aria-label={isDirty ? "Pull from sync (will overwrite local changes)" : "Pull from sync"}
         title={isDirty ? "Pull — will overwrite local changes" : "Pull"}
-        className="relative p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer"
+        className="relative p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-surface"
       >
         <CloudDownload className="w-5 h-5" aria-hidden="true" />
         {isDirty && (
@@ -219,9 +139,9 @@ export function SyncDropdown({ name, timeZone, onPullComplete, betweenSlot }: Sy
 
       <button
         type="button"
-        onClick={startSave}
+        onClick={handleSave}
         onPointerDown={(e) => e.stopPropagation()}
-        disabled={!isDirty}
+        disabled={!isDirty || inFlight !== null}
         aria-label={isDirty ? "Save to sync (you have unsaved local changes)" : "Save to sync (nothing to save)"}
         title={isDirty ? "Save — unsaved local changes" : "Nothing to save"}
         className="relative p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-surface"
@@ -253,26 +173,23 @@ export function SyncDropdown({ name, timeZone, onPullComplete, betweenSlot }: Sy
           <div
             onPointerDown={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
-            className="absolute right-0 top-full mt-1 min-w-[10rem] rounded-lg border border-content/20 bg-surface shadow-lg py-2 px-3 z-50"
+            className="absolute right-0 top-full mt-1 min-w-[12rem] rounded-lg border border-content/20 bg-surface shadow-lg py-2 px-3 z-50"
           >
             <p className="text-xs text-content/50 mb-0.5">Signed in as</p>
-            <p className="text-sm text-content">{name}</p>
+            <p className="text-sm text-content mb-3">{name}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setAvatarOpen(false);
+                signOut();
+              }}
+              className="w-full text-xs text-content/70 hover:text-content border border-content/20 rounded px-2 py-1 transition-colors"
+            >
+              Sign out
+            </button>
           </div>
         )}
       </div>
-
-      <SyncPasswordDialog
-        open={flow.type === "password"}
-        title={
-          flow.type === "password" && flow.action === "save"
-            ? "Save your changes"
-            : "Pull the latest changes"
-        }
-        inProgress={flow.type === "password" && flow.inProgress}
-        errorMessage={flow.type === "password" ? flow.error : undefined}
-        onSubmit={handlePasswordSubmit}
-        onClose={handlePasswordClose}
-      />
     </>
   );
 }

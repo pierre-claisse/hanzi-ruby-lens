@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { LoginScreen, useAuth } from "./auth";
 import { TextDisplay } from "./components/TextDisplay";
 import { TitleBar } from "./components/TitleBar";
 import { LibraryScreen } from "./components/LibraryScreen";
@@ -25,6 +25,19 @@ import { useTextLoader } from "./hooks/useTextLoader";
 import { useElapsedTime } from "./hooks/useElapsedTime";
 
 function App() {
+  const { state: authState } = useAuth();
+  if (authState.status === "locked") {
+    return <LoginScreen />;
+  }
+  const isAuthorizedDevice = authState.role === "pierre";
+  return <AuthedApp isAuthorizedDevice={isAuthorizedDevice} />;
+}
+
+interface AuthedAppProps {
+  isAuthorizedDevice: boolean;
+}
+
+function AuthedApp({ isAuthorizedDevice }: AuthedAppProps) {
   const {
     previews,
     activeText,
@@ -54,12 +67,13 @@ function App() {
   const [theme, toggleTheme] = useTheme();
   const { paletteId, setPalette, palettes } = useColorPalette();
   const { formatted: elapsedTime } = useElapsedTime(isProcessing);
-  const [isAuthorizedDevice, setIsAuthorizedDevice] = useState(false);
-  const [syncConfigured, setSyncConfigured] = useState(false);
   const [showManageTags, setShowManageTags] = useState(false);
   const [commentDialogSegIndex, setCommentDialogSegIndex] = useState<number | null>(null);
   const [commentsPanelOpen, setCommentsPanelOpen] = useState(false);
   const identity = useIdentity(isAuthorizedDevice ? "pierre" : "common");
+  // syncConfigured is always true in the PWA — credentials are loaded via
+  // AuthProvider before this component renders.
+  const syncConfigured = true;
 
   // Calendar state — hoisted so the panel can outlive grid cell renders.
   const today = useMemo(() => todayInZone(identity.timeZone), [identity.timeZone]);
@@ -79,16 +93,6 @@ function App() {
     deleteSession,
     refresh: refreshSessions,
   } = useSessions();
-
-  // Check device authorization at startup
-  useEffect(() => {
-    invoke<boolean>("is_authorized_device").then(setIsAuthorizedDevice).catch(() => setIsAuthorizedDevice(false));
-  }, []);
-
-  // Check whether sync is configured at build time
-  useEffect(() => {
-    invoke<boolean>("sync_is_configured").then(setSyncConfigured).catch(() => setSyncConfigured(false));
-  }, []);
 
   // Suppress Space key on all buttons — Enter is the only activation key
   useEffect(() => {
