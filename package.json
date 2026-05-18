@@ -21,7 +21,9 @@
     "@tauri-apps/plugin-opener": "^2.0.0",
     "chiron-sung-hk-webfont": "^1.0.24",
     "idb": "^8.0.3",
+    "jieba-wasm": "^2.4.0",
     "lucide-react": "^0.563.0",
+    "pinyin-pro": "^3.28.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
