@@ -16,7 +16,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { argon2idAsync } from "@noble/hashes/argon2";
+import { argon2idAsync } from "@noble/hashes/argon2.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT_PATH = resolve(HERE, "..", "public", "sync_blobs.json");
