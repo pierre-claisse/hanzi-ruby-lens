@@ -74,7 +74,7 @@ pub fn insert_text(
     raw_input: &str,
     segments: &[TextSegment],
 ) -> Result<Text, AppError> {
-    let created_at = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let created_at = crate::sync::now_utc_iso();
     let segments_json = serde_json::to_string(segments)
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
 
@@ -265,7 +265,7 @@ pub fn update_segments(
 
     let updated_json = serde_json::to_string(&segments)
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
-    let modified_at = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let modified_at = crate::sync::now_utc_iso();
     conn.execute(
         "UPDATE texts SET segments = ?1, modified_at = ?2 WHERE id = ?3",
         rusqlite::params![updated_json, modified_at, id],
@@ -359,7 +359,7 @@ pub fn split_segment_db(
 
     let updated_json = serde_json::to_string(&segments)
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
-    let modified_at = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let modified_at = crate::sync::now_utc_iso();
     conn.execute(
         "UPDATE texts SET segments = ?1, modified_at = ?2 WHERE id = ?3",
         rusqlite::params![updated_json, modified_at, id],
@@ -463,7 +463,7 @@ pub fn merge_segments_db(
 
     let updated_json = serde_json::to_string(&segments)
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
-    let modified_at = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let modified_at = crate::sync::now_utc_iso();
     conn.execute(
         "UPDATE texts SET segments = ?1, modified_at = ?2 WHERE id = ?3",
         rusqlite::params![updated_json, modified_at, id],
@@ -522,7 +522,7 @@ pub fn update_word_comment_db(
                     }
                     word.comment = Some(text.clone());
                     word.comment_author = author.filter(|a| !a.trim().is_empty());
-                    word.comment_at = Some(crate::sync::now_gmt8_string());
+                    word.comment_at = Some(crate::sync::now_utc_iso());
                 }
                 _ => {
                     word.comment = None;
@@ -541,7 +541,7 @@ pub fn update_word_comment_db(
 
     let updated_json = serde_json::to_string(&segments)
         .map_err(|e| rusqlite::Error::ToSqlConversionFailure(Box::new(e)))?;
-    let modified_at = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let modified_at = crate::sync::now_utc_iso();
     conn.execute(
         "UPDATE texts SET segments = ?1, modified_at = ?2 WHERE id = ?3",
         rusqlite::params![updated_json, modified_at, id],
@@ -684,13 +684,6 @@ pub fn delete_text(conn: &Connection, id: i64) -> Result<(), AppError> {
 
 // ── Session operations ──
 
-fn now_gmt8_iso() -> String {
-    chrono::Utc::now()
-        .with_timezone(&chrono::FixedOffset::east_opt(8 * 3600).unwrap())
-        .format("%Y-%m-%dT%H:%M:%S")
-        .to_string()
-}
-
 fn load_session_text_ids(conn: &Connection, session_id: i64) -> Result<Vec<i64>, AppError> {
     let mut stmt = conn.prepare(
         "SELECT text_id FROM session_texts WHERE session_id = ?1 ORDER BY text_id",
@@ -806,9 +799,13 @@ fn validate_session_fields(
             return Err(AppError::Validation(format!("Invalid time format: {}", t)));
         }
     }
-    if end_time <= start_time {
+    // `end_time` may be < `start_time` when the user's local-time session
+    // straddles UTC midnight (e.g. Paris 01:00→02:00 in summer = UTC
+    // 23:00→00:00). The end is then implicitly on the next UTC day. Only
+    // equality is rejected — that's a zero-duration session.
+    if end_time == start_time {
         return Err(AppError::Validation(
-            "End time must be strictly greater than start time".to_string(),
+            "End time must differ from start time".to_string(),
         ));
     }
     Ok(())
@@ -827,7 +824,7 @@ pub fn create_session(
     text_ids: &[i64],
 ) -> Result<Session, AppError> {
     validate_session_fields(date, start_time, end_time)?;
-    let created_at = now_gmt8_iso();
+    let created_at = crate::sync::now_utc_iso();
 
     let tx = conn.transaction()?;
     tx.execute(
@@ -880,7 +877,7 @@ pub fn update_session_db(
     text_ids: &[i64],
 ) -> Result<Session, AppError> {
     validate_session_fields(date, start_time, end_time)?;
-    let modified_at = now_gmt8_iso();
+    let modified_at = crate::sync::now_utc_iso();
 
     let tx = conn.transaction()?;
     let affected = tx.execute(
@@ -1020,7 +1017,7 @@ pub fn export_all(conn: &Connection) -> Result<ExportPayload, AppError> {
         .collect::<Result<Vec<_>, _>>()?;
     drop(stmt);
 
-    let exported_at = chrono::Local::now().format("%Y-%m-%dT%H:%M:%S").to_string();
+    let exported_at = crate::sync::now_utc_iso();
 
     Ok(ExportPayload {
         version: 1,
@@ -1763,13 +1760,24 @@ mod tests {
     }
 
     #[test]
-    fn create_session_validates_end_after_start() {
+    fn create_session_rejects_equal_start_and_end() {
         let mut conn = in_memory_db();
         let result = create_session(
-            &mut conn, "2026-05-17", "15:00", "14:00",
+            &mut conn, "2026-05-17", "15:00", "15:00",
             SessionKind::LiveLesson, false, None, None, &[],
         );
-        assert!(result.is_err(), "end <= start should be rejected");
+        assert!(result.is_err(), "start == end should be rejected");
+    }
+
+    #[test]
+    fn create_session_allows_end_before_start_for_utc_midnight_wrap() {
+        // Paris 01:00→02:00 in summer = UTC 23:00→00:00 (end on next UTC day).
+        let mut conn = in_memory_db();
+        let result = create_session(
+            &mut conn, "2026-05-17", "23:00", "00:00",
+            SessionKind::LiveLesson, false, None, None, &[],
+        );
+        assert!(result.is_ok(), "UTC midnight wrap must be allowed");
     }
 
     #[test]

@@ -5,8 +5,8 @@ import {
   buildCalendarGrid,
   shiftMonth,
   monthName,
-  todayGmt8,
 } from "../utils/calendarGrid";
+import { todayInZone, utcWallToLocal } from "../utils/dateTimeFormat";
 
 interface CalendarScreenProps {
   year: number;
@@ -15,6 +15,7 @@ interface CalendarScreenProps {
   sessions: Session[];
   selectedDate: string | null;
   onSelectDate: (date: string) => void;
+  timeZone: string;
 }
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -28,25 +29,29 @@ export function CalendarScreen({
   sessions,
   selectedDate,
   onSelectDate,
+  timeZone,
 }: CalendarScreenProps) {
   const [yearPickerOpen, setYearPickerOpen] = useState(false);
   const yearPickerRef = useRef<HTMLDivElement>(null);
   const yearListRef = useRef<HTMLDivElement>(null);
 
   const grid = useMemo(() => buildCalendarGrid(year, month), [year, month]);
-  const today = useMemo(() => todayGmt8(), []);
+  const today = useMemo(() => todayInZone(timeZone), [timeZone]);
 
-  // Index sessions by date for O(1) per-cell lookup.
+  // Sessions are stored as UTC wall-clock. Group them by their *local* date
+  // (the date the user sees in their time zone), which may differ from the
+  // stored UTC date by ±1 day.
   const sessionsByDate = useMemo(() => {
     const m = new Map<string, { lessons: number; studies: number }>();
     for (const s of sessions) {
-      const entry = m.get(s.date) ?? { lessons: 0, studies: 0 };
+      const local = utcWallToLocal(s.date, s.startTime, timeZone);
+      const entry = m.get(local.date) ?? { lessons: 0, studies: 0 };
       if (s.kind === "live_lesson") entry.lessons++;
       else entry.studies++;
-      m.set(s.date, entry);
+      m.set(local.date, entry);
     }
     return m;
-  }, [sessions]);
+  }, [sessions, timeZone]);
 
   const goPrev = () => {
     const { year: y, month: mo } = shiftMonth(year, month, -1);
@@ -204,8 +209,21 @@ export function CalendarScreen({
   );
 }
 
-// Re-export the helper that App.tsx needs to compute the visible range.
+// Visible range used to fetch sessions. The grid covers the visible local
+// dates; sessions are stored in UTC wall-clock that can shift by ±1 day from
+// the viewer's local date, so we pad the range by one day on each side.
+function shiftIsoDate(isoDate: string, deltaDays: number): string {
+  const [y, m, d] = isoDate.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + deltaDays);
+  const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
+  return `${dt.getUTCFullYear()}-${pad(dt.getUTCMonth() + 1)}-${pad(dt.getUTCDate())}`;
+}
+
 export function visibleMonthRange(year: number, month: number): { from: string; to: string } {
   const grid = buildCalendarGrid(year, month);
-  return { from: grid[0].date, to: grid[grid.length - 1].date };
+  return {
+    from: shiftIsoDate(grid[0].date, -1),
+    to: shiftIsoDate(grid[grid.length - 1].date, 1),
+  };
 }

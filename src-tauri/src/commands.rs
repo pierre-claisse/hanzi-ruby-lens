@@ -294,7 +294,7 @@ pub async fn sync_save(
         .db(crate::database::export_all)
         .map_err(|e| crate::sync::SyncError::Other(e.to_string()))?;
 
-    let timestamp = crate::sync::now_gmt8_string();
+    let timestamp = crate::sync::now_utc_iso();
     payload.sync_author = Some(author.clone());
     payload.sync_timestamp = Some(timestamp.clone());
 

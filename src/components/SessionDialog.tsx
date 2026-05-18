@@ -3,7 +3,8 @@ import { X, Trash2, BookOpen, GraduationCap } from "lucide-react";
 import type { Session, SessionKind, TextPreview } from "../types/domain";
 import type { SessionMutation } from "../hooks/useSessions";
 import { fuzzyFilterTexts } from "../utils/textSearch";
-import { todayGmt8, compareDates } from "../utils/calendarGrid";
+import { compareDates } from "../utils/calendarGrid";
+import { todayInZone, localWallToUtc, resolveSessionLocal } from "../utils/dateTimeFormat";
 
 interface SessionDialogProps {
   open: boolean;
@@ -13,6 +14,7 @@ interface SessionDialogProps {
   onSave: (id: number | null, input: SessionMutation) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
   onClose: () => void;
+  timeZone: string;
 }
 
 const MAX_NOTES_LEN = 5000;
@@ -25,6 +27,7 @@ export function SessionDialog({
   onSave,
   onDelete,
   onClose,
+  timeZone,
 }: SessionDialogProps) {
   const [date, setDate] = useState<string>("");
   const [startTime, setStartTime] = useState<string>("");
@@ -37,13 +40,16 @@ export function SessionDialog({
   const [textPickerOpen, setTextPickerOpen] = useState<boolean>(false);
   const pickerRef = useRef<HTMLDivElement>(null);
 
-  // Init from props when dialog opens.
+  // Init from props when dialog opens. Sessions are stored in UTC wall-clock;
+  // the form always shows the viewer's local wall-clock. `resolveSessionLocal`
+  // handles the UTC midnight wrap (endTime < startTime).
   useEffect(() => {
     if (!open) return;
     if (session) {
-      setDate(session.date);
-      setStartTime(session.startTime);
-      setEndTime(session.endTime);
+      const r = resolveSessionLocal(session.date, session.startTime, session.endTime, timeZone);
+      setDate(r.localStartDate);
+      setStartTime(r.localStartTime);
+      setEndTime(r.localEndTime);
       setKind(session.kind);
       setDone(session.done);
       setNotes(session.notes ?? "");
@@ -59,7 +65,7 @@ export function SessionDialog({
     }
     setTextQuery("");
     setTextPickerOpen(false);
-  }, [open, session, defaultDate]);
+  }, [open, session, defaultDate, timeZone]);
 
   // Click outside picker closes it. Use the capture phase so this fires even
   // when the surrounding dialog calls `stopPropagation()` on mousedown (the
@@ -75,7 +81,7 @@ export function SessionDialog({
     return () => document.removeEventListener("mousedown", handler, true);
   }, [textPickerOpen]);
 
-  const isFuture: boolean = open && !!date && compareDates(date, todayGmt8()) > 0;
+  const isFuture: boolean = open && !!date && compareDates(date, todayInZone(timeZone)) > 0;
 
   // If user moves date into the future, auto-uncheck Done.
   useEffect(() => {
@@ -96,30 +102,36 @@ export function SessionDialog({
     return filtered.filter((t) => !textIds.includes(t.id));
   }, [textQuery, texts, textIds]);
 
+  // Compare in local wall-clock space (what the user sees). Convert the
+  // session's stored UTC to the viewer's local on the fly.
   const hasChanged = useMemo(() => {
     if (!session) return true; // create mode: any save is a change
+    const r = resolveSessionLocal(session.date, session.startTime, session.endTime, timeZone);
     const sameTextIds =
       textIds.length === session.textIds.length &&
       textIds.every((id, i) => id === session.textIds[i]);
     return (
-      date !== session.date ||
-      startTime !== session.startTime ||
-      endTime !== session.endTime ||
+      date !== r.localStartDate ||
+      startTime !== r.localStartTime ||
+      endTime !== r.localEndTime ||
       kind !== session.kind ||
       done !== session.done ||
       (notes.trim() || null) !== (session.notes ?? null) ||
       !sameTextIds
     );
-  }, [session, date, startTime, endTime, kind, done, notes, textIds]);
+  }, [session, date, startTime, endTime, kind, done, notes, textIds, timeZone]);
 
   const canSave = validDate && validTimes && hasChanged;
 
   const handleSave = useCallback(async () => {
     if (!canSave) return;
+    // Convert local wall-clock (form values) back to UTC wall-clock for storage.
+    const utcStart = localWallToUtc(date, startTime, timeZone);
+    const utcEnd = localWallToUtc(date, endTime, timeZone);
     const mutation: SessionMutation = {
-      date,
-      startTime,
-      endTime,
+      date: utcStart.date,
+      startTime: utcStart.time,
+      endTime: utcEnd.time,
       kind,
       done,
       notes: notes.trim() ? notes.trim() : null,

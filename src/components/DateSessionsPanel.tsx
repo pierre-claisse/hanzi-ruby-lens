@@ -7,7 +7,8 @@ import {
   Square,
 } from "lucide-react";
 import type { Session, TextPreview } from "../types/domain";
-import { formatDateLong, compareDates, todayGmt8 } from "../utils/calendarGrid";
+import { formatDateLong, compareDates } from "../utils/calendarGrid";
+import { formatInZone, todayInZone, resolveSessionLocal } from "../utils/dateTimeFormat";
 
 interface DateSessionsPanelProps {
   date: string;
@@ -16,6 +17,7 @@ interface DateSessionsPanelProps {
   onAddSession: () => void;
   onEditSession: (id: number) => void;
   onToggleDone: (id: number) => void;
+  timeZone: string;
 }
 
 export function DateSessionsPanel({
@@ -25,6 +27,7 @@ export function DateSessionsPanel({
   onAddSession,
   onEditSession,
   onToggleDone,
+  timeZone,
 }: DateSessionsPanelProps) {
   const textsById = useMemo(() => {
     const m = new Map<number, TextPreview>();
@@ -32,17 +35,32 @@ export function DateSessionsPanel({
     return m;
   }, [texts]);
 
-  const dateSessions = useMemo(
-    () =>
-      sessions
-        .filter((s) => s.date === date)
-        .sort((a, b) =>
-          a.startTime < b.startTime ? -1 : a.startTime > b.startTime ? 1 : a.id - b.id,
-        ),
-    [sessions, date],
-  );
+  // Sessions store UTC wall-clock; resolve each to the viewer's local
+  // wall-clock so we can filter and sort by what the user actually sees.
+  // Sessions whose local-time end falls past UTC midnight are handled by
+  // `resolveSessionLocal` (end on next UTC day).
+  const dateSessions = useMemo(() => {
+    const enriched = sessions.map((s) => {
+      const r = resolveSessionLocal(s.date, s.startTime, s.endTime, timeZone);
+      return {
+        ...s,
+        localDate: r.localStartDate,
+        localStartTime: r.localStartTime,
+        localEndTime: r.localEndTime,
+      };
+    });
+    return enriched
+      .filter((s) => s.localDate === date)
+      .sort((a, b) =>
+        a.localStartTime < b.localStartTime
+          ? -1
+          : a.localStartTime > b.localStartTime
+          ? 1
+          : a.id - b.id,
+      );
+  }, [sessions, date, timeZone]);
 
-  const isFuture = compareDates(date, todayGmt8()) > 0;
+  const isFuture = compareDates(date, todayInZone(timeZone)) > 0;
 
   return (
     <div className="flex-shrink-0 w-80 h-full border-l border-content/10 flex flex-col">
@@ -80,7 +98,7 @@ export function DateSessionsPanel({
                       <Icon className="w-3.5 h-3.5" />
                       <span>{label}</span>
                       <span className="text-content/60 font-normal">
-                        · {s.startTime} – {s.endTime}
+                        · {s.localStartTime} – {s.localEndTime}
                       </span>
                     </div>
                     <span
@@ -137,7 +155,7 @@ export function DateSessionsPanel({
                   {(s.author || s.createdAt) && (
                     <p className="text-[10px] text-content/40 mt-1">
                       {s.author ?? "—"}
-                      {s.createdAt && ` · ${s.createdAt}`}
+                      {s.createdAt && ` · ${formatInZone(s.createdAt, timeZone)}`}
                     </p>
                   )}
                 </button>

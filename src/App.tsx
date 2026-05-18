@@ -11,13 +11,12 @@ import { CommentsPanel } from "./components/CommentsPanel";
 import { CalendarScreen, visibleMonthRange } from "./components/CalendarScreen";
 import { DateSessionsPanel } from "./components/DateSessionsPanel";
 import { SessionDialog } from "./components/SessionDialog";
-import { UserNameOnboarding } from "./components/UserNameOnboarding";
-import { useUserName } from "./hooks/useUserName";
+import { useIdentity } from "./hooks/useIdentity";
 import { useSessions } from "./hooks/useSessions";
 import type { SessionMutation } from "./hooks/useSessions";
 import { clearSyncState } from "./utils/syncDirty";
 import { markCommentRead } from "./utils/readComments";
-import { todayGmt8 } from "./utils/calendarGrid";
+import { todayInZone } from "./utils/dateTimeFormat";
 import { usePinyinVisibility } from "./hooks/usePinyinVisibility";
 import { useTextZoom } from "./hooks/useTextZoom";
 import { useTheme } from "./hooks/useTheme";
@@ -60,10 +59,10 @@ function App() {
   const [showManageTags, setShowManageTags] = useState(false);
   const [commentDialogSegIndex, setCommentDialogSegIndex] = useState<number | null>(null);
   const [commentsPanelOpen, setCommentsPanelOpen] = useState(false);
-  const { name: userName, isSet: hasUserName, setName: setUserName } = useUserName();
+  const identity = useIdentity(isAuthorizedDevice);
 
   // Calendar state — hoisted so the panel can outlive grid cell renders.
-  const today = useMemo(() => todayGmt8(), []);
+  const today = useMemo(() => todayInZone(identity.timeZone), [identity.timeZone]);
   const [calendarYearMonth, setCalendarYearMonth] = useState<{ year: number; month: number }>(() => {
     const [y, mo] = today.split("-").map(Number);
     return { year: y, month: mo };
@@ -200,15 +199,14 @@ function App() {
 
   const handleSessionSave = useCallback(
     async (id: number | null, input: SessionMutation) => {
-      const author = userName.trim() ? userName.trim() : null;
       if (id == null) {
-        await createSession(input, author);
+        await createSession(input, identity.name);
       } else {
         await updateSession(id, input);
       }
       setSessionDialogState(null);
     },
-    [createSession, updateSession, userName],
+    [createSession, updateSession, identity.name],
   );
 
   const handleSessionDelete = useCallback(
@@ -262,10 +260,9 @@ function App() {
   }, [activeText]);
 
   const handleCommentSave = useCallback(async (segmentIndex: number, comment: string | null) => {
-    const trimmedName = userName.trim();
-    await updateComment(segmentIndex, comment, trimmedName ? trimmedName : null);
+    await updateComment(segmentIndex, comment, identity.name);
     setCommentDialogSegIndex(null);
-  }, [updateComment, userName]);
+  }, [updateComment, identity.name]);
 
   const handleCommentClose = useCallback(() => {
     setCommentDialogSegIndex(null);
@@ -288,6 +285,7 @@ function App() {
             onTagsChanged={handleTagsChanged}
             filterActive={filterTagIds.length > 0}
             isAuthorizedDevice={isAuthorizedDevice}
+            timeZone={identity.timeZone}
           />
         );
       case "input":
@@ -324,6 +322,7 @@ function App() {
                   sessions={calendarSessions}
                   selectedDate={calendarSelectedDate}
                   onSelectDate={handleCalendarSelectDate}
+                  timeZone={identity.timeZone}
                 />
               </div>
             </div>
@@ -334,6 +333,7 @@ function App() {
               onAddSession={handleAddSessionFromPanel}
               onEditSession={handleEditSessionFromPanel}
               onToggleDone={handleToggleSessionDone}
+              timeZone={identity.timeZone}
             />
           </div>
         );
@@ -360,6 +360,7 @@ function App() {
                 onToggle={() => setCommentsPanelOpen((prev) => !prev)}
                 onCommentClick={handleOpenCommentDialog}
                 locked={activeText.locked}
+                timeZone={identity.timeZone}
               />
             )}
           </div>
@@ -406,10 +407,8 @@ function App() {
         syncConfigured={syncConfigured}
         onSyncPullComplete={handleSyncPullComplete}
         onToggleCalendarView={handleToggleCalendarView}
-      />
-      <UserNameOnboarding
-        open={syncConfigured && !hasUserName}
-        onSubmit={(n) => setUserName(n)}
+        identityName={identity.name}
+        identityTimeZone={identity.timeZone}
       />
       {renderContent()}
       <ManageTagsDialog
@@ -443,6 +442,7 @@ function App() {
           onSave={handleSessionSave}
           onDelete={handleSessionDelete}
           onClose={handleCloseSessionDialog}
+          timeZone={identity.timeZone}
         />
       )}
     </>

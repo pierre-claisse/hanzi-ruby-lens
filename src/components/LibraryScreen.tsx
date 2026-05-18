@@ -5,7 +5,7 @@ import { TAG_COLORS } from "../data/tagColors";
 import type { TextPreview, Tag } from "../types/domain";
 import { TextPreviewCard } from "./TextPreviewCard";
 import { computeContextMenuPosition, computeSubmenuPosition } from "../utils/menuPositioning";
-import { formatDateTime } from "../utils/formatDateTime";
+import { formatInZone } from "../utils/dateTimeFormat";
 import { markLocalDirty } from "../utils/syncDirty";
 import { useReadComments } from "../hooks/useReadComments";
 
@@ -18,9 +18,10 @@ interface LibraryScreenProps {
   onTagsChanged: () => Promise<void>;
   filterActive: boolean;
   isAuthorizedDevice: boolean;
+  timeZone: string;
 }
 
-export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock, tags, onTagsChanged, filterActive, isAuthorizedDevice }: LibraryScreenProps) {
+export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock, tags, onTagsChanged, filterActive, isAuthorizedDevice, timeZone }: LibraryScreenProps) {
   const [contextMenu, setContextMenu] = useState<{ ids: number[]; preview: TextPreview; x: number; y: number } | null>(null);
   const [tagsSubmenu, setTagsSubmenu] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
@@ -235,9 +236,9 @@ export function LibraryScreen({ previews, onOpenText, onDeleteText, onToggleLock
             {/* Metadata footer (non-interactive) */}
             <div className="border-t border-content/10 my-1" />
             <div className="px-3 py-1.5 text-xs text-content/50 space-y-0.5">
-              <div>Created: {formatDateTime(contextMenu.preview.createdAt)}</div>
+              <div>Created: {formatInZone(contextMenu.preview.createdAt, timeZone)}</div>
               {contextMenu.preview.modifiedAt && (
-                <div>Modified: {formatDateTime(contextMenu.preview.modifiedAt)}</div>
+                <div>Modified: {formatInZone(contextMenu.preview.modifiedAt, timeZone)}</div>
               )}
             </div>
 

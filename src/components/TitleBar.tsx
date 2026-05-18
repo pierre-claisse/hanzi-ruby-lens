@@ -45,9 +45,11 @@ interface TitleBarProps {
   syncConfigured?: boolean;
   onSyncPullComplete?: () => void;
   onToggleCalendarView?: () => void;
+  identityName?: string;
+  identityTimeZone?: string;
 }
 
-export function TitleBar({ appView, pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, onZoomOut, isMinZoom, isMaxZoom, palettes, selectedPaletteId, onPaletteSelect, theme, onThemeToggle, onBack, showBack, rawInput, onAddText, titleText, onManageTags, tags, filterTagIds, onFilterTagIds, sortAsc, onToggleSort, onDataImportComplete, onDataResetComplete, isAuthorizedDevice, syncConfigured, onSyncPullComplete, onToggleCalendarView }: TitleBarProps) {
+export function TitleBar({ appView, pinyinVisible, onPinyinToggle, zoomLevel, onZoomIn, onZoomOut, isMinZoom, isMaxZoom, palettes, selectedPaletteId, onPaletteSelect, theme, onThemeToggle, onBack, showBack, rawInput, onAddText, titleText, onManageTags, tags, filterTagIds, onFilterTagIds, sortAsc, onToggleSort, onDataImportComplete, onDataResetComplete, isAuthorizedDevice, syncConfigured, onSyncPullComplete, onToggleCalendarView, identityName, identityTimeZone }: TitleBarProps) {
   const isLibrary = appView === "library";
   const isCalendar = appView === "calendar";
   const calendarToggleButton = onToggleCalendarView && (isLibrary || isCalendar) ? (
@@ -156,8 +158,10 @@ export function TitleBar({ appView, pinyinVisible, onPinyinToggle, zoomLevel, on
             onResetComplete={onDataResetComplete}
           />
         )}
-        {syncConfigured && onSyncPullComplete && (
+        {syncConfigured && onSyncPullComplete && identityName && identityTimeZone && (
           <SyncDropdown
+            name={identityName}
+            timeZone={identityTimeZone}
             onPullComplete={onSyncPullComplete}
             betweenSlot={calendarToggleButton}
           />

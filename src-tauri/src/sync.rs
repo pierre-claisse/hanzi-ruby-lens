@@ -15,7 +15,6 @@
 
 use std::sync::OnceLock;
 
-use chrono::FixedOffset;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION, USER_AGENT};
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
@@ -310,11 +309,13 @@ pub struct SyncPullResult {
     pub tag_count: usize,
 }
 
-pub fn now_gmt8_string() -> String {
-    let offset = FixedOffset::east_opt(8 * 3600).expect("valid GMT+8 offset");
+/// Current instant as a UTC ISO 8601 string ("2026-05-18T08:30:00Z").
+///
+/// All stored timestamps live in UTC. Display in a user-local time zone is
+/// the frontend's responsibility (see `src/utils/dateTimeFormat.ts`).
+pub fn now_utc_iso() -> String {
     chrono::Utc::now()
-        .with_timezone(&offset)
-        .format("%Y-%m-%d %H:%M GMT+8")
+        .format("%Y-%m-%dT%H:%M:%SZ")
         .to_string()
 }
 
@@ -370,13 +371,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn timestamp_format_is_gmt8() {
-        let s = now_gmt8_string();
-        // Format: "YYYY-MM-DD HH:MM GMT+8"
-        assert!(s.ends_with(" GMT+8"), "got: {}", s);
-        // 19 chars before " GMT+8" (= "YYYY-MM-DD HH:MM"): 4+1+2+1+2+1+2+1+2 = 16
-        let prefix = s.trim_end_matches(" GMT+8");
-        assert_eq!(prefix.len(), 16, "got prefix: {}", prefix);
+    fn timestamp_format_is_utc_iso() {
+        let s = now_utc_iso();
+        // Format: "YYYY-MM-DDTHH:MM:SSZ" → exactly 20 chars
+        assert_eq!(s.len(), 20, "got: {}", s);
+        assert!(s.ends_with('Z'), "got: {}", s);
+        assert_eq!(s.chars().nth(4), Some('-'));
+        assert_eq!(s.chars().nth(7), Some('-'));
+        assert_eq!(s.chars().nth(10), Some('T'));
+        assert_eq!(s.chars().nth(13), Some(':'));
+        assert_eq!(s.chars().nth(16), Some(':'));
     }
 
     #[test]

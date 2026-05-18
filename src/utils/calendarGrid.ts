@@ -4,20 +4,8 @@ export interface CalendarCell {
   inMonth: boolean;
 }
 
-const TZ_OFFSET_MINUTES = 8 * 60;
-
 export function pad2(n: number): string {
   return n < 10 ? `0${n}` : String(n);
-}
-
-export function formatDateGmt8(d: Date): string {
-  const utcMs = d.getTime() + d.getTimezoneOffset() * 60_000;
-  const local = new Date(utcMs + TZ_OFFSET_MINUTES * 60_000);
-  return `${local.getUTCFullYear()}-${pad2(local.getUTCMonth() + 1)}-${pad2(local.getUTCDate())}`;
-}
-
-export function todayGmt8(): string {
-  return formatDateGmt8(new Date());
 }
 
 function isLeap(year: number): boolean {

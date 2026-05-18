@@ -1,6 +1,7 @@
 import { PanelRightClose, PanelRightOpen, MessageSquare } from "lucide-react";
 import type { TextSegment } from "../types/domain";
 import { useReadComments } from "../hooks/useReadComments";
+import { formatInZone } from "../utils/dateTimeFormat";
 
 interface CommentsPanelProps {
   textId: number;
@@ -9,9 +10,10 @@ interface CommentsPanelProps {
   onToggle: () => void;
   onCommentClick: (segmentIndex: number) => void;
   locked: boolean;
+  timeZone: string;
 }
 
-export function CommentsPanel({ textId, segments, isOpen, onToggle, onCommentClick, locked }: CommentsPanelProps) {
+export function CommentsPanel({ textId, segments, isOpen, onToggle, onCommentClick, locked, timeZone }: CommentsPanelProps) {
   const { isRead } = useReadComments();
 
   const comments = segments
@@ -92,7 +94,7 @@ export function CommentsPanel({ textId, segments, isOpen, onToggle, onCommentCli
                         {(seg.word.commentAuthor || seg.word.commentAt) && (
                           <p className="text-[10px] text-content/40 mt-1">
                             {seg.word.commentAuthor ?? "—"}
-                            {seg.word.commentAt && ` · ${seg.word.commentAt}`}
+                            {seg.word.commentAt && ` · ${formatInZone(seg.word.commentAt, timeZone)}`}
                           </p>
                         )}
                       </button>
