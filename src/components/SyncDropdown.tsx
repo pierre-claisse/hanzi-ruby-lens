@@ -8,6 +8,7 @@ import { AlertCircle, AlertTriangle, CircleUser, CloudDownload, CloudUpload } fr
 import { message, confirm } from "@tauri-apps/plugin-dialog";
 import { useAuth } from "../auth";
 import { useLastSync } from "../hooks/useLastSync";
+import { useOnline } from "../hooks/useOnline";
 import { pullGist, saveGist, SyncError } from "../sync";
 import { exportAll, importAll, validateExportPayload, type ExportPayload } from "../db";
 import { formatInZone, nowUtcIso } from "../utils/dateTimeFormat";
@@ -26,6 +27,7 @@ export function SyncDropdown({ name, timeZone, onPullComplete, betweenSlot }: Sy
   const [inFlight, setInFlight] = useState<null | "pull" | "save">(null);
   const avatarRef = useRef<HTMLDivElement>(null);
   const { meta, isDirty, recordSync } = useLastSync();
+  const online = useOnline();
 
   // Click-outside to close the avatar dropdown.
   useEffect(() => {
@@ -124,9 +126,21 @@ export function SyncDropdown({ name, timeZone, onPullComplete, betweenSlot }: Sy
         type="button"
         onClick={handlePull}
         onPointerDown={(e) => e.stopPropagation()}
-        disabled={inFlight !== null}
-        aria-label={isDirty ? "Pull from sync (will overwrite local changes)" : "Pull from sync"}
-        title={isDirty ? "Pull — will overwrite local changes" : "Pull"}
+        disabled={inFlight !== null || !online}
+        aria-label={
+          !online
+            ? "Pull from sync (offline)"
+            : isDirty
+            ? "Pull from sync (will overwrite local changes)"
+            : "Pull from sync"
+        }
+        title={
+          !online
+            ? "Offline — sync unavailable"
+            : isDirty
+            ? "Pull — will overwrite local changes"
+            : "Pull"
+        }
         className="relative p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-surface"
       >
         <CloudDownload className="w-5 h-5" aria-hidden="true" />
@@ -141,9 +155,21 @@ export function SyncDropdown({ name, timeZone, onPullComplete, betweenSlot }: Sy
         type="button"
         onClick={handleSave}
         onPointerDown={(e) => e.stopPropagation()}
-        disabled={!isDirty || inFlight !== null}
-        aria-label={isDirty ? "Save to sync (you have unsaved local changes)" : "Save to sync (nothing to save)"}
-        title={isDirty ? "Save — unsaved local changes" : "Nothing to save"}
+        disabled={!isDirty || inFlight !== null || !online}
+        aria-label={
+          !online
+            ? "Save to sync (offline)"
+            : isDirty
+            ? "Save to sync (you have unsaved local changes)"
+            : "Save to sync (nothing to save)"
+        }
+        title={
+          !online
+            ? "Offline — sync unavailable"
+            : isDirty
+            ? "Save — unsaved local changes"
+            : "Nothing to save"
+        }
         className="relative p-1.5 rounded-lg border border-content/20 bg-surface text-content hover:bg-content/5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-surface"
       >
         <CloudUpload className="w-5 h-5" aria-hidden="true" />
