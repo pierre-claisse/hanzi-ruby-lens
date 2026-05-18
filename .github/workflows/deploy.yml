@@ -29,6 +29,14 @@ jobs:
 
       - run: npm ci
 
+      - name: Encrypt sync secrets into public/sync_blobs.json
+        env:
+          SYNC_PAT: ${{ secrets.SYNC_PAT }}
+          SYNC_GIST_ID: ${{ secrets.SYNC_GIST_ID }}
+          SYNC_COMMON_PASSWORD: ${{ secrets.SYNC_COMMON_PASSWORD }}
+          SYNC_PIERRE_PASSWORD: ${{ secrets.SYNC_PIERRE_PASSWORD }}
+        run: node scripts/build-secrets.mjs
+
       - name: Vite build
         env:
           # Vite needs the base path so static assets resolve under

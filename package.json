@@ -15,6 +15,7 @@
     "@fontsource/chocolate-classical-sans": "^5.2.12",
     "@fontsource/huninn": "^5.2.2",
     "@fontsource/lxgw-wenkai-tc": "^5.2.8",
+    "@noble/hashes": "^2.2.0",
     "@tauri-apps/api": "^2.0.0",
     "@tauri-apps/plugin-clipboard-manager": "^2.0.0",
     "@tauri-apps/plugin-dialog": "^2.0.0",
