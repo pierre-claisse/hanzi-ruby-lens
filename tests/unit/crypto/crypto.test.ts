@@ -10,7 +10,8 @@ import {
   bytesToBase64,
   base64ToBytes,
   buildSyncBlobs,
-  tryUnlock,
+  tryUnlockCommon,
+  tryUnlockPierre,
 } from "../../../src/crypto";
 
 describe("AES-GCM round trip", () => {
@@ -69,61 +70,82 @@ describe("Argon2 KDF", () => {
   });
 });
 
-describe("envelope: buildSyncBlobs + tryUnlock", () => {
+describe("envelope: buildSyncBlobs + tryUnlock*", () => {
   // Argon2id is slow (~200 ms per call) — these tests do multiple derivations.
   // Allow plenty of time.
   const TIMEOUT = 30_000;
 
   it(
-    "unlocks with the common password (role: common)",
+    "common: syncPassword alone unlocks the secrets",
     async () => {
       const blob = await buildSyncBlobs({
         pat: "ghp_xxx",
         gistId: "abc123",
-        commonPassword: "common-pw",
+        syncPassword: "sync-pw",
         pierrePassword: "pierre-pw",
       });
-      const r = await tryUnlock("common-pw", blob);
-      expect(r.ok).toBe(true);
-      if (r.ok) {
-        expect(r.role).toBe("common");
-        expect(r.secrets.pat).toBe("ghp_xxx");
-        expect(r.secrets.gist_id).toBe("abc123");
-      }
+      const secrets = await tryUnlockCommon("sync-pw", blob);
+      expect(secrets).not.toBeNull();
+      expect(secrets?.pat).toBe("ghp_xxx");
+      expect(secrets?.gist_id).toBe("abc123");
     },
     TIMEOUT,
   );
 
   it(
-    "unlocks with Pierre's password (role: pierre)",
+    "common: wrong syncPassword returns null",
     async () => {
       const blob = await buildSyncBlobs({
         pat: "ghp_xxx",
         gistId: "abc123",
-        commonPassword: "common-pw",
+        syncPassword: "sync-pw",
         pierrePassword: "pierre-pw",
       });
-      const r = await tryUnlock("pierre-pw", blob);
-      expect(r.ok).toBe(true);
-      if (r.ok) {
-        expect(r.role).toBe("pierre");
-        expect(r.secrets.gist_id).toBe("abc123");
-      }
+      expect(await tryUnlockCommon("wrong", blob)).toBeNull();
     },
     TIMEOUT,
   );
 
   it(
-    "rejects an unknown password",
+    "pierre: BOTH passwords required",
     async () => {
       const blob = await buildSyncBlobs({
         pat: "ghp_xxx",
         gistId: "abc123",
-        commonPassword: "common-pw",
+        syncPassword: "sync-pw",
         pierrePassword: "pierre-pw",
       });
-      const r = await tryUnlock("wrong-password", blob);
-      expect(r.ok).toBe(false);
+      const ok = await tryUnlockPierre("sync-pw", "pierre-pw", blob);
+      expect(ok).not.toBeNull();
+      expect(ok?.secrets.gist_id).toBe("abc123");
+    },
+    TIMEOUT,
+  );
+
+  it(
+    "pierre: returns null if syncPassword is wrong",
+    async () => {
+      const blob = await buildSyncBlobs({
+        pat: "ghp_xxx",
+        gistId: "abc123",
+        syncPassword: "sync-pw",
+        pierrePassword: "pierre-pw",
+      });
+      expect(await tryUnlockPierre("wrong", "pierre-pw", blob)).toBeNull();
+    },
+    TIMEOUT,
+  );
+
+  it(
+    "pierre: returns null if pierrePassword is wrong",
+    async () => {
+      const blob = await buildSyncBlobs({
+        pat: "ghp_xxx",
+        gistId: "abc123",
+        syncPassword: "sync-pw",
+        pierrePassword: "pierre-pw",
+      });
+      expect(await tryUnlockPierre("sync-pw", "wrong", blob)).toBeNull();
     },
     TIMEOUT,
   );

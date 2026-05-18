@@ -1,4 +1,9 @@
-export { unlockWithPassword, __resetSecretsLoaderForTests } from "./secretsLoader";
+export {
+  unlockAsCommon,
+  unlockAsPierre,
+  __resetSecretsLoaderForTests,
+  type UnlockResult,
+} from "./secretsLoader";
 export {
   pullGist,
   saveGist,

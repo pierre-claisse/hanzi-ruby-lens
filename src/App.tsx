@@ -59,7 +59,7 @@ function App() {
   const [showManageTags, setShowManageTags] = useState(false);
   const [commentDialogSegIndex, setCommentDialogSegIndex] = useState<number | null>(null);
   const [commentsPanelOpen, setCommentsPanelOpen] = useState(false);
-  const identity = useIdentity(isAuthorizedDevice);
+  const identity = useIdentity(isAuthorizedDevice ? "pierre" : "common");
 
   // Calendar state — hoisted so the panel can outlive grid cell renders.
   const today = useMemo(() => todayInZone(identity.timeZone), [identity.timeZone]);

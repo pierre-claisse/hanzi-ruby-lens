@@ -1,43 +1,35 @@
-// Envelope encryption helpers.
+// Two-password authorisation scheme.
 //
-// A random 32-byte `data key` encrypts the actual secret payload once. The
-// data key is then wrapped (encrypted) by every authorised password — the
-// `key_wraps` array. A separate `pierre_marker` blob is wrapped only by
-// Pierre's password, so a successful unwrap of *that* one is what flips the
-// app into Pierre mode.
+// The bundle ships two independent encrypted blobs (`sync_blobs.json`):
 //
-// At login, we try every entry in `key_wraps` with the typed password. If
-// any succeeds we have the data key and can decrypt the secrets. Then we
-// also try `pierre_marker`; if that succeeds, role = "pierre".
+//   sync_blob     = AES-GCM-encrypt({ pat, gist_id }, Argon2id(syncPassword))
+//   pierre_marker = AES-GCM-encrypt("granted",          Argon2id(pierrePassword))
+//
+// 段予婷 only needs `syncPassword` to unlock sync (pull/save).
+// Pierre supplies BOTH `syncPassword` AND `pierrePassword` to additionally
+// unlock the `pierre_marker`, which gates Delete / Reset / Import / Export.
+//
+// Picking "Pierre Claisse" in the login UI without knowing `pierrePassword`
+// just fails on the marker unwrap — the toggle is purely a UX selector.
 import {
   aesGcmDecrypt,
   aesGcmEncrypt,
-  KEY_BYTES,
   NONCE_BYTES,
   randomBytes,
 } from "./aesGcm";
 import { base64ToBytes, bytesToBase64 } from "./base64";
 import { deriveKey, SALT_BYTES } from "./kdf";
 
-export interface WrappedBlob {
+export interface EncryptedBlob {
   salt: string;       // base64, 16 bytes
   nonce: string;      // base64, 12 bytes
   ciphertext: string; // base64, opaque length
 }
 
-export interface SecretsCiphertext {
-  nonce: string;
-  ciphertext: string;
-}
-
 export interface SyncBlobs {
   version: 1;
-  /** AES-GCM-encrypted `{ pat, gist_id }` keyed by `data_key`. */
-  secrets: SecretsCiphertext;
-  /** One entry per authorised password. Each holds `data_key` re-encrypted. */
-  key_wraps: WrappedBlob[];
-  /** Decrypts iff the user provided Pierre's password. Plaintext = "granted". */
-  pierre_marker: WrappedBlob;
+  sync_blob: EncryptedBlob;
+  pierre_marker: EncryptedBlob;
 }
 
 export interface SyncSecrets {
@@ -45,12 +37,10 @@ export interface SyncSecrets {
   gist_id: string;
 }
 
-// ── Build-time helpers (used by `scripts/build-secrets.mjs`) ─────────────────
-
-async function wrap(
+async function encrypt(
   password: string,
   payload: Uint8Array,
-): Promise<WrappedBlob> {
+): Promise<EncryptedBlob> {
   const salt = randomBytes(SALT_BYTES);
   const nonce = randomBytes(NONCE_BYTES);
   const key = await deriveKey(password, salt);
@@ -62,51 +52,9 @@ async function wrap(
   };
 }
 
-/**
- * Build the on-disk JSON blob. Called from `scripts/build-secrets.mjs` at
- * deploy time only; not part of the runtime bundle.
- */
-export async function buildSyncBlobs(opts: {
-  pat: string;
-  gistId: string;
-  commonPassword: string;
-  pierrePassword: string;
-}): Promise<SyncBlobs> {
-  const dataKey = randomBytes(KEY_BYTES);
-
-  // Encrypt the actual secrets once with the data key.
-  const secretsNonce = randomBytes(NONCE_BYTES);
-  const secretsPlain = new TextEncoder().encode(
-    JSON.stringify({ pat: opts.pat, gist_id: opts.gistId }),
-  );
-  const secretsCt = await aesGcmEncrypt(dataKey, secretsNonce, secretsPlain);
-
-  // Wrap the data key with each authorised password.
-  const wrappedCommon = await wrap(opts.commonPassword, dataKey);
-  const wrappedPierre = await wrap(opts.pierrePassword, dataKey);
-
-  // Pierre marker — independent secret, only Pierre's password can unwrap it.
-  const pierreMarker = await wrap(
-    opts.pierrePassword,
-    new TextEncoder().encode("granted"),
-  );
-
-  return {
-    version: 1,
-    secrets: {
-      nonce: bytesToBase64(secretsNonce),
-      ciphertext: bytesToBase64(secretsCt),
-    },
-    key_wraps: [wrappedCommon, wrappedPierre],
-    pierre_marker: pierreMarker,
-  };
-}
-
-// ── Runtime helpers (used by `src/sync/secretsLoader.ts`) ────────────────────
-
-async function tryUnwrap(
+async function decrypt(
   password: string,
-  blob: WrappedBlob,
+  blob: EncryptedBlob,
 ): Promise<Uint8Array | null> {
   const salt = base64ToBytes(blob.salt);
   const nonce = base64ToBytes(blob.nonce);
@@ -115,46 +63,62 @@ async function tryUnwrap(
   return aesGcmDecrypt(key, nonce, ct);
 }
 
-export type UnlockOutcome =
-  | { ok: false }
-  | { ok: true; role: "pierre" | "common"; secrets: SyncSecrets };
+// ── Build-time helpers (used by scripts/build-secrets.mjs and tests) ────────
+
+export async function buildSyncBlobs(opts: {
+  pat: string;
+  gistId: string;
+  syncPassword: string;
+  pierrePassword: string;
+}): Promise<SyncBlobs> {
+  const sync_blob = await encrypt(
+    opts.syncPassword,
+    new TextEncoder().encode(JSON.stringify({ pat: opts.pat, gist_id: opts.gistId })),
+  );
+  const pierre_marker = await encrypt(
+    opts.pierrePassword,
+    new TextEncoder().encode("granted"),
+  );
+  return { version: 1, sync_blob, pierre_marker };
+}
+
+// ── Runtime helpers (used by src/sync/secretsLoader.ts) ────────────────────
 
 /**
- * Attempt to unlock the blob with the given password.
- *
- *  - If none of `key_wraps` decrypts → `{ ok: false }` (wrong password).
- *  - If a key_wrap decrypts, we use that data key on `secrets`. We then try
- *    `pierre_marker` with the same password; success ⇒ role = "pierre".
+ * Try the common-identity login path: the user supplies a single
+ * `syncPassword`. Returns the decrypted secrets on success, `null` if the
+ * password doesn't unlock the sync blob.
  */
-export async function tryUnlock(
-  password: string,
+export async function tryUnlockCommon(
+  syncPassword: string,
   blob: SyncBlobs,
-): Promise<UnlockOutcome> {
-  let dataKey: Uint8Array | null = null;
-  for (const wrap of blob.key_wraps) {
-    dataKey = await tryUnwrap(password, wrap);
-    if (dataKey) break;
-  }
-  if (!dataKey) return { ok: false };
-
-  const secretsPlain = await aesGcmDecrypt(
-    dataKey,
-    base64ToBytes(blob.secrets.nonce),
-    base64ToBytes(blob.secrets.ciphertext),
-  );
-  if (!secretsPlain) return { ok: false };
-
-  let secrets: SyncSecrets;
+): Promise<SyncSecrets | null> {
+  const plain = await decrypt(syncPassword, blob.sync_blob);
+  if (!plain) return null;
   try {
-    secrets = JSON.parse(new TextDecoder().decode(secretsPlain)) as SyncSecrets;
+    const obj = JSON.parse(new TextDecoder().decode(plain)) as SyncSecrets;
+    if (typeof obj.pat !== "string" || typeof obj.gist_id !== "string") return null;
+    return obj;
   } catch {
-    return { ok: false };
+    return null;
   }
-  if (typeof secrets.pat !== "string" || typeof secrets.gist_id !== "string") {
-    return { ok: false };
-  }
+}
 
-  const pierre = await tryUnwrap(password, blob.pierre_marker);
-  const role: "pierre" | "common" = pierre ? "pierre" : "common";
-  return { ok: true, role, secrets };
+/**
+ * Try the Pierre-identity login path: the user supplies BOTH passwords. Both
+ * must succeed (sync_blob with syncPassword, pierre_marker with pierrePassword)
+ * for the call to return non-null. The returned `secrets` are the same ones
+ * common would have seen; the difference is that the caller now knows Pierre
+ * privileges are unlocked.
+ */
+export async function tryUnlockPierre(
+  syncPassword: string,
+  pierrePassword: string,
+  blob: SyncBlobs,
+): Promise<{ secrets: SyncSecrets; pierreOk: true } | null> {
+  const secrets = await tryUnlockCommon(syncPassword, blob);
+  if (!secrets) return null;
+  const marker = await decrypt(pierrePassword, blob.pierre_marker);
+  if (!marker) return null;
+  return { secrets, pierreOk: true };
 }

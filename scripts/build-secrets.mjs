@@ -5,8 +5,11 @@
 //   SYNC_PAT              GitHub PAT with gist scope
 //   SYNC_GIST_ID          target gist id
 //   SYNC_COMMON_PASSWORD  password shared with 段予婷 (unlocks pull/save)
-//   SYNC_PIERRE_PASSWORD  Pierre-only password (also unlocks pull/save AND
-//                         the pierre_marker that grants Delete/Reset/etc.)
+//   SYNC_PIERRE_PASSWORD  Pierre-only password (unlocks the pierre_marker
+//                         that grants Delete/Reset/Import/Export).
+//
+// Pierre must provide BOTH passwords at login; 段予婷 provides only the
+// common one.
 //
 // Run locally for development with all four vars in the environment; CI
 // runs this via `.github/workflows/deploy.yml`.
@@ -21,7 +24,6 @@ const OUT_PATH = resolve(HERE, "..", "public", "sync_blobs.json");
 const ARGON2 = { t: 2, m: 19_456, p: 1, dkLen: 32 };
 const SALT_BYTES = 16;
 const NONCE_BYTES = 12;
-const KEY_BYTES = 32;
 
 function envOrFail(name) {
   const v = process.env[name];
@@ -78,16 +80,10 @@ async function main() {
   const commonPassword = envOrFail("SYNC_COMMON_PASSWORD");
   const pierrePassword = envOrFail("SYNC_PIERRE_PASSWORD");
 
-  const dataKey = randomBytes(KEY_BYTES);
-
-  const secretsNonce = randomBytes(NONCE_BYTES);
-  const secretsPlain = new TextEncoder().encode(
-    JSON.stringify({ pat, gist_id: gistId }),
+  const syncBlob = await wrap(
+    commonPassword,
+    new TextEncoder().encode(JSON.stringify({ pat, gist_id: gistId })),
   );
-  const secretsCt = await aesGcmEncrypt(dataKey, secretsNonce, secretsPlain);
-
-  const wrappedCommon = await wrap(commonPassword, dataKey);
-  const wrappedPierre = await wrap(pierrePassword, dataKey);
   const pierreMarker = await wrap(
     pierrePassword,
     new TextEncoder().encode("granted"),
@@ -95,11 +91,7 @@ async function main() {
 
   const blob = {
     version: 1,
-    secrets: {
-      nonce: bytesToBase64(secretsNonce),
-      ciphertext: bytesToBase64(secretsCt),
-    },
-    key_wraps: [wrappedCommon, wrappedPierre],
+    sync_blob: syncBlob,
     pierre_marker: pierreMarker,
   };
 

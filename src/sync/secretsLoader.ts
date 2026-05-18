@@ -1,13 +1,18 @@
 // Fetches the encrypted `sync_blobs.json` shipped alongside the bundle and
-// runs it through `tryUnlock` with a user-supplied password. Outcome:
+// attempts to unlock it with the credentials the user typed in the
+// LoginScreen.
 //
-//   - decrypt fails              → `{ ok: false }` (wrong password)
-//   - decrypt OK, common pwd     → `{ ok: true, role: "common", … }`
-//   - decrypt OK, pierre pwd     → `{ ok: true, role: "pierre", … }`
+// Two flows (mirroring the modal's identity toggle):
+//   - unlockAsCommon(syncPassword)            → "common" role
+//   - unlockAsPierre(syncPassword, pierrePwd) → "pierre" role
 //
-// The result feeds the React `AuthProvider` (Phase 5). The plaintext PAT
-// stays in memory only — never localStorage, never IDB.
-import { tryUnlock, type SyncBlobs, type UnlockOutcome } from "../crypto";
+// The plaintext PAT stays in memory only — never localStorage, never IDB.
+import {
+  tryUnlockCommon,
+  tryUnlockPierre,
+  type SyncBlobs,
+  type SyncSecrets,
+} from "../crypto";
 
 const BLOB_PATH = "sync_blobs.json";
 
@@ -16,9 +21,8 @@ let blobPromise: Promise<SyncBlobs> | null = null;
 async function fetchBlob(): Promise<SyncBlobs> {
   if (blobPromise) return blobPromise;
   blobPromise = (async () => {
-    // Fetch is relative to the PWA base — e.g.
+    // Resolve under the PWA's base URL —
     // https://pierre-claisse.github.io/hanzi-ruby-lens/sync_blobs.json
-    // Vite injects `BASE_URL` (string, not always typed) at build time.
     const meta = import.meta as unknown as { env?: { BASE_URL?: string } };
     const base = meta.env?.BASE_URL ?? "/";
     const url = `${base}${BLOB_PATH}`;
@@ -33,11 +37,31 @@ async function fetchBlob(): Promise<SyncBlobs> {
   return blobPromise;
 }
 
-export async function unlockWithPassword(
-  password: string,
-): Promise<UnlockOutcome> {
+export interface UnlockResult {
+  role: "pierre" | "common";
+  secrets: SyncSecrets;
+  /** The sync password is kept in memory by the AuthProvider so subsequent
+   *  pull/save can reuse it without re-prompting. Only valid until reload. */
+  syncPassword: string;
+}
+
+export async function unlockAsCommon(
+  syncPassword: string,
+): Promise<UnlockResult | null> {
   const blob = await fetchBlob();
-  return tryUnlock(password, blob);
+  const secrets = await tryUnlockCommon(syncPassword, blob);
+  if (!secrets) return null;
+  return { role: "common", secrets, syncPassword };
+}
+
+export async function unlockAsPierre(
+  syncPassword: string,
+  pierrePassword: string,
+): Promise<UnlockResult | null> {
+  const blob = await fetchBlob();
+  const out = await tryUnlockPierre(syncPassword, pierrePassword, blob);
+  if (!out) return null;
+  return { role: "pierre", secrets: out.secrets, syncPassword };
 }
 
 /** Test helper. */

@@ -9,9 +9,9 @@ export { deriveKey, SALT_BYTES, ARGON2_M_KIB, ARGON2_T_COST, ARGON2_P_COST } fro
 export { bytesToBase64, base64ToBytes } from "./base64";
 export {
   buildSyncBlobs,
-  tryUnlock,
+  tryUnlockCommon,
+  tryUnlockPierre,
   type SyncBlobs,
   type SyncSecrets,
-  type UnlockOutcome,
-  type WrappedBlob,
+  type EncryptedBlob,
 } from "./envelope";
