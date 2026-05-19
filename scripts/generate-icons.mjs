@@ -43,6 +43,23 @@ async function main() {
   // Maskable: at least 10% of each edge should be safe area so OS-side
   // adaptive masks don't crop the glyph.
   await emit("icon-maskable-512.png", 512, 64);
+
+  // Favicons — same glyph, browser-tab sizes. Drop into public/ root so
+  // index.html can reference them at "/favicon-32.png" etc.
+  const publicRoot = resolve(HERE, "..", "public");
+  await sharp(Buffer.from(svg({ size: 32 })))
+    .png()
+    .toFile(resolve(publicRoot, "favicon-32.png"));
+  await sharp(Buffer.from(svg({ size: 16 })))
+    .png()
+    .toFile(resolve(publicRoot, "favicon-16.png"));
+  // 180×180 is what iOS Home-screen install pulls when no manifest icon
+  // is acceptable. Lives at /apple-touch-icon.png by convention.
+  await sharp(Buffer.from(svg({ size: 180 })))
+    .png()
+    .toFile(resolve(publicRoot, "apple-touch-icon.png"));
+  // eslint-disable-next-line no-console
+  console.log("Wrote favicon-16.png, favicon-32.png, apple-touch-icon.png");
 }
 
 main().catch((e) => {
