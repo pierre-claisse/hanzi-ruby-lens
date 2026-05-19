@@ -71,14 +71,11 @@ export function SyncDropdown({ name, timeZone, onPullComplete, betweenSlot }: Sy
         timestamp: payload.sync_timestamp ?? undefined,
       });
       onPullComplete();
-      const who = payload.sync_author ? ` from ${payload.sync_author}` : "";
       const when = payload.sync_timestamp
         ? ` (${formatInZone(payload.sync_timestamp, timeZone)})`
         : "";
-      await message(`Library and calendar synced with latest data${who}${when}.`, {
-        title: "Sync Pull",
-        kind: "info",
-      });
+      const who = payload.sync_author ? ` from ${payload.sync_author}` : "";
+      await message(`✓ Pulled the latest data${when}${who}.`, { kind: "info" });
     } catch (err) {
       const msg = err instanceof SyncError ? err.message : (err as Error).message;
       await message(msg, { title: "Sync Pull Error", kind: "error" });
@@ -103,8 +100,8 @@ export function SyncDropdown({ name, timeZone, onPullComplete, betweenSlot }: Sy
       setLastSyncSize(result.wireSize);
       recordSync({ author: name, timestamp });
       await message(
-        `Saved at ${formatInZone(timestamp, timeZone)} by ${name}.`,
-        { title: "Sync Save", kind: "info" },
+        `✓ ${name} saved the data at ${formatInZone(timestamp, timeZone)}.`,
+        { kind: "info" },
       );
     } catch (err) {
       if (err instanceof SyncError && err.kind === "conflict") {
