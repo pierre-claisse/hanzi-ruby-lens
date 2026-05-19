@@ -21,11 +21,11 @@ let blobPromise: Promise<SyncBlobs> | null = null;
 async function fetchBlob(): Promise<SyncBlobs> {
   if (blobPromise) return blobPromise;
   blobPromise = (async () => {
-    // Resolve under the PWA's base URL —
-    // https://pierre-claisse.github.io/hanzi-ruby-lens/sync_blobs.json
-    const meta = import.meta as unknown as { env?: { BASE_URL?: string } };
-    const base = meta.env?.BASE_URL ?? "/";
-    const url = `${base}${BLOB_PATH}`;
+    // The literal `import.meta.env.BASE_URL` is replaced inline by Vite at
+    // build time with the configured `base` (e.g. "/hanzi-ruby-lens/").
+    // Wrapping it in a cast or destructuring breaks the substitution and
+    // the runtime sees `undefined` → wrong URL → 404.
+    const url = `${import.meta.env.BASE_URL}${BLOB_PATH}`;
     const resp = await fetch(url, { cache: "no-store" });
     if (!resp.ok) {
       throw new Error(
