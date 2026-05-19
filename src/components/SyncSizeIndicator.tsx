@@ -13,14 +13,18 @@ function fmt(bytes: number): string {
 export function SyncSizeIndicator() {
   const { lastSyncSize } = useSyncSize();
   if (lastSyncSize === null) return null;
+  const remainingPct = Math.max(
+    0,
+    (1 - lastSyncSize / GIST_LIMIT_BYTES) * 100,
+  );
   // `left-6` keeps the badge clear of the left-edge scrollbar used by Library,
   // Calendar and Reading screens (direction:rtl trick).
   return (
     <div
       className="fixed bottom-2 left-6 text-xs text-content/40 pointer-events-none select-none z-40"
-      aria-label={`Gist size: ${fmt(lastSyncSize)} of ${fmt(GIST_LIMIT_BYTES)}`}
+      aria-label={`Gist size: ${fmt(lastSyncSize)} of ${fmt(GIST_LIMIT_BYTES)}, ${remainingPct.toFixed(1)}% remaining`}
     >
-      {fmt(lastSyncSize)} / {fmt(GIST_LIMIT_BYTES)}
+      {fmt(lastSyncSize)} / {fmt(GIST_LIMIT_BYTES)} ({remainingPct.toFixed(1)}% remaining)
     </div>
   );
 }
