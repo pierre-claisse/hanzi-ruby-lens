@@ -27,18 +27,30 @@ import { useElapsedTime } from "./hooks/useElapsedTime";
 
 function App() {
   const { state: authState } = useAuth();
+  // Hoisted out of `AuthedApp` so the matchMedia listener for OS dark-mode
+  // changes is attached even while the LoginScreen is showing — otherwise
+  // a system-level flip wouldn't reach the login modal.
+  const [theme, toggleTheme] = useTheme();
   if (authState.status === "locked") {
     return <LoginScreen />;
   }
   const isAuthorizedDevice = authState.role === "pierre";
-  return <AuthedApp isAuthorizedDevice={isAuthorizedDevice} />;
+  return (
+    <AuthedApp
+      isAuthorizedDevice={isAuthorizedDevice}
+      theme={theme}
+      toggleTheme={toggleTheme}
+    />
+  );
 }
 
 interface AuthedAppProps {
   isAuthorizedDevice: boolean;
+  theme: "light" | "dark";
+  toggleTheme: () => void;
 }
 
-function AuthedApp({ isAuthorizedDevice }: AuthedAppProps) {
+function AuthedApp({ isAuthorizedDevice, theme, toggleTheme }: AuthedAppProps) {
   const {
     previews,
     activeText,
@@ -65,7 +77,6 @@ function AuthedApp({ isAuthorizedDevice }: AuthedAppProps) {
   } = useTextLoader();
   const [pinyinVisible, setPinyinVisible] = usePinyinVisibility();
   const { zoomLevel, zoomIn, zoomOut, isMinZoom, isMaxZoom } = useTextZoom();
-  const [theme, toggleTheme] = useTheme();
   const { paletteId, setPalette, palettes } = useColorPalette();
   const { formatted: elapsedTime } = useElapsedTime(isProcessing);
   const [showManageTags, setShowManageTags] = useState(false);
