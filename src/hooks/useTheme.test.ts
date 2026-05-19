@@ -68,7 +68,7 @@ describe("useTheme", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
-  it("follows live OS theme change when no explicit choice has been made", () => {
+  it("follows live OS theme change", () => {
     currentMatches = false;
     const { result } = renderHook(() => useTheme());
     expect(result.current[0]).toBe("light");
@@ -81,10 +81,10 @@ describe("useTheme", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
-  it("manual toggle persists to localStorage", () => {
+  it("persists the active theme to localStorage on mount and on change", () => {
     currentMatches = false;
     const { result } = renderHook(() => useTheme());
-    expect(localStorage.getItem("theme")).toBeNull();
+    expect(localStorage.getItem("theme")).toBe("light");
 
     act(() => {
       result.current[1]();
@@ -95,21 +95,23 @@ describe("useTheme", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
-  it("explicit user choice survives OS theme changes (no override)", () => {
+  it("OS change still flips theme even after a manual toggle (and persists)", () => {
     currentMatches = false;
     const { result } = renderHook(() => useTheme());
 
-    // User explicitly picks dark.
+    // User toggles to dark.
     act(() => {
       result.current[1]();
     });
     expect(result.current[0]).toBe("dark");
+    expect(localStorage.getItem("theme")).toBe("dark");
 
-    // OS flips to light — we keep the user's choice.
+    // OS flips to light — theme follows.
     act(() => {
       simulateOsThemeChange(false);
     });
-    expect(result.current[0]).toBe("dark");
+    expect(result.current[0]).toBe("light");
+    expect(localStorage.getItem("theme")).toBe("light");
   });
 
   it("ignores invalid stored values and falls back to OS pref", () => {
