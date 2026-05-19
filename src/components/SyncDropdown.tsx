@@ -9,7 +9,7 @@ import { message, confirm } from "@tauri-apps/plugin-dialog";
 import { useAuth } from "../auth";
 import { useLastSync } from "../hooks/useLastSync";
 import { useOnline } from "../hooks/useOnline";
-import { pullGist, saveGist, SyncError } from "../sync";
+import { pullGist, saveGist, SyncError, useSyncSize } from "../sync";
 import { exportAll, importAll, validateExportPayload, type ExportPayload } from "../db";
 import { formatInZone, nowUtcIso } from "../utils/dateTimeFormat";
 
@@ -28,6 +28,7 @@ export function SyncDropdown({ name, timeZone, onPullComplete, betweenSlot }: Sy
   const avatarRef = useRef<HTMLDivElement>(null);
   const { meta, isDirty, recordSync } = useLastSync();
   const online = useOnline();
+  const { setLastSyncSize } = useSyncSize();
 
   // Click-outside to close the avatar dropdown.
   useEffect(() => {
@@ -42,7 +43,7 @@ export function SyncDropdown({ name, timeZone, onPullComplete, betweenSlot }: Sy
   }, [avatarOpen]);
 
   if (state.status !== "unlocked") return null;
-  const { pat, gistId } = state;
+  const { pat, gistId, syncPassword } = state;
 
   const handlePull = useCallback(async () => {
     if (inFlight) return;
@@ -55,10 +56,11 @@ export function SyncDropdown({ name, timeZone, onPullComplete, betweenSlot }: Sy
     }
     setInFlight("pull");
     try {
-      const json = await pullGist(pat, gistId);
+      const result = await pullGist(pat, gistId, syncPassword);
+      setLastSyncSize(result.wireSize);
       let payload: ExportPayload;
       try {
-        payload = JSON.parse(json) as ExportPayload;
+        payload = JSON.parse(result.jsonPayload) as ExportPayload;
       } catch (e) {
         throw new SyncError("other", `Invalid remote payload: ${(e as Error).message}`);
       }
@@ -83,7 +85,7 @@ export function SyncDropdown({ name, timeZone, onPullComplete, betweenSlot }: Sy
     } finally {
       setInFlight(null);
     }
-  }, [inFlight, isDirty, pat, gistId, recordSync, onPullComplete, timeZone]);
+  }, [inFlight, isDirty, pat, gistId, syncPassword, recordSync, onPullComplete, timeZone, setLastSyncSize]);
 
   const handleSave = useCallback(async () => {
     if (inFlight) return;
@@ -94,7 +96,11 @@ export function SyncDropdown({ name, timeZone, onPullComplete, betweenSlot }: Sy
       payload.sync_author = name;
       payload.sync_timestamp = timestamp;
       const json = JSON.stringify(payload);
-      await saveGist(pat, gistId, json, meta?.timestamp ?? null);
+      const result = await saveGist(pat, gistId, json, syncPassword, meta?.timestamp ?? null, {
+        sync_timestamp: timestamp,
+        sync_author: name,
+      });
+      setLastSyncSize(result.wireSize);
       recordSync({ author: name, timestamp });
       await message(
         `Saved at ${formatInZone(timestamp, timeZone)} by ${name}.`,
@@ -118,7 +124,7 @@ export function SyncDropdown({ name, timeZone, onPullComplete, betweenSlot }: Sy
     } finally {
       setInFlight(null);
     }
-  }, [inFlight, pat, gistId, name, meta?.timestamp, recordSync, handlePull, timeZone]);
+  }, [inFlight, pat, gistId, syncPassword, name, meta?.timestamp, recordSync, handlePull, timeZone, setLastSyncSize]);
 
   return (
     <>

@@ -10,4 +10,11 @@ export {
   extractSyncTimestamp,
   SyncError,
   type SyncErrorKind,
+  type PullResult,
+  type SaveResult,
 } from "./gistClient";
+export {
+  SyncSizeProvider,
+  useSyncSize,
+  GIST_LIMIT_BYTES,
+} from "./SyncSizeContext";

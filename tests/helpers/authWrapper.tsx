@@ -1,9 +1,10 @@
 // Test helper: render the `<App />` (or any subtree) inside a pre-unlocked
-// `<AuthProvider />`. Skips the LoginScreen so existing integration tests
-// can keep asserting against the library / reading / calendar views
-// without having to type a password.
+// `<AuthProvider />` plus a `<SyncSizeProvider />`. Skips the LoginScreen so
+// existing integration tests can keep asserting against the library /
+// reading / calendar views without having to type a password.
 import type { ReactNode } from "react";
 import { AuthProvider } from "../../src/auth";
+import { SyncSizeProvider } from "../../src/sync";
 
 interface Options {
   role?: "pierre" | "common";
@@ -29,7 +30,7 @@ export function UnlockedAuth({
         syncPassword,
       }}
     >
-      {children}
+      <SyncSizeProvider>{children}</SyncSizeProvider>
     </AuthProvider>
   );
 }

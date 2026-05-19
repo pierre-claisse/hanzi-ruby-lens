@@ -15,6 +15,7 @@
     "@fontsource/huninn": "^5.2.2",
     "@fontsource/lxgw-wenkai-tc": "^5.2.8",
     "@noble/hashes": "^2.2.0",
+    "brotli-wasm": "^3.0.1",
     "chiron-sung-hk-webfont": "^1.0.24",
     "idb": "^8.0.3",
     "jieba-wasm": "^2.4.0",

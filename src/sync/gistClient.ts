@@ -1,13 +1,25 @@
-// GitHub Gist REST client. Replaces the Rust `sync::http_get_gist` /
-// `http_patch_gist` pair, with the same shape:
+// GitHub Gist REST client.
 //
-//   - `pullGist` → GET, returns the JSON-encoded ExportPayload string.
-//     Handles the API's 1 MB truncation by falling back to `raw_url`.
-//   - `saveGist` → GET-then-PATCH with application-side `sync_timestamp`
-//     comparison for optimistic concurrency. GitHub Gists do NOT support
-//     `If-Match`, so we re-fetch and check before PATCH.
+// Wire format on the gist file is one of two shapes:
 //
-// All error cases are normalised into a typed union the UI can switch on.
+//   - v2 (Brotli-compressed, AES-GCM-encrypted JSON wrapped in a thin clear
+//     envelope — see src/crypto/payloadCipher.ts). All saves write this.
+//   - legacy v1: plain JSON serialisation of `ExportPayload`. Read-only path
+//     for migrating the existing gist on first pull after this upgrade. Never
+//     written by the PWA.
+//
+// `pullGist` auto-detects the format, decrypts/decompresses if needed, and
+// returns the resulting JSON-encoded `ExportPayload` plus the wire size
+// (bytes that actually live in the gist — relevant for the 1 MB ceiling).
+//
+// `saveGist` always writes v2. The optimistic-concurrency check still reads
+// `sync_timestamp` from the wrapper, which is the same in both formats.
+import {
+  encryptPayload,
+  decryptPayload,
+  isEncryptedPayload,
+} from "../crypto/payloadCipher";
+
 const GITHUB_API = "https://api.github.com";
 const FILE_NAME = "hanzi-ruby-lens.json";
 const USER_AGENT = "hanzi-ruby-lens-pwa/0.1";
@@ -60,6 +72,8 @@ async function getJson(resp: Response, label: string): Promise<unknown> {
   }
 }
 
+/** Fetches the raw `hanzi-ruby-lens.json` file content from the gist, whatever
+ *  the wire format. */
 async function fetchGist(pat: string, gistId: string): Promise<string> {
   let resp: Response;
   try {
@@ -91,7 +105,9 @@ async function fetchGist(pat: string, gistId: string): Promise<string> {
     );
   }
   if (file.truncated && file.raw_url) {
-    // API truncates content > 1 MB; the raw URL has the full payload.
+    // GitHub truncates content > 1 MB in the gist JSON; the raw URL serves
+    // the full file. For v2 this should never happen (ceiling is the same
+    // 1 MB but compression buys ~25x headroom), kept for legacy safety.
     let rawResp: Response;
     try {
       rawResp = await fetch(file.raw_url, {
@@ -112,14 +128,70 @@ async function fetchGist(pat: string, gistId: string): Promise<string> {
   return file.content;
 }
 
-export async function pullGist(pat: string, gistId: string): Promise<string> {
-  return fetchGist(pat, gistId);
+export interface PullResult {
+  /** JSON-encoded `ExportPayload` (after any decryption/decompression). */
+  jsonPayload: string;
+  /** Wrapper-level metadata, also embedded inside `jsonPayload`. */
+  sync_timestamp: string | null;
+  sync_author: string | null;
+  /** Size in bytes of the wire content (what actually counts towards the
+   *  1 MB gist ceiling). For v2: compressed+encrypted+wrapped. */
+  wireSize: number;
+  /** True when the gist still holds the legacy plain-JSON format. Used to
+   *  prompt the user (or the next save) to migrate. */
+  legacy: boolean;
+}
+
+export async function pullGist(
+  pat: string,
+  gistId: string,
+  syncPassword: string,
+): Promise<PullResult> {
+  const wire = await fetchGist(pat, gistId);
+  const wireSize = new Blob([wire]).size;
+
+  if (isEncryptedPayload(wire)) {
+    const result = await decryptPayload(wire, syncPassword);
+    if (!result) {
+      throw new SyncError(
+        "auth",
+        "Could not decrypt remote gist content (wrong sync password?)",
+      );
+    }
+    return {
+      jsonPayload: result.jsonPayload,
+      sync_timestamp: result.sync_timestamp,
+      sync_author: result.sync_author,
+      wireSize,
+      legacy: false,
+    };
+  }
+
+  // Legacy v1: plain ExportPayload JSON. Read the meta from the top level.
+  let parsed: { sync_timestamp?: unknown; sync_author?: unknown };
+  try {
+    parsed = JSON.parse(wire) as typeof parsed;
+  } catch (e) {
+    throw new SyncError(
+      "other",
+      `Invalid remote payload: ${(e as Error).message}`,
+    );
+  }
+  return {
+    jsonPayload: wire,
+    sync_timestamp:
+      typeof parsed.sync_timestamp === "string" ? parsed.sync_timestamp : null,
+    sync_author:
+      typeof parsed.sync_author === "string" ? parsed.sync_author : null,
+    wireSize,
+    legacy: true,
+  };
 }
 
 /**
- * Extract the `sync_timestamp` field from an ExportPayload JSON string. Used
- * for application-side optimistic concurrency. Returns null when the field is
- * missing or the JSON is malformed.
+ * Extract the `sync_timestamp` field from the wire blob (either format —
+ * both expose it at the top level). Used by the conflict check below and
+ * exposed for tests.
  */
 export function extractSyncTimestamp(json: string): string | null {
   try {
@@ -131,25 +203,27 @@ export function extractSyncTimestamp(json: string): string | null {
   }
 }
 
+export interface SaveResult {
+  /** Size in bytes of the wire content after this save. */
+  wireSize: number;
+}
+
 /**
- * Save the given JSON payload to the configured Gist with optimistic
- * concurrency on `sync_timestamp`.
+ * Save `jsonPayload` to the configured gist as v2 (compressed+encrypted),
+ * with optimistic concurrency on `sync_timestamp`.
  *
- *  - GET the current remote content; read its `sync_timestamp`.
- *  - If that field exists and differs from `lastSyncTimestamp`, throw
- *    `SyncError("conflict")` — the remote has been touched since our last
- *    sync.
- *  - Otherwise PATCH the gist.
- *
- * Race window between the GET and the PATCH is intentional; with two users
- * it's acceptable. A "real" backend would use a strong CAS.
+ *  - GET the current remote, read its `sync_timestamp` (works for v1 and v2).
+ *  - If it differs from `lastSyncTimestamp`, throw SyncError("conflict").
+ *  - Otherwise encrypt the payload and PATCH the gist.
  */
 export async function saveGist(
   pat: string,
   gistId: string,
   jsonPayload: string,
+  syncPassword: string,
   lastSyncTimestamp: string | null,
-): Promise<void> {
+  meta: { sync_timestamp: string | null; sync_author: string | null },
+): Promise<SaveResult> {
   const remoteJson = await fetchGist(pat, gistId);
   const remoteTs = extractSyncTimestamp(remoteJson);
   if (remoteTs !== null && remoteTs !== lastSyncTimestamp) {
@@ -158,6 +232,9 @@ export async function saveGist(
       "The remote data has been updated since your last pull",
     );
   }
+
+  const wireContent = await encryptPayload(jsonPayload, syncPassword, meta);
+  const wireSize = new Blob([wireContent]).size;
 
   let resp: Response;
   try {
@@ -168,7 +245,7 @@ export async function saveGist(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        files: { [FILE_NAME]: { content: jsonPayload } },
+        files: { [FILE_NAME]: { content: wireContent } },
       }),
     });
   } catch (e) {
@@ -185,4 +262,6 @@ export async function saveGist(
     const text = await resp.text().catch(() => "");
     throw new SyncError("server", text || resp.statusText, resp.status);
   }
+
+  return { wireSize };
 }

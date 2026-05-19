@@ -11,6 +11,7 @@ import { CommentsPanel } from "./components/CommentsPanel";
 import { CalendarScreen, visibleMonthRange } from "./components/CalendarScreen";
 import { DateSessionsPanel } from "./components/DateSessionsPanel";
 import { SessionDialog } from "./components/SessionDialog";
+import { SyncSizeIndicator } from "./components/SyncSizeIndicator";
 import { useIdentity } from "./hooks/useIdentity";
 import { useSessions } from "./hooks/useSessions";
 import type { SessionMutation } from "./hooks/useSessions";
@@ -449,6 +450,7 @@ function AuthedApp({ isAuthorizedDevice }: AuthedAppProps) {
           timeZone={identity.timeZone}
         />
       )}
+      <SyncSizeIndicator />
     </>
   );
 }

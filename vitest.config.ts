@@ -24,6 +24,12 @@ export default defineConfig({
       "@tauri-apps/plugin-opener": fileURLToPath(
         new URL("./src/tauriShim/opener.ts", import.meta.url),
       ),
+      // brotli-wasm initialises a WASM blob that doesn't load cleanly under
+      // happy-dom; swap it for a Node-zlib-backed shim. Output is the same
+      // Brotli wire format, so compressed bytes round-trip in either env.
+      "brotli-wasm": fileURLToPath(
+        new URL("./src/test/brotliShim.ts", import.meta.url),
+      ),
     },
   },
   test: {
