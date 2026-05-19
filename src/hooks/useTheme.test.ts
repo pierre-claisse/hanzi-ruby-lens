@@ -10,6 +10,7 @@ describe("useTheme", () => {
     matchMediaListeners = [];
     currentMatches = false;
     document.documentElement.className = "";
+    localStorage.clear();
 
     // Mock matchMedia
     Object.defineProperty(window, "matchMedia", {
@@ -35,13 +36,13 @@ describe("useTheme", () => {
     matchMediaListeners.forEach((cb) => cb({ matches: isDark }));
   }
 
-  it("initializes theme from OS preference (light)", () => {
+  it("initializes theme from OS preference when nothing is stored (light)", () => {
     currentMatches = false;
     const { result } = renderHook(() => useTheme());
     expect(result.current[0]).toBe("light");
   });
 
-  it("initializes theme from OS preference (dark)", () => {
+  it("initializes theme from OS preference when nothing is stored (dark)", () => {
     currentMatches = true;
     const { result } = renderHook(() => useTheme());
     expect(result.current[0]).toBe("dark");
@@ -59,7 +60,15 @@ describe("useTheme", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(false);
   });
 
-  it("detects live OS theme change from light to dark", () => {
+  it("reads the stored theme on init, overriding the OS preference", () => {
+    currentMatches = false;
+    localStorage.setItem("theme", "dark");
+    const { result } = renderHook(() => useTheme());
+    expect(result.current[0]).toBe("dark");
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+  });
+
+  it("follows live OS theme change when no explicit choice has been made", () => {
     currentMatches = false;
     const { result } = renderHook(() => useTheme());
     expect(result.current[0]).toBe("light");
@@ -72,55 +81,42 @@ describe("useTheme", () => {
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
-  it("detects live OS theme change from dark to light", () => {
-    currentMatches = true;
-    const { result } = renderHook(() => useTheme());
-    expect(result.current[0]).toBe("dark");
-
-    act(() => {
-      simulateOsThemeChange(false);
-    });
-
-    expect(result.current[0]).toBe("light");
-    expect(document.documentElement.classList.contains("dark")).toBe(false);
-  });
-
-  it("manual toggle changes theme", () => {
+  it("manual toggle persists to localStorage", () => {
     currentMatches = false;
     const { result } = renderHook(() => useTheme());
-    expect(result.current[0]).toBe("light");
+    expect(localStorage.getItem("theme")).toBeNull();
 
     act(() => {
       result.current[1]();
     });
 
     expect(result.current[0]).toBe("dark");
+    expect(localStorage.getItem("theme")).toBe("dark");
     expect(document.documentElement.classList.contains("dark")).toBe(true);
   });
 
-  it("OS change overrides manual toggle", () => {
+  it("explicit user choice survives OS theme changes (no override)", () => {
     currentMatches = false;
     const { result } = renderHook(() => useTheme());
 
-    // Manual toggle to dark
+    // User explicitly picks dark.
     act(() => {
       result.current[1]();
     });
     expect(result.current[0]).toBe("dark");
 
-    // OS changes to light — should override
+    // OS flips to light — we keep the user's choice.
     act(() => {
       simulateOsThemeChange(false);
     });
-    expect(result.current[0]).toBe("light");
+    expect(result.current[0]).toBe("dark");
   });
 
-  it("does not read from localStorage", () => {
-    const getItemSpy = vi.spyOn(Storage.prototype, "getItem");
-    currentMatches = false;
-    renderHook(() => useTheme());
-    expect(getItemSpy).not.toHaveBeenCalledWith("theme");
-    getItemSpy.mockRestore();
+  it("ignores invalid stored values and falls back to OS pref", () => {
+    currentMatches = true;
+    localStorage.setItem("theme", "purple-rain");
+    const { result } = renderHook(() => useTheme());
+    expect(result.current[0]).toBe("dark");
   });
 
   it("cleans up event listener on unmount", () => {
@@ -129,7 +125,6 @@ describe("useTheme", () => {
     expect(matchMediaListeners).toHaveLength(1);
 
     unmount();
-    // removeEventListener was called — listener removed
     expect(matchMediaListeners).toHaveLength(0);
   });
 });

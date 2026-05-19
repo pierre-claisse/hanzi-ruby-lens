@@ -9,15 +9,25 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <title>Hanzi Ruby Lens</title>
     <script>
+      // Apply theme + palette synchronously before React boots so the
+      // LoginScreen renders in the user's chosen colours immediately,
+      // with no flash of default styling.
+      //   theme         "dark" | "light"   (set by useTheme on toggle)
+      //   colorPalette  palette id          (set by useColorPalette)
+      // Theme falls back to OS preference when no explicit choice is stored.
       (function() {
         try {
-          const theme = localStorage.getItem("theme");
-          if (theme === "dark") {
-            document.documentElement.classList.add("dark");
-          }
-        } catch (e) {
-          // Ignore localStorage errors (private browsing, quota exceeded)
-        }
+          var stored = localStorage.getItem("theme");
+          var isDark = stored === "dark"
+            || (stored !== "light"
+                && window.matchMedia
+                && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          if (isDark) document.documentElement.classList.add("dark");
+        } catch (e) { /* private browsing / quota — fall through */ }
+        try {
+          var palette = localStorage.getItem("colorPalette");
+          if (palette) document.documentElement.dataset.palette = palette;
+        } catch (e) { /* ignore */ }
       })();
     </script>
   </head>
